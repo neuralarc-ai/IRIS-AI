@@ -1,4 +1,3 @@
-
 "use client";
 import React from 'react';
 import Link from 'next/link';
@@ -64,7 +63,7 @@ export default function LeadCard({ lead, onLeadConverted }: LeadCardProps) {
   const canConvert = lead.status !== "Converted to Account" && lead.status !== "Lost";
 
   return (
-    <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full bg-card">
+    <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full p-4 " bgImage="/1.svg">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start mb-1">
           <CardTitle className="text-xl font-headline flex items-center text-foreground">
@@ -120,9 +119,9 @@ export default function LeadCard({ lead, onLeadConverted }: LeadCardProps) {
       </CardContent>
       <CardFooter className="pt-4 border-t mt-auto">
         <Button variant="outline" size="sm" asChild className="mr-auto">
-          <Link href={`/leads?id=${lead.id}#details`}> {/* This link might be for a detail view not yet implemented */}
+          <Link href={`/leads/${lead.id}`}> 
             <Eye className="mr-2 h-4 w-4" />
-            View
+            View Details
           </Link>
         </Button>
         {canConvert ? (

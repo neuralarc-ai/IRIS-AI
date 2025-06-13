@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -31,24 +30,24 @@ export default function HorizontalNav() {
         className={cn(
           "fixed top-0 left-0 right-0 z-50 w-full border-b",
           "bg-[#2B2521]", 
-          "border-gray-700" 
+          "border-gray-700"
         )}
         style={{ height: '70px' }} 
       >
-        <div className="container mx-auto flex h-full items-center justify-between px-1 py-2"> 
+        <div className="container mx-auto flex h-full items-center justify-between px-4 py-2"> 
           <div className="flex items-center">
-            <Link href="/dashboard" className="mr-6">
-              <Logo iconSize={28} textSize="text-2xl" className="text-[#EFEDEB]" /> 
+            <Link href="/dashboard" className="mr-8">
+              <Logo iconSize={28} textSize="text-2xl" className="text-[#EFEDEB] bg-transparent" /> 
             </Link>
           </div>
 
-          <div className="flex flex-1 items-center justify-end gap-1"> 
+          <div className="flex flex-1 items-center justify-end gap-4"> 
             <Button variant="ghost" size="icon" className="hidden sm:inline-flex text-[#EFEDEB] hover:text-[#EFEDEB]/90"> 
               <Search className="h-5 w-5" />
               <span className="sr-only">Search</span>
             </Button>
 
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden md:flex items-center gap-2">
               {navItems.map((item) => (
                 <Button
                   key={item.href}
@@ -56,9 +55,12 @@ export default function HorizontalNav() {
                   size="sm"
                   asChild
                   className={cn(
-                    "text-[#EFEDEB] hover:text-[#EFEDEB]/90 hover:bg-white/5", 
-                    (pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard' && item.href !== '/')) &&
-                    "text-[#EFEDEB] bg-white/10 font-semibold" 
+                    "text-[#EFEDEB] hover:text-[#EFEDEB]/90 hover:bg-white/5 font-normal text-base leading-6 tracking-normal font-sans px-4 h-9 min-w-[140px]",
+                    (pathname === item.href || 
+                      (pathname.startsWith(item.href) && 
+                        (item.href === '/dashboard' ? pathname === '/dashboard' : true))) &&
+                    "text-[#EFEDEB] bg-white/10 font-semibold",
+                    item.label === "User Management" && "bg-white text-black hover:bg-white hover:text-black"
                   )}
                 >
                   <Link href={item.href}>
@@ -69,16 +71,20 @@ export default function HorizontalNav() {
               ))}
             </nav>
 
-            <Button
-              variant="outline" 
-              size="sm"
-              className="h-9 text-[#EFEDEB] border-gray-500 hover:bg-gray-700 hover:text-[#EFEDEB]/90" 
-              onClick={() => setIsAddAccountDialogOpen(true)}
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Quick Create
-            </Button>
-            <UserProfile />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline" 
+                size="sm"
+                className="h-9 min-w-[140px] border-gray-500 font-normal text-base leading-6 tracking-normal font-sans text-black bg-white px-4"
+                onClick={() => setIsAddAccountDialogOpen(true)}
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Quick Create
+              </Button>
+              <div className="text-black rounded">
+                <UserProfile />
+              </div>
+            </div>
           </div>
         </div>
         {/* Mobile Nav */}
@@ -86,7 +92,7 @@ export default function HorizontalNav() {
           className={cn(
             "md:hidden flex items-center justify-around border-t py-2 overflow-x-auto",
             "bg-[#2B2521]", 
-            "border-gray-700" 
+            "border-gray-700"
           )}
           style={{ position: 'absolute', bottom: '-50px', left: 0, right: 0, height: '50px' }} 
         >
@@ -97,13 +103,15 @@ export default function HorizontalNav() {
               size="sm"
               asChild
               className={cn(
-                "flex-1 justify-center text-xs text-[#EFEDEB] px-1 min-w-max hover:bg-white/5", 
-                 (pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard' && item.href !== '/')) &&
-                  "text-[#EFEDEB] font-semibold" 
+                "flex-1 justify-center text-xs text-[#EFEDEB] px-2 min-w-max hover:bg-white/5 font-normal text-base leading-6 tracking-normal font-sans", 
+                (pathname === item.href || 
+                  (pathname.startsWith(item.href) && 
+                    (item.href === '/dashboard' ? pathname === '/dashboard' : true))) &&
+                "text-[#EFEDEB] font-semibold" 
               )}
             >
               <Link href={item.href} className="flex flex-col items-center">
-                <item.icon className="h-5 w-5 mb-0.5" />
+                <item.icon className="h-5 w-5 mb-1" />
                 <span className="truncate">{item.label}</span>
               </Link>
             </Button>

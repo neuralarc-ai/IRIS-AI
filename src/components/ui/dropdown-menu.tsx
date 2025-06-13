@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -70,7 +69,7 @@ const DropdownMenuContent = React.forwardRef<
       sideOffset={sideOffset}
       className={cn(
         "z-50 overflow-auto shadow-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2", // Base structure & animations
-        "w-[330px] h-[407px] rounded-xl p-2", // Dimensions & Padding & Rounded corners
+        "w-[330px] rounded-xl p-2", // Dimensions & Padding & Rounded corners
         "bg-[#38312C] text-gray-100", // Background and Text color
         "border-[1.5px] border-gray-500/60", // Border width and color
         className

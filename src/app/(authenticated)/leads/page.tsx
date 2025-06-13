@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -7,13 +6,14 @@ import LeadCard from '@/components/leads/LeadCard';
 import { mockLeads as initialMockLeads } from '@/lib/data';
 import type { Lead, LeadStatus } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Search, ListFilter, FileUp } from 'lucide-react';
+import { PlusCircle, Search, ListFilter, FileUp, Plus, Upload } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AddLeadDialog from '@/components/leads/AddLeadDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import CSVImport from '@/components/common/CSVImport';
 
 const leadStatusOptions: LeadStatus[] = ["New", "Contacted", "Qualified", "Proposal Sent", "Converted to Account", "Lost"];
 
@@ -22,6 +22,7 @@ export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all');
   const [isAddLeadDialogOpen, setIsAddLeadDialogOpen] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -52,22 +53,44 @@ export default function LeadsPage() {
     );
   };
 
-  const handleImportCsv = () => {
-    // Placeholder for CSV import functionality
-    toast({
-      title: "Import CSV",
-      description: "CSV import functionality is under development. Please add leads manually or use the business card OCR.",
-      duration: 5000,
-    });
+  const handleImport = async (data: any[]) => {
+    try {
+      // Here you would typically make an API call to your backend
+      // For now, we'll just show a success message
+      console.log('Imported leads:', data);
+      
+      // Example API call (uncomment when backend is ready):
+      // const response = await fetch('/api/leads/import', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ leads: data })
+      // });
+      // if (!response.ok) throw new Error('Import failed');
+      
+      toast({
+        title: "Success",
+        description: `Successfully imported ${data.length} leads`,
+      });
+      setShowImport(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to import leads",
+        variant: "destructive"
+      });
+    }
   };
-
 
   return (
     <div className="container mx-auto space-y-6">
       <PageTitle title="Lead Management" subtitle="Track and manage potential clients.">
         <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleImportCsv}>
-                <FileUp className="mr-2 h-4 w-4" /> Import CSV
+            <Button
+              variant="outline"
+              onClick={() => setShowImport(true)}
+              className="flex items-center"
+            >
+                <Upload className="mr-2 h-4 w-4" /> Import CSV
             </Button>
             <Button onClick={() => setIsAddLeadDialogOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Lead
@@ -75,7 +98,17 @@ export default function LeadsPage() {
         </div>
       </PageTitle>
 
-      <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+      {showImport && (
+        <div className="max-w-2xl mx-auto">
+          <CSVImport
+            type="leads"
+            onImport={handleImport}
+            templateUrl="/templates/leads-template.csv"
+          />
+        </div>
+      )}
+
+      <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 ">
          <CardHeader className="pb-4">
             <CardTitle className="text-lg flex items-center">
                 <ListFilter className="mr-2 h-5 w-5 text-primary"/> Filter & Search Leads

@@ -1,4 +1,3 @@
-
 import type { Account, Opportunity, Update, User, Lead, LeadStatus, OpportunityStatus, AccountType, UpdateType } from '@/types';
 import { DEMO_PIN } from '@/lib/constants';
 import { countries } from '@/lib/countryData'; // Import countries
@@ -423,4 +422,8 @@ export const getRecentUpdates = (limit: number = 3): Update[] => {
   return [...mockUpdates] 
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, limit);
+};
+
+export const getUpdateById = (updateId: string): Update | undefined => {
+  return mockUpdates.find(update => update.id === updateId);
 };

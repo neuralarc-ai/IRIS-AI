@@ -1,12 +1,11 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, type GradientType } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, CheckSquare, Repeat, MessageSquare, Users, Mail, BarChartBig, Brain, Activity, ThumbsUp, ThumbsDown, MessageCircleMore, Briefcase, Sparkles, UserCircle, User as UserIcon } from 'lucide-react';
-import type { Update, UpdateInsights as AIUpdateInsights, Opportunity, Account, User, Lead } from '@/types';
+import { Eye, CheckSquare, Repeat, MessageSquare, Users, Mail, BarChartBig, Brain, Activity, ThumbsUp, ThumbsDown, MessageCircleMore, Briefcase, Sparkles, UserCircle, User as UserIcon, Phone, Calendar, FileText, AlertCircle } from 'lucide-react';
+import type { Update, UpdateInsights as AIUpdateInsights, Opportunity, Account, User, Lead, UpdateType } from '@/types';
 import {format, parseISO} from 'date-fns';
 import { generateInsights, RelationshipHealthOutput } from '@/ai/flows/intelligent-insights'; 
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -15,14 +14,21 @@ import Link from 'next/link';
 
 interface UpdateItemProps {
   update: Update;
+  gradient?: GradientType;
 }
 
-const getUpdateTypeIcon = (type: Update['type']) => {
+const getUpdateIcon = (type: UpdateType) => {
   switch (type) {
-    case 'Call': return <MessageCircleMore className="h-5 w-5 text-primary shrink-0" />; 
-    case 'Meeting': return <Users className="h-5 w-5 text-primary shrink-0" />;
-    case 'Email': return <Mail className="h-5 w-5 text-primary shrink-0" />;
-    default: return <MessageSquare className="h-5 w-5 text-primary shrink-0" />; 
+    case 'Meeting':
+      return <Calendar className="h-4 w-4" />;
+    case 'Email':
+      return <Mail className="h-4 w-4" />;
+    case 'Call':
+      return <Phone className="h-4 w-4" />;
+    case 'General':
+      return <MessageSquare className="h-4 w-4" />;
+    default:
+      return <MessageSquare className="h-4 w-4" />;
   }
 };
 
@@ -35,8 +41,7 @@ const getSentimentIcon = (sentiment?: string) => {
     return <Activity className="h-4 w-4"/>;
 }
 
-
-export default function UpdateItem({ update }: UpdateItemProps) {
+export default function UpdateItem({ update, gradient }: UpdateItemProps) {
   const [insights, setInsights] = useState<Partial<AIUpdateInsights> & { relationshipHealth?: RelationshipHealthOutput | null } | null>(null);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [showAiInsights, setShowAiInsights] = useState(false);
@@ -105,15 +110,15 @@ export default function UpdateItem({ update }: UpdateItemProps) {
     }
   };
   
-  const UpdateIcon = getUpdateTypeIcon(update.type);
+  const formattedDate = format(parseISO(update.date), 'MMM d, yyyy h:mm a');
 
   return (
-    <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 bg-card flex flex-col h-full">
+    <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 bg-card flex flex-col h-full" gradient={gradient}>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start mb-1">
           <CardTitle className="text-xl font-headline flex items-center text-foreground">
-            {UpdateIcon}
-            <span className="ml-2.5">Update: {format(parseISO(update.date), 'MMM dd, yyyy, p')}</span>
+            {getUpdateIcon(update.type)}
+            <span className="ml-2.5">Update: {formattedDate}</span>
           </CardTitle>
           <Badge variant="secondary" className="capitalize whitespace-nowrap ml-2 bg-accent text-accent-foreground">
             {update.type}
@@ -211,8 +216,7 @@ export default function UpdateItem({ update }: UpdateItemProps) {
           {showAiInsights && insights ? 'Hide Insights' : (isLoadingInsights ? 'Loading...' : 'Show AI Insights')}
         </Button>
         <Button variant="outline" size="sm" asChild>
-          {/* Link destination might need to be dynamic based on leadId or opportunityId if a detail view is implemented */}
-          <Link href={`/updates?id=${update.id}#details`}> 
+          <Link href={`/updates/${update.id}`}> 
             <Eye className="mr-2 h-4 w-4" />
             View Details
           </Link>

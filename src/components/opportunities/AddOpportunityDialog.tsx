@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,16 +23,23 @@ interface AddOpportunityDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onOpportunityAdded?: (newOpportunity: Opportunity) => void;
+  initialAccountId?: string;
 }
 
-export default function AddOpportunityDialog({ open, onOpenChange, onOpportunityAdded }: AddOpportunityDialogProps) {
+export default function AddOpportunityDialog({ open, onOpenChange, onOpportunityAdded, initialAccountId }: AddOpportunityDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [value, setValue] = useState<number | string>('');
-  const [selectedAccountId, setSelectedAccountId] = useState<string | ''>('');
+  const [selectedAccountId, setSelectedAccountId] = useState<string | ''>(initialAccountId || '');
 
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (initialAccountId) {
+      setSelectedAccountId(initialAccountId);
+    }
+  }, [initialAccountId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,4 +1,3 @@
-
 import React from 'react';
 // import { Eye } from 'lucide-react'; // Icon removed as per request
 
@@ -12,7 +11,7 @@ const Logo: React.FC<LogoProps> = ({ className, textSize = "text-2xl" }) => {
   return (
     <div className={`flex items-center ${className}`}>
       {/* <Eye size={iconSize} className="text-primary mr-2" /> Icon removed */}
-      <span className={`font-headline font-bold ${textSize} text-foreground`}>
+      <span className={`font-sans font-bold ${textSize} text-[#FFFFFF]`}>
         IRIS AI
       </span>
     </div>

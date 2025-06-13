@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -117,9 +116,10 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
   }
 
   return (
-    <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full bg-card">
+    <Card className="shadow-lg flex flex-col h-full" bgImage="/5.svg">
+      <div className='bg-white'>
       <CardHeader className="pb-3">
-        <div className="flex justify-between items-start mb-1">
+        <div className="flex justify-between items-start mb-1 ">
           <CardTitle className="text-xl font-headline flex items-center text-foreground">
             <BarChartBig className="mr-2 h-5 w-5 text-primary shrink-0" />
             {opportunity.name}
@@ -136,7 +136,7 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
             )}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex-grow space-y-3.5 text-sm">
+      <CardContent className="flex-grow space-y-3.5 text-sm bg-white">
         <div className="flex items-center text-foreground">
             <DollarSign className="mr-2 h-4 w-4 text-green-600 shrink-0" />
             <span className="font-medium">Quoted Value:</span>
@@ -192,6 +192,9 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
           </Link>
         </Button>
       </CardFooter>
+      </div>
+     
+      
     </Card>
   );
 }

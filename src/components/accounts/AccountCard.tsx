@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -10,6 +9,7 @@ import type { Account, DailyAccountSummary as AIDailySummary, Opportunity } from
 import { getOpportunitiesByAccount } from '@/lib/data';
 import { generateDailyAccountSummary } from '@/ai/flows/daily-account-summary';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import AddOpportunityDialog from '@/components/opportunities/AddOpportunityDialog';
 
 interface AccountCardProps {
   account: Account;
@@ -19,6 +19,7 @@ export default function AccountCard({ account }: AccountCardProps) {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [dailySummary, setDailySummary] = useState<AIDailySummary | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const [isAddOpportunityDialogOpen, setIsAddOpportunityDialogOpen] = useState(false);
 
   useEffect(() => {
     setOpportunities(getOpportunitiesByAccount(account.id));
@@ -50,9 +51,13 @@ export default function AccountCard({ account }: AccountCardProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account.id, account.name, account.status]);
 
+  const handleOpportunityAdded = (newOpportunity: Opportunity) => {
+    // Refresh the account data or update the UI as needed
+    // This could be handled by a parent component if needed
+  };
 
   return (
-    <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full bg-card">
+    <Card className="shadow-lg flex flex-col h-full" bgImage="/D9613D0C-A55A-4CBD-8C94-00112661A0CB (1) 2.svg">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start mb-1">
           <CardTitle className="text-xl font-headline flex items-center text-foreground">
@@ -126,18 +131,22 @@ export default function AccountCard({ account }: AccountCardProps) {
       </CardContent>
       <CardFooter className="pt-4 border-t mt-auto"> {/* mt-auto pushes footer to bottom */}
         <Button variant="outline" size="sm" asChild className="mr-auto">
-          <Link href={`/accounts?id=${account.id}#details`}> 
+          <Link href={`/accounts/${account.id}`}> 
             <Eye className="mr-2 h-4 w-4" />
             View Details
           </Link>
         </Button>
-        <Button size="sm" asChild>
-          <Link href={`/opportunities/new?accountId=${account.id}`}> {/* Pre-fill accountId for new opportunity */}
-            <PlusCircle className="mr-2 h-4 w-4" />
-            New Opportunity
-          </Link>
+        <Button size="sm" onClick={() => setIsAddOpportunityDialogOpen(true)}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          New Opportunity
         </Button>
       </CardFooter>
+      <AddOpportunityDialog
+        open={isAddOpportunityDialogOpen}
+        onOpenChange={setIsAddOpportunityDialogOpen}
+        onOpportunityAdded={handleOpportunityAdded}
+        initialAccountId={account.id}
+      />
     </Card>
   );
 }
