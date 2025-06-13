@@ -1,0 +1,115 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* New background color for light mode */
+    --background: 40 33% 98%; /* #FBFAF8 */
+    --foreground: 220 10% 15%; /* Darker text for good contrast */
+
+    /* Card variables for glass effect */
+    --card: 0 0% 100%;
+    --card-foreground: 220 10% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 10% 10%;
+
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 220 10% 90%;
+    --secondary-foreground: 220 10% 10%;
+
+    --muted: 220 10% 85%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 220 10% 88%;
+    --accent-foreground: 220 10% 10%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 10% 80%;
+    --input: 220 10% 80%;
+    --ring: 240 5.9% 10%;
+
+    --radius: 0.5rem;
+
+    /* Chart colors - monochrome theme */
+    --chart-1: 0 0% 20%;
+    --chart-2: 0 0% 35%;
+    --chart-3: 0 0% 50%;
+    --chart-4: 0 0% 65%;
+    --chart-5: 0 0% 80%;
+  }
+
+  .dark {
+    /* Dark mode background remains dark */
+    --background: 220 10% 12%; 
+    --foreground: 220 10% 90%; /* Lighter text for dark background */
+
+    /* Card variables for dark mode */
+    --card: 220 10% 15%;
+    --card-foreground: 220 10% 90%;
+
+    --popover: 220 10% 10%;
+    --popover-foreground: 220 10% 90%;
+
+    --primary: 220 10% 90%;
+    --primary-foreground: 220 10% 10%;
+
+    --secondary: 220 10% 20%;
+    --secondary-foreground: 220 10% 90%;
+
+    --muted: 220 10% 20%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 220 10% 25%;
+    --accent-foreground: 220 10% 90%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 10% 25%;
+    --input: 220 10% 25%;
+    --ring: 220 10% 80%;
+
+    --chart-1: 0 0% 80%;
+    --chart-2: 0 0% 65%;
+    --chart-3: 0 0% 50%;
+    --chart-4: 0 0% 35%;
+    --chart-5: 0 0% 20%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    /* Apply solid background color using CSS variable */
+    @apply bg-[hsl(var(--background))] text-foreground font-body;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-headline;
+  }
+  code, pre {
+    @apply font-code;
+  }
+}
+
+/* Subtle transitions and hover effects */
+@layer components {
+  .btn-subtle-hover {
+    @apply transition-colors duration-200 ease-in-out;
+  }
+  .card-subtle-hover {
+    @apply transition-shadow duration-300 ease-in-out;
+  }
+  .button-accent-hover:hover {
+    background-color: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+  }
+}
