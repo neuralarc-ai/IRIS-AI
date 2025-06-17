@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -46,7 +45,7 @@ export default function OpportunitiesPage() {
   };
 
   return (
-    <div className="container mx-auto space-y-6">
+    <div className="container mx-auto space-y-6 mt-6">
       <PageTitle title="Opportunity Management" subtitle="Track and manage all ongoing and potential sales opportunities.">
         <Button onClick={() => setIsAddOpportunityDialogOpen(true)}>
           <PlusCircle className="mr-2 h-4 w-4" /> Add New Opportunity

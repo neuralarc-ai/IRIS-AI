@@ -33,8 +33,12 @@ const getStatusBadgeColorClasses = (status: Opportunity['status']): string => {
 const calculateProgress = (startDate: string, endDate: string, status: Opportunity['status']): number => {
   if (status === 'Completed') return 100;
   if (status === 'Cancelled') return 0;
-  if (status === 'Need Analysis' && new Date() < parseISO(startDate)) return 0;
 
+  if (status === 'Need Analysis') {
+    if (new Date() < parseISO(startDate)) {
+      return 0;
+    }
+  }
 
   const start = parseISO(startDate);
   const end = parseISO(endDate);
@@ -46,7 +50,13 @@ const calculateProgress = (startDate: string, endDate: string, status: Opportuni
   const totalDuration = differenceInDays(end, start);
   const elapsedDuration = differenceInDays(today, start);
 
-  if (totalDuration <= 0) return status === 'In Progress' || status === 'Negotiation' || status === 'On Hold' ? 50 : 0;
+  if (totalDuration <= 0) {
+    if (status === 'In Progress' || status === 'Negotiation' || status === 'On Hold') {
+      return 50;
+    } else {
+      return 0;
+    }
+  }
 
   return Math.min(98, Math.max(5, (elapsedDuration / totalDuration) * 100)); // Ensure progress is between 5 and 98 unless completed/cancelled
 };
@@ -116,85 +126,77 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
   }
 
   return (
-    <Card className="shadow-lg flex flex-col h-full" bgImage="/5.svg">
-      <div className='bg-white'>
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start mb-1 ">
-          <CardTitle className="text-xl font-headline flex items-center text-foreground">
-            <BarChartBig className="mr-2 h-5 w-5 text-primary shrink-0" />
-            {opportunity.name}
-          </CardTitle>
-          <Badge variant="secondary" className={`capitalize whitespace-nowrap ml-2 ${getStatusBadgeColorClasses(opportunity.status)}`}>
-            {opportunity.status}
-          </Badge>
-        </div>
-        <CardDescription className="text-sm text-muted-foreground">
-            {accountName && (
-                <span className="flex items-center">
-                  <Briefcase className="mr-1.5 h-4 w-4 shrink-0" /> For: {accountName}
-                </span>
-            )}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex-grow space-y-3.5 text-sm bg-white">
-        <div className="flex items-center text-foreground">
-            <DollarSign className="mr-2 h-4 w-4 text-green-600 shrink-0" />
-            <span className="font-medium">Quoted Value:</span>
-            <span className="ml-1.5 text-muted-foreground">${opportunity.value.toLocaleString()}</span>
-        </div>
-
-        <p className="text-muted-foreground line-clamp-2">{opportunity.description}</p>
-
-        <div>
-          <div className="flex items-center text-muted-foreground mb-1">
-            <CalendarDays className="mr-2 h-4 w-4 shrink-0" />
-            <span>{format(parseISO(opportunity.startDate), 'MMM dd, yyyy')} - {format(parseISO(opportunity.endDate), 'MMM dd, yyyy')}</span>
+    <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full p-2" bgImage="/5.svg">
+      <Card isInner={true} className="flex flex-col h-full bg-white text-black rounded-lg">
+        <CardHeader className="pb-3 px-6 pt-6">
+          <div className="flex justify-between items-start mb-1 ">
+            <CardTitle className="text-xl font-headline flex items-center">
+              <BarChartBig className="mr-2 h-5 w-5 text-primary shrink-0" />
+              {opportunity.name}
+            </CardTitle>
+            <Badge variant="secondary" className={`capitalize whitespace-nowrap ml-2 ${getStatusBadgeColorClasses(opportunity.status)}`}>
+              {opportunity.status}
+            </Badge>
           </div>
-          <Progress value={progress} className="h-2 my-1" />
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span className="flex items-center"><Clock className="mr-1 h-3 w-3 shrink-0"/>{timeRemaining(opportunity.status)}</span>
-            <div className="flex items-center gap-1">
-              {opportunityHealthIcon} {opportunityHealthText}
+          <CardDescription className="text-sm text-muted-foreground">
+              {accountName && (
+                  <span className="flex items-center">
+                    <Briefcase className="mr-1.5 h-4 w-4 shrink-0" /> For: {accountName}
+                  </span>
+              )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex-grow space-y-3.5 text-sm px-6">
+          <p className="text-muted-foreground line-clamp-2">{opportunity.description}</p>
+
+          <div>
+            <div className="flex items-center text-muted-foreground mb-1">
+              <CalendarDays className="mr-2 h-4 w-4 shrink-0" />
+              <span>{format(parseISO(opportunity.startDate), 'MMM dd, yyyy')} - {format(parseISO(opportunity.endDate), 'MMM dd, yyyy')}</span>
+            </div>
+            <Progress value={progress} className="h-2 my-1" />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span className="flex items-center"><Clock className="mr-1 h-3 w-3 shrink-0"/>{timeRemaining(opportunity.status)}</span>
+              <div className="flex items-center gap-1">
+                {opportunityHealthIcon} {opportunityHealthText}
+              </div>
             </div>
           </div>
-        </div>
 
-        {(forecast || isLoadingForecast) && opportunity.status !== 'Completed' && opportunity.status !== 'Cancelled' && (
-            <div className="pt-3 border-t mt-3">
-                <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1.5 flex items-center">
-                    <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" /> AI Forecast
-                </h4>
-            {isLoadingForecast ? (
-                <div className="flex items-center space-x-2 h-12">
-                    <LoadingSpinner size={16} />
-                    <span className="text-xs text-muted-foreground">Generating forecast...</span>
-                </div>
-            ) : forecast ? (
-                <div className="space-y-1 text-xs">
-                <p className="text-foreground line-clamp-1">
-                    <span className="font-medium">Est. Completion:</span> {forecast.completionDateEstimate}
-                </p>
-                <p className="text-foreground line-clamp-2 leading-snug">
-                    <span className="font-medium">Bottlenecks:</span> {forecast.bottleneckIdentification || "None identified"}
-                </p>
-                </div>
-            ) : (
-                <p className="text-xs text-muted-foreground h-12 flex items-center">No AI forecast data for this opportunity.</p>
-            )}
-            </div>
-        )}
-      </CardContent>
-      <CardFooter className="pt-4 border-t mt-auto">
-        <Button variant="outline" size="sm" asChild className="ml-auto">
-          <Link href={`/opportunities/${opportunity.id}`}>
-            <Eye className="mr-2 h-4 w-4" />
-            View Details
-          </Link>
-        </Button>
-      </CardFooter>
-      </div>
-     
-      
+          {(forecast || isLoadingForecast) && opportunity.status !== 'Completed' && opportunity.status !== 'Cancelled' && (
+              <div className="pt-3 border-t mt-3">
+                  <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1.5 flex items-center">
+                      <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" /> AI Forecast
+                  </h4>
+              {isLoadingForecast ? (
+                  <div className="flex items-center space-x-2 h-12">
+                      <LoadingSpinner size={16} />
+                      <span className="text-xs text-muted-foreground">Generating forecast...</span>
+                  </div>
+              ) : forecast ? (
+                  <div className="space-y-1 text-xs">
+                  <p className="text-foreground line-clamp-1">
+                      <span className="font-medium">Est. Completion:</span> {forecast.completionDateEstimate}
+                  </p>
+                  <p className="text-foreground line-clamp-2 leading-snug">
+                      <span className="font-medium">Bottlenecks:</span> {forecast.bottleneckIdentification || "None identified"}
+                  </p>
+                  </div>
+              ) : (
+                  <p className="text-xs text-muted-foreground h-12 flex items-center">No AI forecast data for this opportunity.</p>
+              )}
+              </div>
+          )}
+        </CardContent>
+        <CardFooter className="pt-4 border-t mt-auto px-6 pb-6">
+          <Button variant="outline" size="sm" asChild className="ml-auto">
+            <Link href={`/opportunities/${opportunity.id}`}>
+              <Eye className="mr-2 h-4 w-4" />
+              View Details
+            </Link>
+          </Button>
+        </CardFooter>
+      </Card>
     </Card>
   );
 }

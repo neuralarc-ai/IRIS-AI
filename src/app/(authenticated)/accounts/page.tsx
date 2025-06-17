@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -47,7 +46,7 @@ export default function AccountsPage() {
   };
 
   return (
-    <div className="container mx-auto space-y-6">
+    <div className="container mx-auto space-y-6 mt-6">
       <PageTitle title="Accounts Management" subtitle="Oversee all client and partner accounts.">
         <Button onClick={() => setIsAddAccountDialogOpen(true)}>
           <PlusCircle className="mr-2 h-4 w-4" /> Add New Account

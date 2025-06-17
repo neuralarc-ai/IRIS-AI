@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -55,7 +54,7 @@ export default function UpdatesPage() {
   });
 
   return (
-    <div className="container mx-auto space-y-6">
+    <div className="container mx-auto space-y-6 mt-6">
       <PageTitle title="Communication Updates" subtitle="Log and review all opportunity-related communications.">
         <Button onClick={() => setIsAddUpdateDialogOpen(true)}> 
           <PlusCircle className="mr-2 h-4 w-4" /> Log New Update

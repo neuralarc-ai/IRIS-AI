@@ -10,6 +10,7 @@ import UserProfile from './UserProfile';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import AddAccountDialog from '@/components/accounts/AddAccountDialog';
+import Papa, { ParseResult } from 'papaparse';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -28,7 +29,7 @@ export default function HorizontalNav() {
     <>
       <header 
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 w-full border-b",
+          "w-full border-b",
           "bg-[#2B2521]", 
           "border-gray-700"
         )}
@@ -41,7 +42,7 @@ export default function HorizontalNav() {
             </Link>
           </div>
 
-          <div className="flex flex-1 items-center justify-end gap-4"> 
+          <div className="flex flex-1 items-center justify-end gap-2"> 
             <Button variant="ghost" size="icon" className="hidden sm:inline-flex text-[#EFEDEB] hover:text-[#EFEDEB]/90"> 
               <Search className="h-5 w-5" />
               <span className="sr-only">Search</span>
@@ -81,43 +82,43 @@ export default function HorizontalNav() {
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Quick Create
               </Button>
-              <div className="text-black rounded">
-                <UserProfile />
-              </div>
+              <UserProfile />
             </div>
           </div>
         </div>
-        {/* Mobile Nav */}
-        <div 
-          className={cn(
-            "md:hidden flex items-center justify-around border-t py-2 overflow-x-auto",
-            "bg-[#2B2521]", 
-            "border-gray-700"
-          )}
-          style={{ position: 'absolute', bottom: '-50px', left: 0, right: 0, height: '50px' }} 
-        >
-          {navItems.map((item) => (
-            <Button
-              key={item.href}
-              variant="ghost"
-              size="sm"
-              asChild
-              className={cn(
-                "flex-1 justify-center text-xs text-[#EFEDEB] px-2 min-w-max hover:bg-white/5 font-normal text-base leading-6 tracking-normal font-sans", 
-                (pathname === item.href || 
-                  (pathname.startsWith(item.href) && 
-                    (item.href === '/dashboard' ? pathname === '/dashboard' : true))) &&
-                "text-[#EFEDEB] font-semibold" 
-              )}
-            >
-              <Link href={item.href} className="flex flex-col items-center">
-                <item.icon className="h-5 w-5 mb-1" />
-                <span className="truncate">{item.label}</span>
-              </Link>
-            </Button>
-          ))}
-        </div>
       </header>
+      
+      {/* Mobile Nav - Normal positioning */}
+      <div 
+        className={cn(
+          "md:hidden w-full flex items-center justify-around border-t py-2 overflow-x-auto",
+          "bg-[#2B2521]", 
+          "border-gray-700"
+        )}
+        style={{ height: '50px' }} 
+      >
+        {navItems.map((item) => (
+          <Button
+            key={item.href}
+            variant="ghost"
+            size="sm"
+            asChild
+            className={cn(
+              "flex-1 justify-center text-xs text-[#EFEDEB] px-2 min-w-max hover:bg-white/5 font-normal text-base leading-6 tracking-normal font-sans", 
+              (pathname === item.href || 
+                (pathname.startsWith(item.href) && 
+                  (item.href === '/dashboard' ? pathname === '/dashboard' : true))) &&
+              "text-[#EFEDEB] font-semibold" 
+            )}
+          >
+            <Link href={item.href} className="flex flex-col items-center">
+              <item.icon className="h-5 w-5 mb-1" />
+              <span className="truncate">{item.label}</span>
+            </Link>
+          </Button>
+        ))}
+      </div>
+      
       <AddAccountDialog open={isAddAccountDialogOpen} onOpenChange={setIsAddAccountDialogOpen} />
     </>
   );

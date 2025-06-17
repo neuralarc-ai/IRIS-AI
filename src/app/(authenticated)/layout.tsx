@@ -30,7 +30,7 @@ export default function AuthenticatedLayout({
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <HorizontalNav />
-      <main className="flex-1 pt-[70px] md:pt-[70px]">
+      <main className="flex-1">
         {children}
       </main>
     </div>

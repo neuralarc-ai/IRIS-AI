@@ -113,115 +113,115 @@ export default function UpdateItem({ update, gradient }: UpdateItemProps) {
   const formattedDate = format(parseISO(update.date), 'MMM d, yyyy h:mm a');
 
   return (
-    <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 bg-card flex flex-col h-full" gradient={gradient}>
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start mb-1">
-          <CardTitle className="text-xl font-headline flex items-center text-foreground">
-            {getUpdateIcon(update.type)}
-            <span className="ml-2.5">Update: {formattedDate}</span>
-          </CardTitle>
-          <Badge variant="secondary" className="capitalize whitespace-nowrap ml-2 bg-accent text-accent-foreground">
-            {update.type}
-          </Badge>
-        </div>
-
-        {lead && (
-            <CardDescription className="text-sm text-muted-foreground flex items-center">
-                <UserIcon className="mr-2 h-4 w-4 shrink-0" />
-                Lead: {lead.companyName} ({lead.personName})
-            </CardDescription>
-        )}
-        {opportunity && (
-          <CardDescription className="text-sm text-muted-foreground flex items-center">
-            <BarChartBig className="mr-2 h-4 w-4 shrink-0" />
-            Opportunity: {opportunity.name}
-          </CardDescription>
-        )}
-        {account && ( // Display account only if an opportunity is linked
-            <CardDescription className="text-xs text-muted-foreground flex items-center mt-0.5">
-                <Briefcase className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-                Account: {account.name}
-            </CardDescription>
-        )}
-         {updatedByUser && (
-            <CardDescription className="text-xs text-muted-foreground flex items-center mt-0.5">
-                <UserCircle className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-                Updated by: {updatedByUser.name}
-            </CardDescription>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-3.5 text-sm flex-grow">
-        <p className="text-foreground leading-relaxed line-clamp-4">{update.content}</p>
-        
-        {showAiInsights && (
-          <div className="pt-3.5 border-t mt-3.5 space-y-3">
-            <h4 className="font-semibold text-foreground text-sm flex items-center">
-              <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />
-              AI-Powered Insights
-            </h4>
-            {isLoadingInsights ? (
-              <div className="flex items-center space-x-2 h-16">
-                <LoadingSpinner size={16} />
-                <span className="text-xs text-muted-foreground">Analyzing update...</span>
-              </div>
-            ) : insights ? (
-              <div className="space-y-2 text-xs">
-                {insights.summary && (
-                  <div>
-                    <strong className="text-foreground block mb-0.5">Summary:</strong>
-                    <p className="text-muted-foreground ml-1 leading-snug">{insights.summary}</p>
-                  </div>
-                )}
-                {insights.actionItems && insights.actionItems.length > 0 && (
-                  <div className="mt-1.5">
-                    <strong className="text-foreground flex items-center mb-0.5"><CheckSquare className="mr-1.5 h-4 w-4 shrink-0" />Action Items:</strong>
-                    <ul className="list-disc list-inside ml-3 space-y-0.5">
-                      {insights.actionItems.slice(0,3).map((item, idx) => <li key={idx} className="text-muted-foreground">{item}</li>)}
-                      {insights.actionItems.length > 3 && <li className="text-muted-foreground text-xs">...and more</li>}
-                    </ul>
-                  </div>
-                )}
-                {insights.followUpSuggestions && insights.followUpSuggestions.length > 0 && (
-                   <div className="mt-1.5">
-                    <strong className="text-foreground flex items-center mb-0.5"><Repeat className="mr-1.5 h-4 w-4 shrink-0" />Follow-up Suggestions:</strong>
-                     <ul className="list-disc list-inside ml-3 space-y-0.5">
-                      {insights.followUpSuggestions.slice(0,2).map((item, idx) => <li key={idx} className="text-muted-foreground">{item}</li>)}
-                     </ul>
-                   </div>
-                )}
-                 {insights.sentiment && (
-                    <div className="flex items-center mt-1.5">
-                    {getSentimentIcon(insights.sentiment)}
-                    <strong className="text-foreground ml-1.5">Sentiment:</strong>
-                    <span className="text-muted-foreground ml-1">{insights.sentiment}</span>
-                    </div>
-                 )}
-                 {insights.relationshipHealth && update.opportunityId && ( // Show relationship health only for opportunity updates
-                    <div className="mt-1.5">
-                        <strong className="text-foreground block mb-0.5">Relationship Health (Opportunity):</strong>
-                        <p className="text-muted-foreground ml-1 leading-snug">{insights.relationshipHealth.summary} (Score: {insights.relationshipHealth.healthScore.toFixed(2)})</p>
-                    </div>
-                 )}
-                 {!insights.summary && !isLoadingInsights && <p className="text-xs text-muted-foreground">No detailed insights generated for this update.</p>}
-              </div>
-            ) : (
-                <p className="text-xs text-muted-foreground h-16 flex items-center">No AI insights available for this update.</p>
-            )}
+    <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full p-2" bgImage="/6.svg" gradient={gradient}>
+      <Card isInner={true} className="flex flex-col h-full bg-white text-black rounded-lg">
+        <CardHeader className="pb-3 px-6 pt-6">
+          <div className="flex justify-between items-start mb-1">
+            <CardTitle className="text-xl font-headline flex items-center">
+              {getUpdateIcon(update.type)}
+              <span className="ml-2.5">Update: {formattedDate}</span>
+            </CardTitle>
+            <Badge variant="secondary" className="capitalize whitespace-nowrap ml-2 bg-accent text-accent-foreground">
+              {update.type}
+            </Badge>
           </div>
-        )}
-      </CardContent>
-      <CardFooter className="pt-4 border-t mt-auto">
-        <Button variant="ghost" size="sm" onClick={toggleAiInsights} className="mr-auto text-muted-foreground hover:text-primary">
-          <Sparkles className={`mr-2 h-4 w-4 ${showAiInsights && insights ? 'text-yellow-500' : ''}`} />
-          {showAiInsights && insights ? 'Hide Insights' : (isLoadingInsights ? 'Loading...' : 'Show AI Insights')}
-        </Button>
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/updates/${update.id}`}> 
-            <Eye className="mr-2 h-4 w-4" />
-            View Details
-          </Link>
-        </Button>
-      </CardFooter>
+
+          {lead && (
+              <CardDescription className="text-sm text-muted-foreground flex items-center">
+                  <UserIcon className="mr-2 h-4 w-4 shrink-0" />
+                  Lead: {lead.companyName} ({lead.personName})
+              </CardDescription>
+          )}
+          {opportunity && (
+            <CardDescription className="text-sm text-muted-foreground flex items-center">
+              <BarChartBig className="mr-2 h-4 w-4 shrink-0" />
+              Opportunity: {opportunity.name}
+            </CardDescription>
+          )}
+          {account && ( // Display account only if an opportunity is linked
+              <CardDescription className="text-xs text-muted-foreground flex items-center mt-0.5">
+                  <Briefcase className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                  Account: {account.name}
+              </CardDescription>
+          )}
+           {updatedByUser && (
+              <CardDescription className="text-xs text-muted-foreground flex items-center mt-0.5">
+                  <UserCircle className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                  Updated by: {updatedByUser.name}
+              </CardDescription>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-3.5 text-sm flex-grow px-6">
+          <p className="text-foreground leading-relaxed line-clamp-4">{update.content}</p>
+          
+          {showAiInsights && (
+            <div className="pt-3.5 border-t mt-3.5 space-y-3">
+              <h4 className="font-semibold text-foreground text-sm flex items-center">
+                <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />
+                AI-Powered Insights
+              </h4>
+              {isLoadingInsights ? (
+                <div className="flex items-center space-x-2 h-16">
+                  <LoadingSpinner size={16} />
+                  <span className="text-xs text-muted-foreground">Analyzing update...</span>
+                </div>
+              ) : insights ? (
+                <div className="space-y-2 text-xs">
+                  {insights.summary && (
+                    <div>
+                      <strong className="text-foreground block mb-0.5">Summary:</strong>
+                      <p className="text-muted-foreground ml-1 leading-snug">{insights.summary}</p>
+                    </div>
+                  )}
+                  {insights.actionItems && insights.actionItems.length > 0 && (
+                    <div className="mt-1.5">
+                      <strong className="text-foreground flex items-center mb-0.5"><CheckSquare className="mr-1.5 h-4 w-4 shrink-0" />Action Items:</strong>
+                      <ul className="list-disc list-inside ml-3 space-y-0.5">
+                        {insights.actionItems.slice(0,3).map((item, idx) => <li key={idx} className="text-muted-foreground">{item}</li>)}
+                        {insights.actionItems.length > 3 && <li className="text-muted-foreground text-xs">...and more</li>}
+                      </ul>
+                    </div>
+                  )}
+                  {insights.followUpSuggestions && insights.followUpSuggestions.length > 0 && (
+                     <div className="mt-1.5">
+                      <strong className="text-foreground flex items-center mb-0.5"><Repeat className="mr-1.5 h-4 w-4 shrink-0" />Follow-up Suggestions:</strong>
+                       <ul className="list-disc list-inside ml-3 space-y-0.5">
+                        {insights.followUpSuggestions.slice(0,2).map((item, idx) => <li key={idx} className="text-muted-foreground">{item}</li>)}
+                       </ul>
+                     </div>
+                  )}
+                   {insights.sentiment && (
+                      <div className="flex items-center mt-1.5">
+                      {getSentimentIcon(insights.sentiment)}
+                      <strong className="text-foreground ml-1.5">Sentiment:</strong>
+                      <span className="text-muted-foreground ml-1">{insights.sentiment}</span>
+                      </div>
+                   )}
+                   {insights.relationshipHealth && update.opportunityId && ( // Show relationship health only for opportunity updates
+                      <div className="mt-1.5">
+                        <strong className="text-foreground flex items-center mb-0.5"><MessageCircleMore className="mr-1.5 h-4 w-4 shrink-0" />Relationship Health:</strong>
+                        <p className="text-muted-foreground ml-1 leading-snug">{insights.relationshipHealth.summary}</p>
+                      </div>
+                   )}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground h-full flex items-center">No AI insights available for this update.</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="pt-4 border-t mt-auto px-6 pb-6">
+          <Button variant="outline" size="sm" onClick={toggleAiInsights} className="mr-2">
+            {showAiInsights ? 'Hide AI Insights' : 'Show AI Insights'}
+          </Button>
+          <Button variant="outline" size="sm" asChild className="ml-auto">
+            <Link href={`/updates/${update.id}`}> 
+              <Eye className="mr-2 h-4 w-4" />
+              View Details
+            </Link>
+          </Button>
+        </CardFooter>
+      </Card>
     </Card>
   );
 }

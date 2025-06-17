@@ -21,12 +21,12 @@ export default function UserProfile() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full hover:bg-transparent">
-          <Avatar className="h-9 w-9 ">
+        <Button variant="ghost" className="relative h-12 w-12 rounded-full hover:bg-transparent">
+          <Avatar className="h-12 w-12 ">
             {/* User icon from public directory */}
             <AvatarImage src="/user.svg" alt="User" data-ai-hint="user avatar" />
             <AvatarFallback>
-              <UserCircle className="h-6 w-6" />
+              <UserCircle className="h-8 w-8" />
             </AvatarFallback>
           </Avatar>
         </Button>
