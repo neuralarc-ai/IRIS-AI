@@ -53,7 +53,6 @@ export default function AccountDetailsPage() {
           try {
             const summary = await generateDailyAccountSummary({
               accountName: accountData.name,
-              accountDescription: accountData.description,
               accountStatus: accountData.status,
               recentUpdates: "Recent updates indicate steady progress.",
             });
@@ -223,6 +222,7 @@ export default function AccountDetailsPage() {
         onOpenChange={setIsAddOpportunityDialogOpen}
         onOpportunityAdded={handleOpportunityAdded}
         initialAccountId={account.id}
+        accounts={[{ id: account.id, name: account.name, type: account.type }]}
       />
     </div>
   );

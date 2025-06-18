@@ -15,8 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import type { Opportunity, Account } from '@/types';
-import { addOpportunity, mockAccounts } from '@/lib/data';
+import type { Opportunity } from '@/types';
 import { Loader2, BarChartBig, Briefcase } from 'lucide-react';
 
 interface AddOpportunityDialogProps {
@@ -24,46 +23,80 @@ interface AddOpportunityDialogProps {
   onOpenChange: (open: boolean) => void;
   onOpportunityAdded?: (newOpportunity: Opportunity) => void;
   initialAccountId?: string;
+  accounts: { id: string, name: string, type: string }[];
 }
 
-export default function AddOpportunityDialog({ open, onOpenChange, onOpportunityAdded, initialAccountId }: AddOpportunityDialogProps) {
+export default function AddOpportunityDialog({ open, onOpenChange, onOpportunityAdded, initialAccountId, accounts = [] }: AddOpportunityDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [value, setValue] = useState<number | string>('');
   const [selectedAccountId, setSelectedAccountId] = useState<string | ''>(initialAccountId || '');
-
+  const [accountName, setAccountName] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [expectedCloseDate, setExpectedCloseDate] = useState('');
+  const [status, setStatus] = useState('Need Analysis');
   const { toast } = useToast();
 
+  // Debug logging
+  console.log('AddOpportunityDialog render - open:', open);
+  console.log('Accounts prop in AddOpportunityDialog:', accounts);
+
+  // Fetch account name if initialAccountId is provided
   useEffect(() => {
     if (initialAccountId) {
       setSelectedAccountId(initialAccountId);
+      // Try to get account name from accounts prop first
+      const found = accounts.find(a => a.id === initialAccountId);
+      if (found) {
+        setAccountName(found.name);
+      } else {
+        // Fetch from backend if not found in prop
+        fetch(`/api/accounts?id=${initialAccountId}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.data && data.data.length > 0) {
+              setAccountName(data.data[0].name);
+            } else {
+              setAccountName('');
+            }
+          })
+          .catch(() => setAccountName(''));
+      }
+    } else {
+      setAccountName('');
     }
-  }, [initialAccountId]);
+  }, [initialAccountId, accounts]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !selectedAccountId || value === '' || Number(value) <= 0) {
-      toast({ title: "Error", description: "Opportunity Name, associated Account, and a valid positive Quoted Amount are required.", variant: "destructive" });
+    if (!name.trim() || !selectedAccountId || value === '' || Number(value) <= 0 || !expectedCloseDate || !status) {
+      toast({ title: "Error", description: "Opportunity Name, associated Account, a valid positive Quoted Amount, Status, and Expected Close Date are required.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const newOpportunityData = {
-        name,
-        description,
-        value: Number(value),
-        accountId: selectedAccountId,
-      };
-      const newOpportunity = addOpportunity(newOpportunityData);
-      
+      const response = await fetch('/api/opportunities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          associated_account_id: selectedAccountId,
+          description,
+          amount: Number(value),
+          expected_close_date: expectedCloseDate,
+          status,
+        })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create opportunity');
+      }
+      const result = await response.json();
+      const newOpportunity = result.data;
       toast({
         title: "Opportunity Created",
-        description: `Opportunity "${name}" has been successfully added for account ${mockAccounts.find(a => a.id === selectedAccountId)?.name}.`,
+        description: `Opportunity "${name}" has been successfully added for account ${accounts.find(a => a.id === selectedAccountId)?.name}.`,
       });
-      
       onOpportunityAdded?.(newOpportunity);
       resetForm();
       onOpenChange(false);
@@ -80,6 +113,9 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
     setDescription('');
     setValue('');
     setSelectedAccountId('');
+    setAccountName('');
+    setExpectedCloseDate('');
+    setStatus('Need Analysis');
   };
 
   return (
@@ -101,25 +137,14 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
             <Label htmlFor="opportunity-name">Opportunity Name <span className="text-destructive">*</span></Label>
             <Input id="opportunity-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Q4 Enterprise Deal" disabled={isLoading} />
           </div>
-          
-          <div>
-            <Label htmlFor="opportunity-account">Associated Account <span className="text-destructive">*</span></Label>
-            <Select value={selectedAccountId} onValueChange={(value: string) => setSelectedAccountId(value)} disabled={isLoading}>
-              <SelectTrigger id="opportunity-account">
-                <SelectValue placeholder="Select an account" />
-              </SelectTrigger>
-              <SelectContent>
-                {mockAccounts.filter(account => account.status === 'Active').map(account => (
-                  <SelectItem key={account.id} value={account.id}>
-                    <div className="flex items-center">
-                      <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
-                      {account.name} ({account.type})
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+
+          {/* Associated Account as read-only field */}
+          {selectedAccountId && (
+            <div>
+              <Label htmlFor="opportunity-account">Associated Account <span className="text-destructive">*</span></Label>
+              <Input id="opportunity-account" value={accountName} disabled />
+            </div>
+          )}
 
           <div>
             <Label htmlFor="opportunity-description">Description</Label>
@@ -143,6 +168,40 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
               disabled={isLoading}
               min="0"
             />
+          </div>
+          {/* Expected Close Date */}
+          <div>
+            <Label htmlFor="expected-close-date">Expected Close Date <span className="text-destructive">*</span></Label>
+            <Input
+              id="expected-close-date"
+              type="date"
+              value={expectedCloseDate}
+              onChange={(e) => setExpectedCloseDate(e.target.value)}
+              disabled={isLoading}
+              required
+            />
+          </div>
+          {/* Status Dropdown */}
+          <div>
+            <Label htmlFor="opportunity-status">Status <span className="text-destructive">*</span></Label>
+            <Select
+              value={status}
+              onValueChange={setStatus}
+              disabled={isLoading}
+              required
+            >
+              <SelectTrigger id="opportunity-status">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Need Analysis">Need Analysis</SelectItem>
+                <SelectItem value="Negotiation">Negotiation</SelectItem>
+                <SelectItem value="In Progress">In Progress</SelectItem>
+                <SelectItem value="On Hold">On Hold</SelectItem>
+                <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="Cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <DialogFooter className="pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>

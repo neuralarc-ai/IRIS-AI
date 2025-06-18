@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import AccountCard from '@/components/accounts/AccountCard';
-import { mockAccounts as initialMockAccounts } from '@/lib/data';
 import type { Account, AccountType, AccountStatus } from '@/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Search, ListFilter } from 'lucide-react';
@@ -12,28 +11,73 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import AddAccountDialog from '@/components/accounts/AddAccountDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { useToast } from "@/hooks/use-toast";
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<AccountStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<AccountType | 'all'>('all');
   const [isAddAccountDialogOpen, setIsAddAccountDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  // Fetch accounts from Supabase
+  const fetchAccounts = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/accounts');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch accounts');
+      }
+      
+      const result = await response.json();
+      
+      // Transform API response from snake_case to camelCase
+      const transformedAccounts: Account[] = (result.data || []).map((apiAccount: any) => ({
+        id: apiAccount.id,
+        name: apiAccount.name,
+        type: apiAccount.type,
+        status: apiAccount.status,
+        description: apiAccount.description,
+        contactEmail: apiAccount.contact_email,
+        contactPersonName: apiAccount.contact_person_name,
+        contactPhone: apiAccount.contact_phone,
+        industry: apiAccount.industry,
+        convertedFromLeadId: apiAccount.converted_from_lead_id,
+        opportunityIds: [],
+        createdAt: apiAccount.created_at,
+        updatedAt: apiAccount.updated_at,
+      }));
+      
+      setAccounts(transformedAccounts);
+    } catch (error) {
+      console.error('Error fetching accounts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load accounts. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setAccounts([...initialMockAccounts]);
+    fetchAccounts();
   }, []);
 
   const filteredAccounts = accounts.filter(account => {
-    const matchesSearch = account.name.toLowerCase().includes(searchTerm.toLowerCase()) || (account.contactEmail && account.contactEmail.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesSearch = account.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         (account.contactEmail && account.contactEmail.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = statusFilter === 'all' || account.status === statusFilter;
     const matchesType = typeFilter === 'all' || account.type === typeFilter;
     return matchesSearch && matchesStatus && matchesType;
   }).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
-
-  const handleAccountAddedOrUpdated = (updatedAccount: Account) => {
+  const handleAccountAddedOrUpdated = async (updatedAccount: Account) => {
     setAccounts(prevAccounts => {
       const existingIndex = prevAccounts.findIndex(acc => acc.id === updatedAccount.id);
       if (existingIndex > -1) {
@@ -43,7 +87,23 @@ export default function AccountsPage() {
       }
       return [updatedAccount, ...prevAccounts];
     });
+    
+    toast({
+      title: "Account Updated",
+      description: `${updatedAccount.name} has been successfully updated.`,
+    });
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto space-y-6 mt-6">
+        <PageTitle title="Accounts Management" subtitle="Oversee all client and partner accounts." />
+        <div className="flex items-center justify-center h-[60vh]">
+          <LoadingSpinner size={32} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto space-y-6 mt-6">
@@ -105,11 +165,25 @@ export default function AccountsPage() {
         </CardContent>
       </Card>
 
-
-      {filteredAccounts.length > 0 ? (
+      {accounts.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-muted-foreground mb-4">
+            <PlusCircle className="mx-auto h-12 w-12 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No accounts yet</h3>
+            <p className="text-sm">Get started by adding your first account or converting a lead.</p>
+          </div>
+          <Button onClick={() => setIsAddAccountDialogOpen(true)}>
+            <PlusCircle className="mr-2 h-4 w-4" /> Add First Account
+          </Button>
+        </div>
+      ) : filteredAccounts.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
           {filteredAccounts.map((account) => (
-            <AccountCard key={account.id} account={account} />
+            <AccountCard
+              key={account.id}
+              account={account}
+              isConverted={!!account.convertedFromLeadId}
+            />
           ))}
         </div>
       ) : (
@@ -119,17 +193,18 @@ export default function AccountsPage() {
           <p className="text-muted-foreground">Try adjusting your search or filter criteria, or add a new account.</p>
         </div>
       )}
+
       <AddAccountDialog
         open={isAddAccountDialogOpen}
         onOpenChange={setIsAddAccountDialogOpen}
         onAccountAdded={handleAccountAddedOrUpdated}
-        onLeadConverted={(leadId, newAccountId) => {
-            // Find the newly created/updated account and pass it to the handler
-            const newOrUpdatedAccount = accounts.find(acc => acc.id === newAccountId) || initialMockAccounts.find(acc => acc.id === newAccountId);
-            if(newOrUpdatedAccount) {
-                 handleAccountAddedOrUpdated(newOrUpdatedAccount);
-            }
-             // Optionally, refresh leads list on the Leads page if it were visible or if global state existed
+        onLeadConverted={async (leadId, newAccountId) => {
+          // Refresh accounts after lead conversion
+          await fetchAccounts();
+          toast({
+            title: "Lead Converted",
+            description: "Lead has been successfully converted to an account.",
+          });
         }}
       />
     </div>

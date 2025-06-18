@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef } from 'react';
@@ -16,7 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { Lead, ExtractedLeadInfo } from '@/types';
-import { addLead } from '@/lib/data';
 import { countries } from '@/lib/countryData';
 import { extractLeadInfoFromCard } from '@/ai/flows/extract-lead-from-card';
 import { Loader2, UserPlus, UploadCloud, ScanLine, FileText } from 'lucide-react';
@@ -107,32 +105,58 @@ export default function AddLeadDialog({ open, onOpenChange, onLeadAdded }: AddLe
         return;
     }
 
-
     setIsLoading(true);
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 700)); 
-      
-      const newLeadData = {
-        companyName,
-        personName,
-        email,
-        phone,
-        linkedinProfileUrl,
-        country,
-      };
-      const newLead = addLead(newLeadData); 
-      
-      toast({
-        title: "Lead Created",
-        description: `${personName} from ${companyName} has been successfully added as a lead.`,
+      const response = await fetch('/api/leads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          company_name: companyName,
+          person_name: personName,
+          email: email,
+          phone: phone || null,
+          linkedin_profile_url: linkedinProfileUrl || null,
+          country: country || null,
+          status: 'New'
+        })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create lead');
+      }
+
+      const result = await response.json();
+      
+      // Transform the API response to match the Lead interface
+      const newLead: Lead = {
+        id: result.data.id,
+        companyName: result.data.company_name,
+        personName: result.data.person_name,
+        email: result.data.email,
+        phone: result.data.phone,
+        linkedinProfileUrl: result.data.linkedin_profile_url,
+        country: result.data.country,
+        status: result.data.status,
+        opportunityIds: [],
+        updateIds: [],
+        createdAt: result.data.created_at,
+        updatedAt: result.data.updated_at,
+      };
       
       onLeadAdded?.(newLead);
       resetForm();
       onOpenChange(false);
     } catch (error) {
-      console.error("Failed to create lead:", error);
-      toast({ title: "Error", description: "Failed to create lead. Please try again.", variant: "destructive" });
+      console.error('Error creating lead:', error);
+      toast({ 
+        title: "Error", 
+        description: error instanceof Error ? error.message : "Failed to create lead. Please try again.", 
+        variant: "destructive" 
+      });
     } finally {
       setIsLoading(false);
     }

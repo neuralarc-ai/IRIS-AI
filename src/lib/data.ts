@@ -246,7 +246,7 @@ export const addAccount = (accountData: Omit<Account, 'id' | 'opportunityIds' | 
 
 export const addLead = (leadData: Omit<Lead, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'opportunityIds' | 'updateIds' >): Lead => {
   const newLead: Lead = {
-    id: `lead_${new Date().getTime()}`,
+    id: `lead_${new Date().getTime()}_${Math.random().toString(36).substr(2, 9)}`,
     companyName: leadData.companyName,
     personName: leadData.personName,
     email: leadData.email,

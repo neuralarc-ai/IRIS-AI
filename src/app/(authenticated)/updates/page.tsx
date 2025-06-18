@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import UpdateItem from '@/components/updates/UpdateItem';
-import { mockUpdates as initialMockUpdates, mockOpportunities } from '@/lib/data';
 import type { Update, UpdateType, Opportunity } from '@/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Search, ListFilter, MessageSquare } from 'lucide-react';
@@ -16,6 +15,7 @@ import AddUpdateDialog from '@/components/updates/AddUpdateDialog';
 
 export default function UpdatesPage() {
   const [updates, setUpdates] = useState<Update[]>([]);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [searchTerm, setSearchTerm] = useState(''); 
   const [typeFilter, setTypeFilter] = useState<UpdateType | 'all'>('all');
   const [opportunityFilter, setOpportunityFilter] = useState<string | 'all'>('all');
@@ -23,11 +23,27 @@ export default function UpdatesPage() {
   const [isAddUpdateDialogOpen, setIsAddUpdateDialogOpen] = useState(false);
 
   useEffect(() => {
-    setUpdates([...initialMockUpdates].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    const fetchUpdates = async () => {
+      const response = await fetch('/api/updates');
+      const result = await response.json();
+      setUpdates(result.data || []);
+    };
+    fetchUpdates();
   }, []);
 
-  const handleUpdateAdded = (newUpdate: Update) => {
-    setUpdates(prevUpdates => [newUpdate, ...prevUpdates].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  useEffect(() => {
+    const fetchOpportunities = async () => {
+      const response = await fetch('/api/opportunities');
+      const result = await response.json();
+      setOpportunities(result.data || []);
+    };
+    fetchOpportunities();
+  }, []);
+
+  const handleUpdateAdded = async () => {
+    const response = await fetch('/api/updates');
+    const result = await response.json();
+    setUpdates(result.data || []);
   };
 
   const updateTypeOptions: UpdateType[] = ["General", "Call", "Meeting", "Email"];
@@ -35,7 +51,7 @@ export default function UpdatesPage() {
   const filteredUpdates = updates.filter(update => {
     const matchesSearch = update.content.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === 'all' || update.type === typeFilter;
-    const matchesOpportunity = opportunityFilter === 'all' || update.opportunityId === opportunityFilter;
+    const matchesOpportunity = opportunityFilter === 'all' || update.opportunity_id === opportunityFilter;
     let matchesDate = true;
     if (dateFilter) {
       try {
@@ -105,7 +121,7 @@ export default function UpdatesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Opportunities</SelectItem>
-                  {mockOpportunities.map(opportunity => ( 
+                  {opportunities.map(opportunity => ( 
                     <SelectItem key={opportunity.id} value={opportunity.id}>{opportunity.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -143,6 +159,7 @@ export default function UpdatesPage() {
         open={isAddUpdateDialogOpen}
         onOpenChange={setIsAddUpdateDialogOpen}
         onUpdateAdded={handleUpdateAdded}
+        opportunities={opportunities}
       />
     </div>
   );

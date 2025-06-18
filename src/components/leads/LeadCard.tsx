@@ -1,13 +1,12 @@
 "use client";
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Users, User, Mail, Phone, Eye, CheckSquare, FileWarning, CalendarPlus, History, Linkedin, MapPin } from 'lucide-react';
 import type { Lead } from '@/types';
-import { formatDistanceToNow } from 'date-fns';
-import { convertLeadToAccount } from '@/lib/data';
+import { formatDistanceToNow, parseISO } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 
 interface LeadCardProps {
@@ -41,26 +40,62 @@ const getStatusBadgeColorClasses = (status: Lead['status']): string => {
 
 export default function LeadCard({ lead, onLeadConverted }: LeadCardProps) {
   const { toast } = useToast();
+  const [isConverting, setIsConverting] = useState(false);
 
   const handleConvertLead = async () => {
     if (lead.status === "Converted to Account" || lead.status === "Lost") {
       toast({ title: "Action not allowed", description: "This lead has already been processed.", variant: "destructive" });
       return;
     }
-    const newAccount = convertLeadToAccount(lead.id);
-    if (newAccount) {
+
+    setIsConverting(true);
+    try {
+      const response = await fetch(`/api/leads/${lead.id}/convert`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notes: 'Converted via lead card'
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to convert lead');
+      }
+
+      const result = await response.json();
+      
       toast({
         title: "Lead Converted!",
-        description: `${lead.companyName} has been converted to an account: ${newAccount.name}.`,
+        description: `${lead.companyName} has been converted to account: ${result.data.account.name}.`,
         className: "bg-green-100 dark:bg-green-900 border-green-500"
       });
-      onLeadConverted(lead.id, newAccount.id);
-    } else {
-      toast({ title: "Conversion Failed", description: "Could not convert lead to account.", variant: "destructive" });
+      
+      onLeadConverted(lead.id, result.data.account.id);
+    } catch (error) {
+      console.error('Error converting lead:', error);
+      toast({ 
+        title: "Conversion Failed", 
+        description: error instanceof Error ? error.message : "Could not convert lead to account.", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsConverting(false);
     }
   };
 
   const canConvert = lead.status !== "Converted to Account" && lead.status !== "Lost";
+
+  const formatDate = (dateString: string) => {
+    try {
+      return formatDistanceToNow(parseISO(dateString), { addSuffix: true });
+    } catch (error) {
+      console.error('Error formatting date:', dateString, error);
+      return 'Unknown';
+    }
+  };
 
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full p-2" bgImage="/3.svg">
@@ -111,10 +146,12 @@ export default function LeadCard({ lead, onLeadConverted }: LeadCardProps) {
           )}
           <div className="pt-2 space-y-1">
               <div className="text-xs text-muted-foreground flex items-center">
-                  <CalendarPlus className="mr-1.5 h-3.5 w-3.5 shrink-0"/> Created: {formatDistanceToNow(new Date(lead.createdAt), { addSuffix: true })}
+                  <CalendarPlus className="mr-1.5 h-3.5 w-3.5 shrink-0"/>
+                  Created: {formatDate(lead.createdAt)}
               </div>
                <div className="text-xs text-muted-foreground flex items-center">
-                  <History className="mr-1.5 h-3.5 w-3.5 shrink-0"/> Last Updated: {formatDistanceToNow(new Date(lead.updatedAt), { addSuffix: true })}
+                  <History className="mr-1.5 h-3.5 w-3.5 shrink-0"/>
+                  Last Updated: {formatDate(lead.updatedAt)}
               </div>
           </div>
         </CardContent>
@@ -126,8 +163,17 @@ export default function LeadCard({ lead, onLeadConverted }: LeadCardProps) {
             </Link>
           </Button>
           {canConvert ? (
-               <Button size="sm" onClick={handleConvertLead}>
+               <Button size="sm" onClick={handleConvertLead} disabled={isConverting}>
+                  {isConverting ? (
+                    <>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Converting...
+                    </>
+                  ) : (
+                    <>
                   <CheckSquare className="mr-2 h-4 w-4" /> Convert
+                    </>
+                  )}
                </Button>
           ) : (
             <Button size="sm" variant="outline" disabled>

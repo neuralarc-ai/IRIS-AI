@@ -55,8 +55,8 @@ export default function UpdateItem({ update, gradient }: UpdateItemProps) {
     if (update.opportunityId) {
       const opp = getOpportunityById(update.opportunityId);
       setOpportunity(opp);
-      if (opp?.accountId) {
-        setAccount(getAccountById(opp.accountId));
+      if (opp?.associated_account_id) {
+        setAccount(getAccountById(opp.associated_account_id));
       } else {
         setAccount(undefined); // Should not happen if data is consistent
       }
@@ -113,7 +113,7 @@ export default function UpdateItem({ update, gradient }: UpdateItemProps) {
   const formattedDate = format(parseISO(update.date), 'MMM d, yyyy h:mm a');
 
   return (
-    <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full p-2" bgImage="/6.svg" gradient={gradient}>
+    <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full p-2" gradient={gradient}>
       <Card isInner={true} className="flex flex-col h-full bg-white text-black rounded-lg">
         <CardHeader className="pb-3 px-6 pt-6">
           <div className="flex justify-between items-start mb-1">
@@ -129,30 +129,30 @@ export default function UpdateItem({ update, gradient }: UpdateItemProps) {
           {lead && (
               <CardDescription className="text-sm text-muted-foreground flex items-center">
                   <UserIcon className="mr-2 h-4 w-4 shrink-0" />
-                  Lead: {lead.companyName} ({lead.personName})
+                  <span className="font-semibold mr-1">Lead:</span> {lead.companyName} ({lead.personName})
               </CardDescription>
           )}
           {opportunity && (
             <CardDescription className="text-sm text-muted-foreground flex items-center">
               <BarChartBig className="mr-2 h-4 w-4 shrink-0" />
-              Opportunity: {opportunity.name}
+              <span className="font-semibold mr-1">Opportunity:</span> {opportunity.name}
             </CardDescription>
           )}
           {account && ( // Display account only if an opportunity is linked
               <CardDescription className="text-xs text-muted-foreground flex items-center mt-0.5">
                   <Briefcase className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-                  Account: {account.name}
+                  <span className="font-semibold mr-1">Account:</span> {account.name}
               </CardDescription>
           )}
            {updatedByUser && (
               <CardDescription className="text-xs text-muted-foreground flex items-center mt-0.5">
                   <UserCircle className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-                  Updated by: {updatedByUser.name}
+                  <span className="font-semibold mr-1">Updated by:</span> {updatedByUser.name}
               </CardDescription>
           )}
         </CardHeader>
         <CardContent className="space-y-3.5 text-sm flex-grow px-6">
-          <p className="text-foreground leading-relaxed line-clamp-4">{update.content}</p>
+          <p className="text-foreground leading-relaxed">{update.content}</p>
           
           {showAiInsights && (
             <div className="pt-3.5 border-t mt-3.5 space-y-3">
@@ -215,7 +215,7 @@ export default function UpdateItem({ update, gradient }: UpdateItemProps) {
             {showAiInsights ? 'Hide AI Insights' : 'Show AI Insights'}
           </Button>
           <Button variant="outline" size="sm" asChild className="ml-auto">
-            <Link href={`/updates/${update.id}`}> 
+            <Link href={`/updates/${update.id}`} prefetch={false}>
               <Eye className="mr-2 h-4 w-4" />
               View Details
             </Link>

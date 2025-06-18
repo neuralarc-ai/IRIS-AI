@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, User, Users, Mail, Phone, Building2, CalendarDays, Clock, Linkedin, MapPin, CheckSquare, FileWarning } from 'lucide-react';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { getLeadById, convertLeadToAccount } from '@/lib/data';
 import type { Lead } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 
@@ -17,8 +16,9 @@ const getStatusBadgeColorClasses = (status: Lead['status']): string => {
     case 'New': return 'bg-blue-500/20 text-blue-700 border-blue-500/30';
     case 'Contacted': return 'bg-amber-500/20 text-amber-700 border-amber-500/30';
     case 'Qualified': return 'bg-green-500/20 text-green-700 border-green-500/30';
+    case 'Proposal Sent': return 'bg-purple-500/20 text-purple-700 border-purple-500/30';
+    case 'Converted to Account': return 'bg-emerald-500/20 text-emerald-700 border-emerald-500/30';
     case 'Lost': return 'bg-red-500/20 text-red-700 border-red-500/30';
-    case 'Converted': return 'bg-purple-500/20 text-purple-700 border-purple-500/30';
     default: return 'bg-gray-500/20 text-gray-700 border-gray-500/30';
   }
 };
@@ -36,16 +36,38 @@ export default function LeadDetailsPage() {
       setIsLoading(true);
       try {
         const leadId = params.id as string;
-        const leadData = getLeadById(leadId);
+        const response = await fetch(`/api/leads/${leadId}`);
         
-        if (!leadData) {
+        if (!response.ok) {
+          if (response.status === 404) {
           router.push('/leads');
           return;
         }
+          throw new Error('Failed to fetch lead details');
+        }
+        
+        const result = await response.json();
+        
+        // Transform the API response to match the Lead interface
+        const leadData: Lead = {
+          id: result.data.id,
+          companyName: result.data.company_name,
+          personName: result.data.person_name,
+          email: result.data.email,
+          phone: result.data.phone,
+          linkedinProfileUrl: result.data.linkedin_profile_url,
+          country: result.data.country,
+          status: result.data.status,
+          opportunityIds: [],
+          updateIds: [],
+          createdAt: result.data.created_at,
+          updatedAt: result.data.updated_at,
+        };
 
         setLead(leadData);
       } catch (error) {
         console.error('Error fetching lead details:', error);
+        router.push('/leads');
       } finally {
         setIsLoading(false);
       }
@@ -59,17 +81,34 @@ export default function LeadDetailsPage() {
 
     setIsConverting(true);
     try {
-      const newAccountId = await convertLeadToAccount(lead.id);
+      const response = await fetch(`/api/leads/${lead.id}/convert`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notes: 'Converted via lead details page'
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to convert lead');
+      }
+
+      const result = await response.json();
+      
       toast({
         title: "Lead Converted",
         description: "The lead has been successfully converted to an account.",
       });
-      router.push(`/accounts/${newAccountId}`);
+      
+      router.push(`/accounts/${result.data.account.id}`);
     } catch (error) {
       console.error('Error converting lead:', error);
       toast({
         title: "Conversion Failed",
-        description: "There was an error converting the lead to an account.",
+        description: error instanceof Error ? error.message : "There was an error converting the lead to an account.",
         variant: "destructive",
       });
     } finally {
@@ -77,7 +116,7 @@ export default function LeadDetailsPage() {
     }
   };
 
-  const canConvert = lead && lead.status !== 'Lost' && lead.status !== 'Converted';
+  const canConvert = lead && lead.status !== 'Lost' && lead.status !== 'Converted to Account';
 
   if (isLoading) {
     return (
@@ -186,13 +225,6 @@ export default function LeadDetailsPage() {
                 </div>
               </div>
             </div>
-
-            {lead.notes && (
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Notes</h3>
-                <p className="text-sm text-muted-foreground">{lead.notes}</p>
-              </div>
-            )}
           </CardContent>
           <CardFooter className="pt-4 border-t">
             {canConvert ? (
@@ -248,16 +280,16 @@ export default function LeadDetailsPage() {
           <CardContent>
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">Lead Source</h3>
-                <p className="text-sm">{lead.source || 'Not specified'}</p>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">LinkedIn Profile</h3>
+                <p className="text-sm">{lead.linkedinProfileUrl ? 'Available' : 'Not provided'}</p>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">Industry</h3>
-                <p className="text-sm">{lead.industry || 'Not specified'}</p>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">Country</h3>
+                <p className="text-sm">{lead.country || 'Not specified'}</p>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">Company Size</h3>
-                <p className="text-sm">{lead.companySize || 'Not specified'}</p>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">Opportunities</h3>
+                <p className="text-sm">{lead.opportunityIds?.length || 0} associated</p>
               </div>
             </div>
           </CardContent>

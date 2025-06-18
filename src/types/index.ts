@@ -1,4 +1,3 @@
-
 export type AccountType = "Client" | "Channel Partner";
 export type AccountStatus = "Active" | "Inactive";
 export type OpportunityStatus = "Need Analysis" | "Negotiation" | "In Progress" | "On Hold" | "Completed" | "Cancelled";
@@ -36,18 +35,32 @@ export interface Lead {
   updatedAt: string;
 }
 
+// API response interface for Supabase leads (snake_case)
+export interface LeadApiResponse {
+  id: string;
+  company_name: string;
+  person_name: string;
+  phone?: string;
+  email: string;
+  linkedin_profile_url?: string;
+  country?: string;
+  status: LeadStatus;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Opportunity {
   id: string;
-  name:string;
-  accountId: string; // Opportunities are linked to Accounts
-  status: OpportunityStatus;
-  value: number;
+  name: string;
+  associated_account_id: string;
   description: string;
-  updateIds: string[];
-  createdAt: string;
-  updatedAt: string;
-  startDate: string;
-  endDate: string;
+  amount: number;
+  status: string;
+  probability?: number;
+  expected_close_date?: string;
+  created_at: string;
+  updated_at: string;
+  // Add any other fields from your Supabase table as needed
 }
 
 export interface Update {
@@ -89,6 +102,9 @@ export interface User {
   email: string;
   pin: string;
   createdAt: string;
+  role?: string;
+  isActive?: boolean;
+  lastLoginAt?: string;
 }
 
 export interface ApiSettings {
@@ -104,4 +120,17 @@ export interface ExtractedLeadInfo {
     companyName?: string;
     email?: string;
     phone?: string;
+}
+
+// API response interface for Supabase users (snake_case)
+export interface UserApiResponse {
+  id: string;
+  name: string;
+  email: string;
+  pin: string;
+  role?: string;
+  is_active?: boolean;
+  last_login_at?: string;
+  created_at: string;
+  updated_at: string;
 }

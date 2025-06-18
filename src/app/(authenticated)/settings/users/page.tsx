@@ -4,8 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Edit, Eye, EyeOff as EyeOffIcon, Users2, Loader2 } from 'lucide-react';
-import { mockUsers as initialMockUsers, addUser, updateUserPin } from '@/lib/data';
-import type { User } from '@/types';
+import type { UserApiResponse } from '@/types';
 import {
   Table,
   TableBody,
@@ -28,18 +27,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { DEMO_PIN } from '@/lib/constants';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-
-const CreateUserForm = ({ onUserCreated, closeDialog }: { onUserCreated: (newUser: User) => void, closeDialog: () => void }) => {
+const CreateUserForm = ({ onUserCreated, closeDialog }: { onUserCreated: () => void, closeDialog: () => void }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [animatedPinDisplay, setAnimatedPinDisplay] = useState<string[]>(Array(6).fill('')); // Initial empty
+  const [animatedPinDisplay, setAnimatedPinDisplay] = useState<string[]>(Array(4).fill('')); // Initial empty
   const [isGeneratingPin, setIsGeneratingPin] = useState(false);
+  const [role, setRole] = useState('user');
   const { toast } = useToast();
   const animationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const finalPinRef = useRef<string | null>(null);
-
 
   useEffect(() => {
     return () => { // Cleanup on unmount
@@ -51,10 +49,10 @@ const CreateUserForm = ({ onUserCreated, closeDialog }: { onUserCreated: (newUse
 
   const startPinAnimation = () => {
     setIsGeneratingPin(true);
-    finalPinRef.current = Math.floor(100000 + Math.random() * 900000).toString();
+    finalPinRef.current = Math.floor(1000 + Math.random() * 9000).toString();
     let animationCount = 0;
     const totalAnimationFramesPerDigit = 5; // How many times each digit "flips"
-    const totalCycles = 6 * totalAnimationFramesPerDigit; // Total "flips" across all digits
+    const totalCycles = 4 * totalAnimationFramesPerDigit; // Total "flips" across all digits
     let currentDigitAnimating = 0;
 
     animationIntervalRef.current = setInterval(() => {
@@ -75,42 +73,74 @@ const CreateUserForm = ({ onUserCreated, closeDialog }: { onUserCreated: (newUse
 
       setAnimatedPinDisplay(newPinDisplay);
 
-      if (currentDigitAnimating >= 6) { // All digits have revealed their final number
+      if (currentDigitAnimating >= 4) { // All digits have revealed their final number
         if (animationIntervalRef.current) clearInterval(animationIntervalRef.current);
         setAnimatedPinDisplay(finalPinRef.current!.split('')); // Ensure final PIN is displayed
 
         setTimeout(() => {
-          const newUser = addUser(name, email, finalPinRef.current!);
-          toast({
-            title: "User Created Successfully!",
-            description: (
-              <div>
-                <p>{newUser.name} has been added to the system.</p>
-                <p className="font-semibold">Generated PIN: <span className="font-mono text-base">{finalPinRef.current}</span></p>
-                <p className="text-xs text-muted-foreground mt-1">Please ensure the user notes down this PIN.</p>
-              </div>
-            ),
-            duration: 7000,
-          });
-          onUserCreated(newUser);
-          resetFormAndAnimation();
-          closeDialog();
+          createUserWithPin();
         }, 800); // Short delay to appreciate the final PIN
       }
     }, 75); // Speed of individual digit "flips"
+  };
+
+  const createUserWithPin = async () => {
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          pin: finalPinRef.current,
+          role
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create user');
+      }
+
+      const result = await response.json();
+      
+      toast({
+        title: "User Created Successfully!",
+        description: (
+          <div>
+            <p>{result.data.name} has been added to the system.</p>
+            <p className="font-semibold">Generated PIN: <span className="font-mono text-base">{finalPinRef.current}</span></p>
+            <p className="text-xs text-muted-foreground mt-1">Please ensure the user notes down this PIN.</p>
+          </div>
+        ),
+        duration: 7000,
+      });
+      
+      onUserCreated();
+      resetFormAndAnimation();
+      closeDialog();
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast({ 
+        title: "Error", 
+        description: error instanceof Error ? error.message : "Failed to create user.",
+        variant: "destructive" 
+      });
+      resetFormAndAnimation();
+    }
   };
   
   const resetFormAndAnimation = () => {
     setName('');
     setEmail('');
-    setAnimatedPinDisplay(Array(6).fill(''));
+    setAnimatedPinDisplay(Array(4).fill(''));
     setIsGeneratingPin(false);
+    setRole('user');
     if (animationIntervalRef.current) {
       clearInterval(animationIntervalRef.current);
     }
     finalPinRef.current = null;
   };
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,7 +160,7 @@ const CreateUserForm = ({ onUserCreated, closeDialog }: { onUserCreated: (newUse
     <DialogContent>
       <DialogHeader>
         <DialogTitle>Create New User</DialogTitle>
-        <DialogDescription>Enter the user's details. A 6-digit PIN will be automatically generated.</DialogDescription>
+        <DialogDescription>Enter the user's details. A 4-digit PIN will be automatically generated.</DialogDescription>
       </DialogHeader>
       <form onSubmit={handleSubmit} className="space-y-4 pt-4">
         <div>
@@ -140,6 +170,19 @@ const CreateUserForm = ({ onUserCreated, closeDialog }: { onUserCreated: (newUse
         <div>
           <Label htmlFor="create-email">Email</Label>
           <Input id="create-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter user's email" disabled={isGeneratingPin} />
+        </div>
+
+        <div>
+          <Label htmlFor="create-role">Role</Label>
+          <Select value={role} onValueChange={setRole} disabled={isGeneratingPin}>
+            <SelectTrigger id="create-role">
+              <SelectValue placeholder="Select role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="user">User</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2 pt-2">
@@ -178,9 +221,10 @@ const CreateUserForm = ({ onUserCreated, closeDialog }: { onUserCreated: (newUse
   );
 };
 
-const EditPinDialog = ({ user, onPinUpdated, open, onOpenChange }: { user: User | null, onPinUpdated: () => void, open: boolean, onOpenChange: (open: boolean) => void }) => {
+const EditPinDialog = ({ user, onPinUpdated, open, onOpenChange }: { user: UserApiResponse | null, onPinUpdated: () => void, open: boolean, onOpenChange: (open: boolean) => void }) => {
   const [newPin, setNewPin] = useState('');
   const [currentPinVisible, setCurrentPinVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -189,15 +233,39 @@ const EditPinDialog = ({ user, onPinUpdated, open, onOpenChange }: { user: User 
     }
   }, [user, open]);
 
-  const handleUpdatePin = () => {
-    if (!user || !newPin || newPin.length !== 6 || !/^\d{6}$/.test(newPin)) {
-      toast({ title: "Error", description: "PIN must be 6 digits and contain only numbers.", variant: "destructive" });
+  const handleUpdatePin = async () => {
+    if (!user || !newPin || newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+      toast({ title: "Error", description: "PIN must be 4 digits and contain only numbers.", variant: "destructive" });
       return;
     }
-    updateUserPin(user.id, newPin);
-    toast({ title: "PIN Updated", description: `PIN for ${user.name} has been changed to ${newPin}.` });
-    onPinUpdated();
-    onOpenChange(false);
+
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch(`/api/users/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: newPin }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update PIN');
+      }
+
+      toast({ title: "PIN Updated", description: `PIN for ${user.name} has been changed to ${newPin}.` });
+      onPinUpdated();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error updating PIN:', error);
+      toast({ 
+        title: "Error", 
+        description: error instanceof Error ? error.message : "Failed to update PIN.",
+        variant: "destructive" 
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!user) return null;
@@ -207,14 +275,14 @@ const EditPinDialog = ({ user, onPinUpdated, open, onOpenChange }: { user: User 
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Manage PIN for {user.name}</DialogTitle>
-          <DialogDescription>View or update the 6-digit PIN for this user.</DialogDescription>
+          <DialogDescription>View or update the 4-digit PIN for this user.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="flex items-center justify-between">
             <Label>Current PIN:</Label>
             <div className="flex items-center gap-2">
               <span className="font-mono text-lg tracking-widest">
-                {currentPinVisible ? user.pin : "••••••"}
+                {currentPinVisible ? user.pin : "••••"}
               </span>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentPinVisible(!currentPinVisible)}>
                 {currentPinVisible ? <EyeOffIcon className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -223,65 +291,78 @@ const EditPinDialog = ({ user, onPinUpdated, open, onOpenChange }: { user: User 
             </div>
           </div>
           <div>
-            <Label htmlFor="edit-newPin">New 6-Digit PIN</Label>
+            <Label htmlFor="edit-newPin">New 4-Digit PIN</Label>
             <Input
               id="edit-newPin"
               value={newPin}
-              onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0,6))}
-              placeholder="Enter new 6-digit PIN"
-              maxLength={6}
+              onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              placeholder="Enter new 4-digit PIN"
+              maxLength={4}
               className="font-mono tracking-widest"
+              disabled={isLoading}
             />
           </div>
         </div>
         <DialogFooter>
-           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-           <Button onClick={handleUpdatePin}>Update PIN</Button>
+           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>Cancel</Button>
+           <Button onClick={handleUpdatePin} disabled={isLoading}>
+             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Update PIN"}
+           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
 
-
 export default function UserManagementPage() {
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserApiResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<UserApiResponse | null>(null);
   const [isEditPinDialogOpen, setIsEditPinDialogOpen] = useState(false);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    const adminUserIndex = initialMockUsers.findIndex(u => u.email === 'admin@iris.ai');
-    if (adminUserIndex !== -1 && initialMockUsers[adminUserIndex].pin !== DEMO_PIN) {
-      initialMockUsers[adminUserIndex].pin = DEMO_PIN;
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/users');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      const data = await response.json();
+      setUsers(data.data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to load users.",
+        variant: "destructive" 
+      });
+    } finally {
+      setIsLoading(false);
     }
-    setUsers([...initialMockUsers]);
-  }, []);
-
-  const refreshUsersState = () => {
-    setUsers([...initialMockUsers]);
   };
 
-  const handleUserCreated = (newUser: User) => {
-    refreshUsersState();
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleUserCreated = () => {
+    fetchUsers();
   };
 
   const handlePinUpdated = () => {
-    refreshUsersState();
+    fetchUsers();
     setEditingUser(null);
   };
 
-  const handleOpenEditDialog = (user: User) => {
+  const handleOpenEditDialog = (user: UserApiResponse) => {
     setEditingUser(user);
     setIsEditPinDialogOpen(true);
   };
 
   const handleCreateUserDialogChange = (open: boolean) => {
     setIsCreateUserDialogOpen(open);
-    // If dialog is closed, ensure any running animation in CreateUserForm is reset
-    // CreateUserForm has its own reset for animation state via its resetFormAndAnimation
   };
-
 
   return (
     <div className="container mx-auto mt-6">
@@ -301,18 +382,25 @@ export default function UserManagementPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center"><Users2 className="mr-2 h-6 w-6 text-primary" /> User Accounts</CardTitle>
+          <CardTitle className="flex items-center">
+            <Users2 className="mr-2 h-6 w-6 text-primary" /> User Accounts
+          </CardTitle>
           <CardDescription>Overview of all registered users in the system.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          {users.length > 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="ml-2">Loading users...</span>
+            </div>
+          ) : users.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead className="text-center">PIN (Visible to Admin)</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-left">Name</TableHead>
+                  <TableHead className="text-left">Email</TableHead>
+                  <TableHead className="text-left">PIN (Visible to Admin)</TableHead>
+                  <TableHead className="text-left">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -320,10 +408,10 @@ export default function UserManagementPage() {
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell className="text-center font-mono tracking-widest">{user.pin}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm" onClick={() => handleOpenEditDialog(user)}>
-                        <Edit className="mr-1.5 h-3.5 w-3.5" /> Manage PIN
+                    <TableCell className="font-mono tracking-widest">{user.pin}</TableCell>
+                    <TableCell className="text-left">
+                      <Button variant="outline" size="sm" onClick={() => handleOpenEditDialog(user)} className="flex items-center gap-2">
+                        <Edit className="h-4 w-4 mr-1" /> Manage PIN
                       </Button>
                     </TableCell>
                   </TableRow>

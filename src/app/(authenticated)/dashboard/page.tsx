@@ -5,7 +5,6 @@ import PageTitle from '@/components/common/PageTitle';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, TrendingUp, Users, AlertTriangle, Lightbulb, BarChartHorizontalBig, CalendarClock, DollarSign, AlertCircle, CheckCircle, History } from 'lucide-react';
 import { aiPoweredOpportunityForecasting } from '@/ai/flows/ai-powered-opportunity-forecasting';
-import { mockOpportunities, mockLeads, getRecentUpdates } from '@/lib/data';
 import type { Opportunity, OpportunityForecast, Lead, OpportunityStatus, Update } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,58 +30,69 @@ const getStatusBadgeVariant = (status: OpportunityStatus | undefined): "default"
   }
 };
 
-
 export default function DashboardPage() {
   const [forecastedOpportunities, setForecastedOpportunities] = useState<OpportunityWithForecast[]>([]);
   const [overallSalesForecast, setOverallSalesForecast] = useState<string | null>(null);
   const [recentUpdates, setRecentUpdates] = useState<Update[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
-  const fetchDashboardData = async () => {
-    setIsLoading(true);
-    try {
-      const activeOpportunities = mockOpportunities.filter(
-        opp => opp.status !== 'Completed' && opp.status !== 'Cancelled'
-      ).slice(0, 2); 
-
-      const forecastPromises = activeOpportunities.map(async (opp) => {
-        try {
-          const forecast = await aiPoweredOpportunityForecasting({
-            opportunityName: opp.name,
-            opportunityDescription: opp.description,
-            opportunityTimeline: `Start: ${format(parseISO(opp.startDate), 'MMM dd, yyyy')}, End: ${format(parseISO(opp.endDate), 'MMM dd, yyyy')}`,
-            opportunityValue: opp.value,
-            opportunityStatus: opp.status,
-            recentUpdates: "Recent updates indicate steady progress and positive client feedback.",
-          });
-          return { ...opp, forecast };
-        } catch (e) {
-          console.error(`Failed to get forecast for ${opp.name}`, e);
-          return { ...opp, forecast: undefined };
-        }
-      });
-
-      const results = await Promise.all(forecastPromises);
-      setForecastedOpportunities(results);
-
-      if (results.length > 0) {
-        setOverallSalesForecast(`Optimistic outlook for next quarter with strong potential from key deals like ${results[0]?.name}. Predicted revenue growth is positive, with several opportunities nearing completion.`);
-      } else {
-        setOverallSalesForecast("No active opportunities to forecast. Add new opportunities to see AI-powered sales predictions.");
-      }
-      
-      setRecentUpdates(getRecentUpdates(2)); 
-      setLastRefreshed(new Date());
-    } catch (error) {
-      console.error("Failed to fetch dashboard data:", error);
-      setOverallSalesForecast("Error fetching sales forecast data.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        const oppRes = await fetch('/api/opportunities');
+        const oppJson = await oppRes.json();
+        const opportunities: Opportunity[] = oppJson.data || [];
+
+        const updRes = await fetch('/api/updates');
+        const updJson = await updRes.json();
+        const updates: Update[] = updJson.data || [];
+
+        const leadsRes = await fetch('/api/leads');
+        const leadsJson = await leadsRes.json();
+        const leadsData: Lead[] = leadsJson.data || [];
+        setLeads(leadsData);
+
+        const activeOpportunities = opportunities.filter(
+          opp => opp.status !== 'Completed' && opp.status !== 'Cancelled'
+        ).slice(0, 2);
+
+        const forecastPromises = activeOpportunities.map(async (opp) => {
+          try {
+            const forecast = await aiPoweredOpportunityForecasting({
+              opportunityName: opp.name,
+              opportunityDescription: opp.description,
+              opportunityTimeline: `Start: ${opp.created_at ? format(parseISO(opp.created_at), 'MMM dd, yyyy') : 'N/A'}, End: ${opp.expected_close_date ? format(parseISO(opp.expected_close_date), 'MMM dd, yyyy') : 'N/A'}`,
+              opportunityValue: opp.amount,
+              opportunityStatus: opp.status,
+              recentUpdates: "Recent updates indicate steady progress and positive client feedback.",
+            });
+            return { ...opp, forecast };
+          } catch (e) {
+            console.error(`Failed to get forecast for ${opp.name}`, e);
+            return { ...opp, forecast: undefined };
+          }
+        });
+        const results = await Promise.all(forecastPromises);
+        setForecastedOpportunities(results);
+
+        if (results.length > 0) {
+          setOverallSalesForecast(`Optimistic outlook for next quarter with strong potential from key deals like ${results[0]?.name}. Predicted revenue growth is positive, with several opportunities nearing completion.`);
+        } else {
+          setOverallSalesForecast("No active opportunities to forecast. Add new opportunities to see AI-powered sales predictions.");
+        }
+        
+        setRecentUpdates(updates.slice(0, 2));
+        setLastRefreshed(new Date());
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+        setOverallSalesForecast("Error fetching sales forecast data.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
     fetchDashboardData();
   }, []);
 
@@ -91,9 +101,9 @@ export default function DashboardPage() {
       "Need Analysis": 0, "Negotiation": 0, "In Progress": 0,
       "On Hold": 0, "Completed": 0, "Cancelled": 0,
     };
-    mockOpportunities.forEach(opp => { counts[opp.status]++; });
+    forecastedOpportunities.forEach(opp => { counts[opp.status as OpportunityStatus]++; });
     return Object.entries(counts).map(([name, value]) => ({ name, count: value })).filter(item => item.count > 0);
-  }, []);
+  }, [forecastedOpportunities]);
 
   return (
     <div className="container mx-auto p-6 mt-6">
@@ -106,7 +116,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Forecast Card */}
-        <Card className="lg:col-span-3" gradient="green" bgImage="/D9613D0C-A55A-4CBD-8C94-00112661A0CB.svg">
+        <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="text-xl flex items-center">
               <TrendingUp className="mr-3 h-6 w-6 text-primary" />
@@ -123,7 +133,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Recent Activity Stream */}
-        <Card className="lg:col-span-2" gradient="gray" bgImage="/D9363D0C-A55A-4CBD-8C94-00112661A0CB.svg">
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold flex items-center text-foreground">
               <History className="mr-3 h-6 w-6 text-blue-500" />
@@ -156,7 +166,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Key Opportunity Insights */}
-        <Card className="lg:col-span-1" gradient="neutral" bgImage="/2.svg">
+        <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold flex items-center text-foreground">
               <Lightbulb className="mr-3 h-6 w-6 text-yellow-500" />
@@ -184,13 +194,13 @@ export default function DashboardPage() {
                     <CardHeader className="pb-3">
                       <div className="flex justify-between items-start">
                         <CardTitle className="text-lg">{opp.name}</CardTitle>
-                        <Badge variant={getStatusBadgeVariant(opp.status)}>
-                          {opp.status}
+                        <Badge variant={getStatusBadgeVariant(opp.status as OpportunityStatus)}>
+                          {opp.status as OpportunityStatus}
                         </Badge>
                       </div>
                       <CardDescription className="flex items-center text-sm pt-1">
                         <DollarSign className="mr-1 h-4 w-4 text-muted-foreground" />
-                        Value: ${opp.value.toLocaleString()}
+                        Value: ${opp.amount.toLocaleString()}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
@@ -226,7 +236,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Opportunities Pipeline */}
-        <Card className="lg:col-span-2" gradient="green" bgImage="/4.svg">
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-lg flex items-center">
               <BarChartHorizontalBig className="mr-3 h-5 w-5 text-primary" />
@@ -261,7 +271,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Lead Engagement */}
-        <Card className="lg:col-span-1" gradient="neutral" bgImage="/3.svg">
+        <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="text-lg flex items-center">
               <Users className="mr-3 h-5 w-5 text-primary" />
@@ -284,8 +294,8 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
                 ))
-              ) : mockLeads.length > 0 ? (
-                mockLeads.slice(0, 3).map(lead => (
+              ) : leads.length > 0 ? (
+                leads.filter(lead => lead.status !== 'Converted to Account').slice(0, 3).map(lead => (
                   <Card key={lead.id} className="w-full" isInner={true}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">

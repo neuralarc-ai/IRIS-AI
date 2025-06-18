@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import OpportunityCard from '@/components/opportunities/OpportunityCard';
-import { mockOpportunities as initialMockOpportunities, mockAccounts, mockLeads } from '@/lib/data';
 import type { Opportunity, OpportunityStatus } from '@/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, ListFilter, Search, BarChartBig } from 'lucide-react';
@@ -14,42 +13,59 @@ import { Label } from '@/components/ui/label';
 import AddOpportunityDialog from '@/components/opportunities/AddOpportunityDialog';
 
 export default function OpportunitiesPage() {
-  const [opportunities, setOpportunities] = useState<Opportunity[]>(initialMockOpportunities);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<OpportunityStatus | 'all'>('all');
   const [accountFilter, setAccountFilter] = useState<string | 'all'>('all'); 
   const [isAddOpportunityDialogOpen, setIsAddOpportunityDialogOpen] = useState(false);
+  const [accounts, setAccounts] = useState<{id: string, name: string, type: string}[]>([]);
 
   const opportunityStatusOptions: OpportunityStatus[] = ["Need Analysis", "Negotiation", "In Progress", "On Hold", "Completed", "Cancelled"];
 
-  const accountOptions = mockAccounts.map(account => ({ id: account.id, name: account.name }));
+  // Fetch opportunities from API
+  const fetchOpportunities = async () => {
+    const response = await fetch('/api/opportunities');
+    const result = await response.json();
+    setOpportunities(result.data || []);
+  };
+
+  // Fetch accounts for the filter dropdown
+  const fetchAccounts = async () => {
+    const response = await fetch('/api/accounts');
+    const result = await response.json();
+    setAccounts((result.data || []).map((acc: any) => ({ id: acc.id, name: acc.name, type: acc.type })));
+  };
 
   useEffect(() => {
-    // This effect ensures that if mockOpportunities is updated (e.g. by adding through dialog), the local state reflects it.
-    // However, addOpportunity in lib/data.ts modifies the array directly, so this might just re-sync.
-    // For a more robust solution with external data, you'd fetch/re-fetch here.
-    setOpportunities([...initialMockOpportunities]);
+    fetchOpportunities();
+    fetchAccounts();
   }, []);
 
+  useEffect(() => {
+    console.log("Accounts fetched for dropdown:", accounts);
+  }, [accounts]);
 
   const filteredOpportunities = opportunities.filter(opportunity => {
     const matchesSearch = opportunity.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || opportunity.status === statusFilter;
-    const matchesAccount = accountFilter === 'all' || opportunity.accountId === accountFilter;
+    const matchesAccount = accountFilter === 'all' || opportunity.associated_account_id === accountFilter;
     return matchesSearch && matchesStatus && matchesAccount;
-  }).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
-  const handleOpportunityAdded = (newOpportunity: Opportunity) => {
-    // Add to the beginning for visibility and to ensure the list state is updated
-    setOpportunities(prevOpportunities => [newOpportunity, ...prevOpportunities.filter(op => op.id !== newOpportunity.id)]);
+  const handleOpportunityAdded = async () => {
+    await fetchOpportunities();
   };
 
   return (
     <div className="container mx-auto space-y-6 mt-6">
       <PageTitle title="Opportunity Management" subtitle="Track and manage all ongoing and potential sales opportunities.">
-        <Button onClick={() => setIsAddOpportunityDialogOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Add New Opportunity
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => {
+            setIsAddOpportunityDialogOpen(true);
+          }}>
+            <PlusCircle className="mr-2 h-4 w-4" /> Add New Opportunity
+          </Button>
+        </div>
       </PageTitle>
 
       <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
@@ -96,7 +112,7 @@ export default function OpportunitiesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Accounts</SelectItem>
-                  {accountOptions.map(account => (
+                  {accounts.map(account => (
                     <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -122,7 +138,8 @@ export default function OpportunitiesPage() {
       <AddOpportunityDialog 
         open={isAddOpportunityDialogOpen} 
         onOpenChange={setIsAddOpportunityDialogOpen}
-        onOpportunityAdded={handleOpportunityAdded} 
+        onOpportunityAdded={handleOpportunityAdded}
+        accounts={accounts}
       />
     </div>
   );

@@ -1,215 +1,158 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import PageTitle from '@/components/common/PageTitle';
-import LeadCard from '@/components/leads/LeadCard';
-import { mockLeads as initialMockLeads, addLead } from '@/lib/data';
-import type { Lead, LeadStatus } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Search, ListFilter, FileUp, Plus, Upload, CheckCircle } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PlusCircle, Upload } from 'lucide-react';
+import PageTitle from '@/components/common/PageTitle';
 import AddLeadDialog from '@/components/leads/AddLeadDialog';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import LeadCard from '@/components/leads/LeadCard';
 import CSVImport from '@/components/common/CSVImport';
-
-const leadStatusOptions: LeadStatus[] = ["New", "Contacted", "Qualified", "Proposal Sent", "Converted to Account", "Lost"];
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { useToast } from "@/hooks/use-toast";
+import type { Lead } from '@/types';
 
 export default function LeadsPage() {
-  console.log('🔄 LeadsPage component rendered');
-  
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all');
+  const [isLoading, setIsLoading] = useState(true);
   const [isAddLeadDialogOpen, setIsAddLeadDialogOpen] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const { toast } = useToast();
 
-  console.log('🔄 LeadsPage state:', { 
-    leadsCount: leads.length, 
-    searchTerm, 
-    statusFilter, 
-    isAddLeadDialogOpen, 
-    showImport
-  });
+  // Fetch leads from Supabase
+  const fetchLeads = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/leads');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch leads');
+      }
+      
+      const result = await response.json();
+      
+      // Transform API response from snake_case to camelCase
+      const transformedLeads: Lead[] = (result.data || []).map((apiLead: any) => ({
+        id: apiLead.id,
+        companyName: apiLead.company_name,
+        personName: apiLead.person_name,
+        email: apiLead.email,
+        phone: apiLead.phone,
+        linkedinProfileUrl: apiLead.linkedin_profile_url,
+        country: apiLead.country,
+        status: apiLead.status,
+        opportunityIds: [],
+        updateIds: [],
+        createdAt: apiLead.created_at,
+        updatedAt: apiLead.updated_at,
+      }));
+      
+      setLeads(transformedLeads);
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load leads. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    console.log('🔄 LeadsPage useEffect - setting initial leads');
-    setLeads([...initialMockLeads].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+    fetchLeads();
   }, []);
 
-
-  const filteredLeads = leads.filter(lead => {
-    const searchTermLower = searchTerm.toLowerCase();
-    const matchesSearch =
-      lead.companyName.toLowerCase().includes(searchTermLower) ||
-      lead.personName.toLowerCase().includes(searchTermLower) ||
-      (lead.email && lead.email.toLowerCase().includes(searchTermLower)) ||
-      (lead.country && lead.country.toLowerCase().includes(searchTermLower));
-    const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  }); // Sorting is now done in useEffect and after add/convert
-
-  const handleLeadAdded = (newLead: Lead) => {
-    setLeads(prevLeads => [newLead, ...prevLeads].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+  const handleLeadAdded = async (newLead: Lead) => {
+    setLeads(prevLeads => [newLead, ...prevLeads]);
+    toast({
+      title: "Lead Added",
+      description: `${newLead.companyName} has been successfully added.`,
+    });
   };
 
-  const handleLeadConverted = (convertedLeadId: string) => {
+  const handleLeadConverted = async (leadId: string, newAccountId: string) => {
+    // Update the lead status in the local state
     setLeads(prevLeads =>
       prevLeads.map(lead =>
-        lead.id === convertedLeadId ? { ...lead, status: 'Converted to Account' as LeadStatus, updatedAt: new Date().toISOString() } : lead
-      ).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        lead.id === leadId 
+          ? { ...lead, status: 'Converted to Account' as const }
+          : lead
+      )
     );
+    toast({
+      title: "Lead Converted",
+      description: "Lead has been successfully converted to an account.",
+    });
   };
 
-  const handleImport = async (data: any[]) => {
-    console.log('🔄 LeadsPage: handleImport triggered');
-    console.log('📊 Received data from CSVImport:', data);
-    console.log('📊 Data length:', data.length);
-    console.log('📊 Sample data item:', data[0]);
-    
-    if (data.length > 0) {
-        console.log('✅ Valid data received, processing leads...');
-        
-        const newLeadsToAdd: Lead[] = data.map((row, index) => {
-            console.log(`🔍 Processing row ${index}:`, row);
-            console.log(`🔍 Row ${index} all available fields:`, Object.keys(row));
-            
-            // Find email field with various possible names (case-insensitive)
-            const possibleEmailFields = ['email', 'Email', 'EMAIL', 'e-mail', 'e_mail', 'email_address', 'emailAddress', 'contact_email', 'contactEmail'];
-            let emailValue = null;
-            
-            // Find the email field (case-insensitive)
-            for (const fieldName of possibleEmailFields) {
-              if (row.hasOwnProperty(fieldName)) {
-                emailValue = row[fieldName];
-                console.log(`🔍 Row ${index} email found with field name: ${fieldName}`);
-                break;
-              }
-            }
-            
-            // Also check all fields for any that contain 'email' (case-insensitive)
-            if (!emailValue) {
-              for (const [key, value] of Object.entries(row)) {
-                if (key.toLowerCase().includes('email')) {
-                  emailValue = value;
-                  console.log(`🔍 Row ${index} email found with partial match: ${key}`);
-                  break;
-                }
-              }
-            }
-            
-            // Extract company name with flexible case matching
-            let companyName = 'N/A';
-            const companyFields = ['companyName', 'company_name', 'Company', 'company', 'CompanyName', 'COMPANY', 'COMPANY_NAME'];
-            
-            for (const field of companyFields) {
-              if (row.hasOwnProperty(field) && row[field] && row[field].toString().trim() !== '') {
-                companyName = row[field].toString().trim();
-                console.log(`🔍 Row ${index} company name found with field: ${field}`);
-                break;
-              }
-            }
-            
-            // Also check for partial matches
-            if (companyName === 'N/A') {
-              for (const [key, value] of Object.entries(row)) {
-                if (key.toLowerCase().includes('company') && value && value.toString().trim() !== '') {
-                  companyName = value.toString().trim();
-                  console.log(`🔍 Row ${index} company name found with partial match: ${key}`);
-                  break;
-                }
-              }
-            }
-            
-            console.log(`🔍 Row ${index} company name mapping:`, {
-              'available fields': Object.keys(row),
-              'final result': companyName
-            });
-            
-            // Extract person name with flexible case matching
-            let personName = 'N/A';
-            const personFields = ['personName', 'person_name', 'name', 'Name', 'fullName', 'full_name', 'PersonName', 'PERSON_NAME', 'NAME', 'FULL_NAME'];
-            
-            for (const field of personFields) {
-              if (row.hasOwnProperty(field) && row[field] && row[field].toString().trim() !== '') {
-                personName = row[field].toString().trim();
-                console.log(`🔍 Row ${index} person name found with field: ${field}`);
-                break;
-              }
-            }
-            
-            // Also check for partial matches
-            if (personName === 'N/A') {
-              for (const [key, value] of Object.entries(row)) {
-                if ((key.toLowerCase().includes('name') || key.toLowerCase().includes('person')) && value && value.toString().trim() !== '') {
-                  personName = value.toString().trim();
-                  console.log(`🔍 Row ${index} person name found with partial match: ${key}`);
-                  break;
-                }
-              }
-            }
-            
-            console.log(`🔍 Row ${index} person name mapping:`, {
-              'available fields': Object.keys(row),
-              'final result': personName
-            });
-            
-            const newLead = {
-                id: `lead-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                companyName: companyName,
-                personName: personName,
-                email: emailValue,
-                phone: row.phone || row.Phone || row.telephone || row.contact || null,
-                linkedinProfileUrl: row.linkedinProfileUrl || row.linkedin || row.linkedin_url || row.linkedinUrl || null,
-                country: row.country || row.Country || row.location || row.Location || null,
-                status: 'New', // Default status for imported leads
+  const handleImport = async (importedData: any[]) => {
+    try {
+      // Process imported data and add to leads
+      const processedLeads = importedData.map((item, index) => ({
+        id: `imported_${Date.now()}_${index}`,
+        companyName: item.company_name || item.companyName || '',
+        personName: item.person_name || item.personName || '',
+        email: item.email || '',
+        phone: item.phone || '',
+        linkedinProfileUrl: item.linkedin_profile_url || item.linkedinProfileUrl || '',
+        country: item.country || '',
+        status: 'New' as const,
                 opportunityIds: [],
                 updateIds: [],
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
-            } as Lead;
-            
-            console.log(`✅ Created new lead ${index}:`, newLead);
-            return newLead;
+      }));
+
+      // Add each imported lead via API
+      for (const lead of processedLeads) {
+        const response = await fetch('/api/leads', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            company_name: lead.companyName,
+            person_name: lead.personName,
+            email: lead.email,
+            phone: lead.phone,
+            linkedin_profile_url: lead.linkedinProfileUrl,
+            country: lead.country,
+            status: lead.status
+          })
         });
 
-        console.log('📊 New leads to add:', newLeadsToAdd);
+        if (response.ok) {
+          const result = await response.json();
+          setLeads(prevLeads => [result.data, ...prevLeads]);
+        }
+      }
 
-        // Add new leads to the mock data and update state
-        console.log('🔍 Adding leads to mock data...');
-        newLeadsToAdd.forEach((lead, index) => {
-            console.log(`Adding lead ${index} to mock data:`, lead.id);
-            addLead(lead);
-        });
-
-        console.log('🔄 Updating leads state...');
-        setLeads(prevLeads => {
-            const updatedLeads = [...newLeadsToAdd, ...prevLeads].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-            console.log('📊 Updated leads count:', updatedLeads.length);
-            return updatedLeads;
-        });
-        
-        console.log('📢 Showing success toast');
         toast({
-            title: "Leads Imported!",
-            description: `${newLeadsToAdd.length} new leads have been added.`, 
-            variant: "default"
+        title: "Import Successful",
+        description: `${processedLeads.length} leads have been imported successfully.`,
         });
-    } else {
-        console.log('❌ No valid data received, showing error toast');
+      setShowImport(false);
+    } catch (error) {
+      console.error('Error importing leads:', error);
         toast({
-            title: "No valid data",
-            description: "No valid rows found in the CSV after validation.",
-            variant: "destructive"
+        title: "Import Failed",
+        description: "Failed to import leads. Please check your file format.",
+        variant: "destructive",
         });
     }
-    
-    setShowImport(false); // Hide the import component after processing
-    console.log('✅ Import component hidden');
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto space-y-6 mt-6">
+        <PageTitle title="Lead Management" subtitle="Track and manage potential clients." />
+        <div className="flex items-center justify-center h-[60vh]">
+          <LoadingSpinner size={32} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto space-y-6 mt-6">
@@ -250,59 +193,34 @@ export default function LeadsPage() {
         </div>
       )}
 
-      <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 ">
-         <CardHeader className="pb-4">
-            <CardTitle className="text-lg flex items-center">
-                <ListFilter className="mr-2 h-5 w-5 text-primary"/> Filter & Search Leads
-            </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-            <div>
-              <Label htmlFor="search-leads">Search Leads</Label>
-               <div className="relative mt-1">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                    id="search-leads"
-                    type="text"
-                    placeholder="Search by company, name, email, country..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                />
+      {leads.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-muted-foreground mb-4">
+            <PlusCircle className="mx-auto h-12 w-12 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No leads yet</h3>
+            <p className="text-sm">Get started by adding your first lead or importing from CSV.</p>
               </div>
-            </div>
-            <div>
-              <Label htmlFor="status-filter">Status</Label>
-              <Select value={statusFilter} onValueChange={(value: LeadStatus | 'all') => setStatusFilter(value)}>
-                <SelectTrigger id="status-filter" className="w-full mt-1">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  {leadStatusOptions.map(status => (
-                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="flex justify-center gap-2">
+            <Button onClick={() => setIsAddLeadDialogOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add First Lead
+            </Button>
+            <Button variant="outline" onClick={() => setShowImport(true)}>
+              <Upload className="mr-2 h-4 w-4" /> Import CSV
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      {filteredLeads.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
-          {filteredLeads.map((lead) => (
-            <LeadCard key={lead.id} lead={lead} onLeadConverted={handleLeadConverted} />
-          ))}
         </div>
       ) : (
-        <div className="text-center py-16">
-          <Search className="mx-auto h-16 w-16 text-muted-foreground/50 mb-6" />
-          <p className="text-xl font-semibold text-foreground mb-2">No Leads Found</p>
-          <p className="text-muted-foreground">Try adjusting your search or filter criteria, or add a new lead.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {leads.map((lead) => (
+            <LeadCard
+              key={lead.id}
+              lead={lead}
+              onLeadConverted={handleLeadConverted}
+            />
+          ))}
         </div>
       )}
+
       <AddLeadDialog
         open={isAddLeadDialogOpen}
         onOpenChange={setIsAddLeadDialogOpen}

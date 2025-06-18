@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -17,7 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { Account, AccountType, AccountStatus, Lead } from '@/types';
-import { addAccount, getUnconvertedLeads, convertLeadToAccount, mockAccounts } from '@/lib/data';
 import { Loader2, PlusCircle, UserCheck } from 'lucide-react';
 
 interface AddAccountDialogProps {
@@ -46,7 +44,45 @@ export default function AddAccountDialog({ open, onOpenChange, onAccountAdded, o
 
   useEffect(() => {
     if (open) {
-      setAvailableLeads(getUnconvertedLeads());
+      // Fetch unconverted leads from API
+      const fetchUnconvertedLeads = async () => {
+        try {
+          const response = await fetch('/api/leads?status=New&status=Contacted&status=Qualified');
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch leads');
+          }
+          
+          const result = await response.json();
+          
+          // Transform API response from snake_case to camelCase
+          const transformedLeads: Lead[] = (result.data || []).map((apiLead: any) => ({
+            id: apiLead.id,
+            companyName: apiLead.company_name,
+            personName: apiLead.person_name,
+            email: apiLead.email,
+            phone: apiLead.phone,
+            status: apiLead.status,
+            source: apiLead.source,
+            notes: apiLead.notes,
+            assignedTo: apiLead.assigned_to,
+            createdAt: apiLead.created_at,
+            updatedAt: apiLead.updated_at,
+          }));
+          
+          setAvailableLeads(transformedLeads);
+        } catch (error) {
+          console.error('Error fetching leads:', error);
+          toast({
+            title: "Warning",
+            description: "Could not load leads for conversion. You can still create accounts manually.",
+            variant: "default",
+          });
+        }
+      };
+      
+      fetchUnconvertedLeads();
+      
       // Reset form fields when dialog opens if not already reset by onOpenChange
       // This is particularly important if the dialog was closed without submitting previously
       if (!selectedLeadToConvert) { // Or a more explicit reset condition if needed
@@ -93,62 +129,99 @@ export default function AddAccountDialog({ open, onOpenChange, onAccountAdded, o
     setIsLoading(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000)); 
       let newAccount: Account | null = null;
 
       if (selectedLeadToConvert && selectedLeadToConvert !== MANUAL_CREATE_VALUE) {
-        const convertedAccount = convertLeadToAccount(selectedLeadToConvert);
-        if (convertedAccount) {
-           newAccount = {
-             ...convertedAccount,
-             name: name || convertedAccount.name, // Allow overriding pre-filled name
-             type: type || convertedAccount.type,
-             description: description || convertedAccount.description,
-             industry: industry || convertedAccount.industry,
-             contactEmail: contactEmail || convertedAccount.contactEmail,
-             contactPersonName: contactPersonName || convertedAccount.contactPersonName,
-             contactPhone: contactPhone || convertedAccount.contactPhone,
-             updatedAt: new Date().toISOString()
-           };
-           // Update mockAccounts array directly if convertLeadToAccount doesn't handle updates to existing entries (it creates new)
-           const accountIndex = mockAccounts.findIndex(acc => acc.id === newAccount!.id);
-           if (accountIndex > -1) {
-             mockAccounts[accountIndex] = newAccount;
-           } else {
-              // This case should ideally not happen if convertLeadToAccount adds it via addAccount
-              mockAccounts.push(newAccount); 
-           }
+        // Convert lead to account using the convert API
+        const convertResponse = await fetch(`/api/leads/${selectedLeadToConvert}/convert`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            notes: 'Converted via account creation dialog'
+          })
+        });
 
-
-          toast({
-            title: "Lead Converted to Account",
-            description: `${newAccount.name} has been successfully created and updated.`,
-            className: "bg-green-100 dark:bg-green-900 border-green-500"
-          });
-          onLeadConverted?.(selectedLeadToConvert, newAccount.id);
-        } else {
-          toast({ title: "Error", description: "Failed to convert selected lead. It might already be converted or lost.", variant: "destructive" });
-          setIsLoading(false);
-          return;
+        if (!convertResponse.ok) {
+          const errorData = await convertResponse.json();
+          throw new Error(errorData.error || 'Failed to convert lead');
         }
+
+        const convertData = await convertResponse.json();
+        
+        // Transform the API response to match the Account interface
+        newAccount = {
+          id: convertData.data.account.id,
+          name: convertData.data.account.name,
+          type: convertData.data.account.type,
+          status: convertData.data.account.status,
+          description: convertData.data.account.description,
+          contactEmail: convertData.data.account.contact_email,
+          contactPersonName: convertData.data.account.contact_person_name,
+          contactPhone: convertData.data.account.contact_phone,
+          industry: convertData.data.account.industry,
+          convertedFromLeadId: selectedLeadToConvert,
+          opportunityIds: [],
+          createdAt: convertData.data.account.created_at,
+          updatedAt: convertData.data.account.updated_at,
+        };
+
+        toast({
+          title: "Lead Converted to Account",
+          description: `${newAccount.name} has been successfully created.`,
+          className: "bg-green-100 dark:bg-green-900 border-green-500"
+        });
+        onLeadConverted?.(selectedLeadToConvert, newAccount.id);
       } else {
-        // This block handles manual creation (selectedLeadToConvert is '' or MANUAL_CREATE_VALUE)
+        // Manual account creation
         if (!name.trim() || !type) {
           toast({ title: "Error", description: "Account Name and Type are required for new accounts.", variant: "destructive" });
           setIsLoading(false);
           return;
         }
-        const newAccountData = {
-          name,
-          type,
-          status: 'Active' as AccountStatus, // Default to Active
-          description,
-          contactEmail,
-          contactPersonName,
-          contactPhone,
-          industry,
+
+        const response = await fetch('/api/accounts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name,
+            type,
+            status: 'Active',
+            description: description || null,
+            contact_person_name: contactPersonName || null,
+            contact_email: contactEmail || null,
+            contact_phone: contactPhone || null,
+            industry: industry || null
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to create account');
+        }
+
+        const result = await response.json();
+        
+        // Transform the API response to match the Account interface
+        newAccount = {
+          id: result.data.id,
+          name: result.data.name,
+          type: result.data.type,
+          status: result.data.status,
+          description: result.data.description,
+          contactEmail: result.data.contact_email,
+          contactPersonName: result.data.contact_person_name,
+          contactPhone: result.data.contact_phone,
+          industry: result.data.industry,
+          convertedFromLeadId: result.data.converted_from_lead_id,
+          opportunityIds: [],
+          createdAt: result.data.created_at,
+          updatedAt: result.data.updated_at,
         };
-        newAccount = addAccount(newAccountData); // addAccount adds to mockAccounts
+
         toast({
           title: "Account Created",
           description: `${newAccount.name} has been successfully added.`,
@@ -163,7 +236,11 @@ export default function AddAccountDialog({ open, onOpenChange, onAccountAdded, o
 
     } catch (error) {
       console.error("Failed to process account:", error);
-      toast({ title: "Error", description: "Failed to process account. Please try again.", variant: "destructive" });
+      toast({ 
+        title: "Error", 
+        description: error instanceof Error ? error.message : "Failed to process account. Please try again.", 
+        variant: "destructive" 
+      });
     } finally {
       setIsLoading(false);
     }
@@ -217,7 +294,7 @@ export default function AddAccountDialog({ open, onOpenChange, onAccountAdded, o
             </div>
             <div>
               <Label htmlFor="account-type">Account Type <span className="text-destructive">*</span></Label>
-              <Select value={type || undefined} onValueChange={(value: AccountType | undefined) => setType(value || 'Client')}>
+              <Select value={type || undefined} onValueChange={(value: string) => setType(value as AccountType || 'Client')}>
                 <SelectTrigger id="account-type">
                   <SelectValue placeholder="Select account type" />
                 </SelectTrigger>
