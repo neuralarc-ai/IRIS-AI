@@ -10,6 +10,7 @@ import CSVImport from '@/components/common/CSVImport';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from "@/hooks/use-toast";
 import type { Lead } from '@/types';
+import LeadsListWithFilter from '@/components/leads/LeadsListWithFilter';
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -210,15 +211,11 @@ export default function LeadsPage() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {leads.map((lead) => (
-            <LeadCard
-              key={lead.id}
-              lead={lead}
-              onLeadConverted={handleLeadConverted}
-            />
-          ))}
-        </div>
+        <LeadsListWithFilter
+          leads={leads}
+          onLeadConverted={handleLeadConverted}
+          onLeadAdded={handleLeadAdded}
+        />
       )}
 
       <AddLeadDialog

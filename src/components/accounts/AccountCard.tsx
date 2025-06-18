@@ -65,9 +65,6 @@ export default function AccountCard({ account, isConverted }: AccountCardProps) 
             <CardTitle className="text-xl font-headline flex items-center">
               <Briefcase className="mr-2 h-5 w-5 text-primary shrink-0" />
               {account.name}
-              {isConverted && (
-                <span className="ml-2 px-2 py-0.5 rounded-full bg-green-100 text-green-800 text-xs font-semibold border border-green-200">Converted from Lead</span>
-              )}
             </CardTitle>
             <Badge 
               variant={account.status === 'Active' ? 'default' : 'secondary'} 
