@@ -213,9 +213,9 @@ export default function LeadsPage() {
       ) : (
         <LeadsListWithFilter
           leads={leads}
-          onLeadConverted={handleLeadConverted}
+              onLeadConverted={handleLeadConverted}
           onLeadAdded={handleLeadAdded}
-        />
+            />
       )}
 
       <AddLeadDialog

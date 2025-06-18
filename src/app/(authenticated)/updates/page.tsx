@@ -26,7 +26,16 @@ export default function UpdatesPage() {
     const fetchUpdates = async () => {
       const response = await fetch('/api/updates');
       const result = await response.json();
-      setUpdates(result.data || []);
+      console.log('Raw /api/updates response:', result);
+      setUpdates((result.data || []).map((apiUpdate: any) => ({
+        id: apiUpdate.id,
+        type: apiUpdate.type,
+        content: apiUpdate.content,
+        date: apiUpdate.date,
+        account: apiUpdate.account,
+        opportunity: apiUpdate.opportunity,
+        updatedByUser: apiUpdate.user,
+      })));
     };
     fetchUpdates();
   }, []);

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { NextRequest } from 'next/server';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -68,14 +69,44 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
-  const { data, error } = await supabase
-    .from('updates')
-    .select('*')
-    .order('created_at', { ascending: false });
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50;
+    const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0;
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    const { data, error } = await supabase
+      .from('updates')
+      .select(`
+        *,
+        account:account_id (id, name),
+        opportunity:opportunity_id (id, name),
+        user:updated_by_user_id (id, name)
+      `)
+      .order('date', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error('Error fetching updates:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch updates' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      data,
+      pagination: {
+        limit,
+        offset,
+        hasMore: data.length === limit
+      }
+    });
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
-  return NextResponse.json({ data }, { status: 200 });
 } 

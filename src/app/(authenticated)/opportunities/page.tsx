@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import AddOpportunityDialog from '@/components/opportunities/AddOpportunityDialog';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
 export default function OpportunitiesPage() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -19,6 +20,7 @@ export default function OpportunitiesPage() {
   const [accountFilter, setAccountFilter] = useState<string | 'all'>('all'); 
   const [isAddOpportunityDialogOpen, setIsAddOpportunityDialogOpen] = useState(false);
   const [accounts, setAccounts] = useState<{id: string, name: string, type: string}[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const opportunityStatusOptions: OpportunityStatus[] = ["Need Analysis", "Negotiation", "In Progress", "On Hold", "Completed", "Cancelled"];
 
@@ -37,8 +39,8 @@ export default function OpportunitiesPage() {
   };
 
   useEffect(() => {
-    fetchOpportunities();
-    fetchAccounts();
+    setIsLoading(true);
+    Promise.all([fetchOpportunities(), fetchAccounts()]).finally(() => setIsLoading(false));
   }, []);
 
   useEffect(() => {
@@ -55,6 +57,17 @@ export default function OpportunitiesPage() {
   const handleOpportunityAdded = async () => {
     await fetchOpportunities();
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto space-y-6 mt-6">
+        <PageTitle title="Opportunity Management" subtitle="Track and manage all ongoing and potential sales opportunities." />
+        <div className="flex items-center justify-center h-[60vh]">
+          <LoadingSpinner size={32} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto space-y-6 mt-6">

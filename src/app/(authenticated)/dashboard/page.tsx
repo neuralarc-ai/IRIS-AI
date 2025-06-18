@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, TrendingUp, Users, AlertTriangle, Lightbulb, BarChartHorizontalBig, CalendarClock, DollarSign, AlertCircle, CheckCircle, History } from 'lucide-react';
@@ -37,63 +37,85 @@ export default function DashboardPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const refreshTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchDashboardData = async () => {
+    setIsLoading(true);
+    try {
+      const oppRes = await fetch('/api/opportunities');
+      const oppJson = await oppRes.json();
+      const opportunities: Opportunity[] = oppJson.data || [];
+
+      const updRes = await fetch('/api/updates');
+      const updJson = await updRes.json();
+      const updates: Update[] = updJson.data || [];
+
+      const leadsRes = await fetch('/api/leads');
+      const leadsJson = await leadsRes.json();
+      const leadsData: Lead[] = (leadsJson.data || []).map((apiLead: any) => ({
+        id: apiLead.id ?? '',
+        company_name: apiLead.company_name ?? '',
+        person_name: apiLead.person_name ?? '',
+        email: apiLead.email ?? '',
+        phone: apiLead.phone ?? '',
+        linkedin_profile_url: apiLead.linkedin_profile_url ?? '',
+        country: apiLead.country ?? '',
+        status: apiLead.status ?? '',
+        opportunityIds: [],
+        updateIds: [],
+        created_at: apiLead.created_at ?? '',
+        updated_at: apiLead.updated_at ?? '',
+      }));
+      setLeads(leadsData);
+
+      const activeOpportunities = opportunities.filter(
+        opp => opp.status !== 'Completed' && opp.status !== 'Cancelled'
+      ).slice(0, 2);
+
+      const forecastPromises = activeOpportunities.map(async (opp) => {
+        try {
+          const forecast = await aiPoweredOpportunityForecasting({
+            opportunityName: opp.name,
+            opportunityDescription: opp.description,
+            opportunityTimeline: `Start: ${opp.created_at ? format(parseISO(opp.created_at), 'MMM dd, yyyy') : 'N/A'}, End: ${opp.expected_close_date ? format(parseISO(opp.expected_close_date), 'MMM dd, yyyy') : 'N/A'}`,
+            opportunityValue: opp.amount,
+            opportunityStatus: opp.status,
+            recentUpdates: "Recent updates indicate steady progress and positive client feedback.",
+          });
+          return { ...opp, forecast };
+        } catch (e) {
+          console.error(`Failed to get forecast for ${opp.name}`, e);
+          return { ...opp, forecast: undefined };
+        }
+      });
+      const results = await Promise.all(forecastPromises);
+      setForecastedOpportunities(results);
+
+      if (results.length > 0) {
+        setOverallSalesForecast(`Optimistic outlook for next quarter with strong potential from key deals like ${results[0]?.name}. Predicted revenue growth is positive, with several opportunities nearing completion.`);
+      } else {
+        setOverallSalesForecast("No active opportunities to forecast. Add new opportunities to see AI-powered sales predictions.");
+      }
+      setRecentUpdates(updates.slice(0, 2));
+      setLastRefreshed(new Date());
+    } catch (error) {
+      console.error("Failed to fetch dashboard data:", error);
+      setOverallSalesForecast("Error fetching sales forecast data.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      setIsLoading(true);
-      try {
-        const oppRes = await fetch('/api/opportunities');
-        const oppJson = await oppRes.json();
-        const opportunities: Opportunity[] = oppJson.data || [];
-
-        const updRes = await fetch('/api/updates');
-        const updJson = await updRes.json();
-        const updates: Update[] = updJson.data || [];
-
-        const leadsRes = await fetch('/api/leads');
-        const leadsJson = await leadsRes.json();
-        const leadsData: Lead[] = leadsJson.data || [];
-        setLeads(leadsData);
-
-        const activeOpportunities = opportunities.filter(
-          opp => opp.status !== 'Completed' && opp.status !== 'Cancelled'
-        ).slice(0, 2);
-
-        const forecastPromises = activeOpportunities.map(async (opp) => {
-          try {
-            const forecast = await aiPoweredOpportunityForecasting({
-              opportunityName: opp.name,
-              opportunityDescription: opp.description,
-              opportunityTimeline: `Start: ${opp.created_at ? format(parseISO(opp.created_at), 'MMM dd, yyyy') : 'N/A'}, End: ${opp.expected_close_date ? format(parseISO(opp.expected_close_date), 'MMM dd, yyyy') : 'N/A'}`,
-              opportunityValue: opp.amount,
-              opportunityStatus: opp.status,
-              recentUpdates: "Recent updates indicate steady progress and positive client feedback.",
-            });
-            return { ...opp, forecast };
-          } catch (e) {
-            console.error(`Failed to get forecast for ${opp.name}`, e);
-            return { ...opp, forecast: undefined };
-          }
-        });
-        const results = await Promise.all(forecastPromises);
-        setForecastedOpportunities(results);
-
-        if (results.length > 0) {
-          setOverallSalesForecast(`Optimistic outlook for next quarter with strong potential from key deals like ${results[0]?.name}. Predicted revenue growth is positive, with several opportunities nearing completion.`);
-        } else {
-          setOverallSalesForecast("No active opportunities to forecast. Add new opportunities to see AI-powered sales predictions.");
-        }
-        
-        setRecentUpdates(updates.slice(0, 2));
-        setLastRefreshed(new Date());
-      } catch (error) {
-        console.error("Failed to fetch dashboard data:", error);
-        setOverallSalesForecast("Error fetching sales forecast data.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchDashboardData();
+    // Set up auto-refresh every 1 hour
+    if (refreshTimeout.current) clearInterval(refreshTimeout.current);
+    refreshTimeout.current = setInterval(() => {
+      fetchDashboardData();
+    }, 3600000);
+    return () => {
+      if (refreshTimeout.current) clearInterval(refreshTimeout.current);
+    };
   }, []);
 
   const opportunityStatusData = useMemo(() => {
@@ -107,11 +129,15 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto p-6 mt-6">
-      <div className="mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <PageTitle 
           title="Dashboard" 
           subtitle={lastRefreshed ? `Last updated: ${format(lastRefreshed, 'MMM dd, yyyy HH:mm')}` : 'Loading...'} 
         />
+        <Button onClick={fetchDashboardData} variant="outline" size="sm" className="ml-4 flex items-center" disabled={isLoading}>
+          <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          {isLoading ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -295,13 +321,13 @@ export default function DashboardPage() {
                   </Card>
                 ))
               ) : leads.length > 0 ? (
-                leads.filter(lead => lead.status !== 'Converted to Account').slice(0, 3).map(lead => (
+                (leads as any[]).filter(lead => lead.status !== 'Converted to Account').map(lead => (
                   <Card key={lead.id} className="w-full" isInner={true}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div>
-                          <p className="font-medium">{lead.personName}</p>
-                          <p className="text-sm text-muted-foreground">{lead.companyName}</p>
+                          <p className="font-medium">{lead.person_name}</p>
+                          <p className="text-sm text-muted-foreground">{lead.company_name}</p>
                         </div>
                         <Badge variant="outline">{lead.status}</Badge>
                       </div>

@@ -46,33 +46,7 @@ export default function UpdateItem({ update, gradient }: UpdateItemProps) {
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [showAiInsights, setShowAiInsights] = useState(false);
   
-  const [opportunity, setOpportunity] = useState<Opportunity | undefined>(undefined);
-  const [account, setAccount] = useState<Account | undefined>(undefined);
-  const [lead, setLead] = useState<Lead | undefined>(undefined);
-  const [updatedByUser, setUpdatedByUser] = useState<User | undefined>(undefined);
-
-  useEffect(() => {
-    if (update.opportunityId) {
-      const opp = getOpportunityById(update.opportunityId);
-      setOpportunity(opp);
-      if (opp?.associated_account_id) {
-        setAccount(getAccountById(opp.associated_account_id));
-      } else {
-        setAccount(undefined); // Should not happen if data is consistent
-      }
-      setLead(undefined); // Clear lead if it's an opportunity update
-    } else if (update.leadId) {
-      setLead(getLeadById(update.leadId));
-      setOpportunity(undefined); // Clear opportunity/account if it's a lead update
-      setAccount(undefined);
-    }
-
-    if (update.updatedByUserId) {
-      setUpdatedByUser(getUserById(update.updatedByUserId));
-    } else {
-      setUpdatedByUser(undefined);
-    }
-  }, [update.opportunityId, update.leadId, update.updatedByUserId]);
+  const formattedDate = format(parseISO(update.date), 'MMM d, yyyy h:mm a');
 
   const fetchInsights = async () => {
     if (!update.content || update.content.length < 20) { // Avoid AI call for very short content
@@ -110,50 +84,42 @@ export default function UpdateItem({ update, gradient }: UpdateItemProps) {
     }
   };
   
-  const formattedDate = format(parseISO(update.date), 'MMM d, yyyy h:mm a');
-
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full p-2" gradient={gradient}>
       <Card isInner={true} className="flex flex-col h-full bg-white text-black rounded-lg">
-        <CardHeader className="pb-3 px-6 pt-6">
-          <div className="flex justify-between items-start mb-1">
-            <CardTitle className="text-xl font-headline flex items-center">
-              {getUpdateIcon(update.type)}
-              <span className="ml-2.5">Update: {formattedDate}</span>
-            </CardTitle>
-            <Badge variant="secondary" className="capitalize whitespace-nowrap ml-2 bg-accent text-accent-foreground">
-              {update.type}
-            </Badge>
+        <CardHeader className="pb-3 px-6 pt-6 flex justify-between items-start">
+          <div className="flex flex-row items-center gap-2 min-h-[32px]">
+            <span className="flex items-center h-8">{getUpdateIcon(update.type)}</span>
+            <CardTitle className="text-xl font-headline mb-0 flex items-center h-8">Update: {formattedDate}</CardTitle>
           </div>
-
-          {lead && (
-              <CardDescription className="text-sm text-muted-foreground flex items-center">
-                  <UserIcon className="mr-2 h-4 w-4 shrink-0" />
-                  <span className="font-semibold mr-1">Lead:</span> {lead.companyName} ({lead.personName})
-              </CardDescription>
-          )}
-          {opportunity && (
-            <CardDescription className="text-sm text-muted-foreground flex items-center">
-              <BarChartBig className="mr-2 h-4 w-4 shrink-0" />
-              <span className="font-semibold mr-1">Opportunity:</span> {opportunity.name}
-            </CardDescription>
-          )}
-          {account && ( // Display account only if an opportunity is linked
-              <CardDescription className="text-xs text-muted-foreground flex items-center mt-0.5">
-                  <Briefcase className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-                  <span className="font-semibold mr-1">Account:</span> {account.name}
-              </CardDescription>
-          )}
-           {updatedByUser && (
-              <CardDescription className="text-xs text-muted-foreground flex items-center mt-0.5">
-                  <UserCircle className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-                  <span className="font-semibold mr-1">Updated by:</span> {updatedByUser.name}
-              </CardDescription>
-          )}
+          <Badge 
+            variant="secondary" 
+            className="capitalize whitespace-nowrap bg-accent text-accent-foreground px-3 py-1 text-sm font-medium"
+            style={{ width: 'fit-content', minWidth: 'max-content' }}
+          >
+            {update.type}
+          </Badge>
         </CardHeader>
-        <CardContent className="space-y-3.5 text-sm flex-grow px-6">
-          <p className="text-foreground leading-relaxed">{update.content}</p>
-          
+        <CardContent className="space-y-2 text-sm flex-grow px-6 text-left">
+          {update.opportunity && (
+            <div className="text-sm text-muted-foreground flex items-center mt-1">
+              <BarChartBig className="mr-2 h-4 w-4 shrink-0" />
+              <span className="font-semibold mr-1">Opportunity:</span> {update.opportunity.name}
+            </div>
+          )}
+          {update.account && (
+            <div className="text-sm text-muted-foreground flex items-center mt-1">
+              <Briefcase className="mr-2 h-4 w-4 shrink-0" />
+              <span className="font-semibold mr-1">Account:</span> {update.account.name}
+            </div>
+          )}
+          {update.updatedByUser && (
+            <div className="text-sm text-muted-foreground flex items-center mt-1">
+              <UserCircle className="mr-2 h-4 w-4 shrink-0" />
+              <span className="font-semibold mr-1">Updated by:</span> {update.updatedByUser.name}
+            </div>
+          )}
+          <p className="text-foreground leading-relaxed mt-2">{update.content}</p>
           {showAiInsights && (
             <div className="pt-3.5 border-t mt-3.5 space-y-3">
               <h4 className="font-semibold text-foreground text-sm flex items-center">
@@ -214,12 +180,14 @@ export default function UpdateItem({ update, gradient }: UpdateItemProps) {
           <Button variant="outline" size="sm" onClick={toggleAiInsights} className="mr-2">
             {showAiInsights ? 'Hide AI Insights' : 'Show AI Insights'}
           </Button>
-          <Button variant="outline" size="sm" asChild className="ml-auto">
-            <Link href={`/updates/${update.id}`} prefetch={false}>
+          {/* Commented out View Details button
+          <Button variant="outline" size="sm" asChild className="mr-auto">
+            <Link href={`/updates/${update.id}`}>
               <Eye className="mr-2 h-4 w-4" />
               View Details
             </Link>
           </Button>
+          */}
         </CardFooter>
       </Card>
     </Card>

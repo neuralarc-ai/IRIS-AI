@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Briefcase, Users, Mail, Phone, Building2, CalendarDays, Clock, BarChartBig, MessageSquareHeart, Lightbulb, PlusCircle } from 'lucide-react';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { getAccountById, getOpportunitiesByAccount } from '@/lib/data';
+import { getOpportunitiesByAccount } from '@/lib/data';
 import type { Account, Opportunity, DailyAccountSummary } from '@/types';
 import { generateDailyAccountSummary } from '@/ai/flows/daily-account-summary';
 import OpportunityCard from '@/components/opportunities/OpportunityCard';
@@ -38,16 +38,33 @@ export default function AccountDetailsPage() {
       setIsLoading(true);
       try {
         const accountId = params.id as string;
-        const accountData = getAccountById(accountId);
-        
-        if (!accountData) {
+        const response = await fetch(`/api/accounts/${accountId}`);
+        if (!response.ok) {
+          if (response.status === 404) {
           router.push('/accounts');
           return;
         }
-
+          throw new Error('Failed to fetch account details');
+        }
+        const result = await response.json();
+        // Transform the API response to match the Account interface
+        const accountData: Account = {
+          id: result.data.id,
+          name: result.data.name,
+          type: result.data.type,
+          status: result.data.status,
+          description: result.data.description,
+          contactEmail: result.data.contact_email,
+          industry: result.data.industry,
+          contactPersonName: result.data.contact_person_name,
+          contactPhone: result.data.contact_phone,
+          convertedFromLeadId: result.data.converted_from_lead_id,
+          opportunityIds: [],
+          createdAt: result.data.created_at,
+          updatedAt: result.data.updated_at,
+        };
         setAccount(accountData);
         setOpportunities(getOpportunitiesByAccount(accountId));
-
         if (accountData.status === 'Active') {
           setIsLoadingSummary(true);
           try {
@@ -65,11 +82,11 @@ export default function AccountDetailsPage() {
         }
       } catch (error) {
         console.error('Error fetching account details:', error);
+        router.push('/accounts');
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchData();
   }, [params.id, router]);
 

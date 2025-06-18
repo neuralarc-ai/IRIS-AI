@@ -135,64 +135,45 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full p-2">
       <Card isInner={true} className="flex flex-col h-full bg-white text-black rounded-lg">
         <CardHeader className="pb-3 px-6 pt-6">
-          <div className="flex justify-between items-start mb-1 ">
-            <CardTitle className="text-xl font-headline flex items-center">
+          <div className="flex flex-row items-center justify-between w-full">
+            <div className="flex flex-row items-center">
               <BarChartBig className="mr-2 h-5 w-5 text-primary shrink-0" />
-              {opportunity.name}
-            </CardTitle>
-            <Badge variant="secondary" className={`capitalize whitespace-nowrap ml-2 ${getStatusBadgeColorClasses(opportunity.status)}`}>
-              {opportunity.status}
-            </Badge>
+              <CardTitle className="text-xl font-headline mb-0 ml-2">{opportunity.name}</CardTitle>
+            </div>
+            <Badge variant="secondary" className={`capitalize whitespace-nowrap ml-2 ${getStatusBadgeColorClasses(opportunity.status)}`}>{opportunity.status}</Badge>
           </div>
         </CardHeader>
-        <CardContent className="flex-grow space-y-3.5 text-sm px-6">
+        <CardContent className="flex-grow space-y-3 text-sm px-6 text-left">
           {accountName && (
-            <div className="mb-1">
-              <label className="block text-xs font-medium text-muted-foreground mb-0.5">Associated Account</label>
-              <div className="flex items-center">
-                <Briefcase className="mr-1.5 h-4 w-4 shrink-0" />
-                <span>{accountName}</span>
-              </div>
+            <div className="flex items-center mb-1">
+              <Briefcase className="mr-2 h-4 w-4 shrink-0" />
+              <span className="font-semibold mr-1">For:</span> {accountName}
             </div>
           )}
-
           {typeof opportunity.amount !== 'undefined' && opportunity.amount !== null && (
             <div className="flex items-center text-muted-foreground mb-1">
               <DollarSign className="mr-2 h-4 w-4 shrink-0" />
-              <span>
-                Quoted Value: <span className="font-semibold text-foreground">${Number(opportunity.amount).toLocaleString()}</span>
-              </span>
+              <span className="font-semibold text-foreground mr-1">Quoted Value:</span> ${Number(opportunity.amount).toLocaleString()}
             </div>
           )}
-
           {opportunity.description && (
             <div className="mb-1">
-              <label className="block text-xs font-medium text-muted-foreground mb-0.5">Description</label>
               <p className="text-muted-foreground">{opportunity.description}</p>
             </div>
           )}
-
           {(opportunity.created_at && opportunity.expected_close_date) && (
             <div className="flex items-center text-muted-foreground mb-1">
               <CalendarDays className="mr-2 h-4 w-4 shrink-0" />
-              <span>
-                {opportunity.created_at ? format(parseISO(opportunity.created_at), 'MMM dd, yyyy') : 'N/A'} - {opportunity.expected_close_date ? format(parseISO(opportunity.expected_close_date), 'MMM dd, yyyy') : 'N/A'}
-              </span>
+              <span>{opportunity.created_at ? format(parseISO(opportunity.created_at), 'MMM dd, yyyy') : 'N/A'} - {opportunity.expected_close_date ? format(parseISO(opportunity.expected_close_date), 'MMM dd, yyyy') : 'N/A'}</span>
             </div>
           )}
-
-          {/* Progress Bar */}
           <div className="mb-2">
             <Progress value={progress} className="h-2" />
           </div>
-
           <div className="flex justify-between text-xs text-muted-foreground mb-1">
             <span className="flex items-center"><Clock className="mr-1 h-3 w-3 shrink-0"/>{timeRemaining(opportunity.status)}</span>
-            <div className="flex items-center gap-1">
-              {opportunityHealthIcon} {opportunityHealthText}
-            </div>
+            <div className="flex items-center gap-1">{opportunityHealthIcon} {opportunityHealthText}</div>
           </div>
-
           {(forecast || isLoadingForecast) && opportunity.status !== 'Completed' && opportunity.status !== 'Cancelled' && (
             <div className="pt-3 border-t mt-3">
               <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1.5 flex items-center">
@@ -219,12 +200,13 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
           )}
         </CardContent>
         <CardFooter className="pt-4 border-t mt-auto px-6 pb-6">
-          <Button variant="outline" size="sm" asChild className="ml-auto">
+          {/* Commented out View Details button */}
+          {/* <Button variant="outline" size="sm" asChild className="mr-auto">
             <Link href={`/opportunities/${opportunity.id}`}>
               <Eye className="mr-2 h-4 w-4" />
               View Details
             </Link>
-          </Button>
+          </Button> */}
         </CardFooter>
       </Card>
     </Card>

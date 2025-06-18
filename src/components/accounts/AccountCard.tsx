@@ -61,11 +61,11 @@ export default function AccountCard({ account, isConverted }: AccountCardProps) 
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full p-2" bgImage="/4.svg">
       <Card isInner={true} className="flex flex-col h-full bg-white text-black rounded-lg">
         <CardHeader className="pb-3 px-6 pt-6">
-          <div className="flex justify-between items-start mb-1">
-            <CardTitle className="text-xl font-headline flex items-center">
+          <div className="flex flex-row items-center justify-between w-full mb-1">
+            <div className="flex flex-row items-center">
               <Briefcase className="mr-2 h-5 w-5 text-primary shrink-0" />
-              {account.name}
-            </CardTitle>
+              <CardTitle className="text-xl font-headline mb-0 ml-2">{account.name}</CardTitle>
+            </div>
             <Badge 
               variant={account.status === 'Active' ? 'default' : 'secondary'} 
               className={`capitalize whitespace-nowrap ml-2 ${account.status === 'Active' ? 'bg-green-500/20 text-green-700 border-green-500/30' : 'bg-amber-500/20 text-amber-700 border-amber-500/30'}`}
@@ -73,11 +73,6 @@ export default function AccountCard({ account, isConverted }: AccountCardProps) 
               {account.status}
             </Badge>
           </div>
-          <CardDescription className="text-sm text-muted-foreground flex items-center">
-              <Tag className="mr-2 h-4 w-4 shrink-0"/> {account.type}
-              {account.industry && <span className="mx-1 text-muted-foreground/50">|</span>}
-              {account.industry && <span className="text-xs">{account.industry}</span>}
-          </CardDescription>
         </CardHeader>
         <CardContent className="flex-grow space-y-3 text-sm px-6">
           <p className="text-muted-foreground line-clamp-2">{account.description}</p>
@@ -132,12 +127,14 @@ export default function AccountCard({ account, isConverted }: AccountCardProps) 
           )}
         </CardContent>
         <CardFooter className="pt-4 border-t mt-auto px-6 pb-6"> {/* mt-auto pushes footer to bottom */}
+          {/*
           <Button variant="outline" size="sm" asChild className="mr-auto">
             <Link href={`/accounts/${account.id}`}> 
               <Eye className="mr-2 h-4 w-4" />
               View Details
             </Link>
           </Button>
+          */}
           <Button size="sm" onClick={() => setIsAddOpportunityDialogOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             New Opportunity
