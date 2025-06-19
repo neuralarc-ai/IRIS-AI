@@ -1,13 +1,19 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { Source_Code_Pro } from 'next/font/google';
+import { Source_Code_Pro, Space_Grotesk } from 'next/font/google';
 
 // Initialize code font
 const sourceCodePro = Source_Code_Pro({
   subsets: ['latin'],
   variable: '--font-source-code-pro',
   display: 'swap',
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-space-grotesk',
 });
 
 export const metadata: Metadata = {
@@ -21,8 +27,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={sourceCodePro.variable}>
-      <body className="font-sans antialiased bg-background text-foreground">
+    <html lang="en" suppressHydrationWarning className={`${sourceCodePro.variable} ${spaceGrotesk.variable}`}>
+      <body className={`font-sans antialiased bg-background text-foreground ${spaceGrotesk.className}`}>
         {children}
         <Toaster />
       </body>

@@ -19,7 +19,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Fustat', 'sans-serif'],
+        sans: ['var(--font-space-grotesk)'],
         body: ['Fustat', 'sans-serif'],
         headline: ['Fustat', 'sans-serif'],
         code: ['var(--font-source-code-pro)', 'monospace'],

@@ -11,8 +11,6 @@
   font-display: swap;
 }
 
-
-
 @font-face {
   font-family: 'Fustat';
   src: url('/fonts/Fustat-Medium.woff2') format('woff2'),
@@ -33,36 +31,27 @@
 
 @layer base {
   :root {
-    /* New background color for light mode */
-    --background: 40 33% 98%; /* #FBFAF8 */
-    --foreground: 220 10% 15%; /* Darker text for good contrast */
-
-    /* Card variables for glass effect */
+    --font-sans: 'Space Grotesk', system-ui, sans-serif;
+    
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
-    --card-foreground: 220 10% 10%;
-
+    --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 10% 10%;
-
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-
-    --secondary: 220 10% 90%;
-    --secondary-foreground: 220 10% 10%;
-
-    --muted: 220 10% 85%;
-    --muted-foreground: 220 10% 45%;
-
-    --accent: 220 10% 88%;
-    --accent-foreground: 220 10% 10%;
-
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 220 10% 80%;
-    --input: 220 10% 80%;
-    --ring: 240 5.9% 10%;
-
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
 
     /* Chart colors - monochrome theme */
@@ -74,35 +63,25 @@
   }
 
   .dark {
-    /* Dark mode background remains dark */
-    --background: 220 10% 12%; 
-    --foreground: 220 10% 90%; /* Lighter text for dark background */
-
-    /* Card variables for dark mode */
-    --card: 220 10% 15%;
-    --card-foreground: 220 10% 90%;
-
-    --popover: 220 10% 10%;
-    --popover-foreground: 220 10% 90%;
-
-    --primary: 220 10% 90%;
-    --primary-foreground: 220 10% 10%;
-
-    --secondary: 220 10% 20%;
-    --secondary-foreground: 220 10% 90%;
-
-    --muted: 220 10% 20%;
-    --muted-foreground: 220 10% 60%;
-
-    --accent: 220 10% 25%;
-    --accent-foreground: 220 10% 90%;
-
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 220 10% 25%;
-    --input: 220 10% 25%;
-    --ring: 220 10% 80%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
 
     --chart-1: 0 0% 80%;
     --chart-2: 0 0% 65%;
@@ -117,8 +96,8 @@
     @apply border-border;
   }
   body {
-    /* Apply solid background color using CSS variable */
-    @apply bg-[hsl(var(--background))] text-foreground font-body;
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline;

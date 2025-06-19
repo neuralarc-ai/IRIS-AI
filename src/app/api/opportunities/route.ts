@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     .from('opportunities')
     .insert([{
       name,
-      associated_account_id,
+      account_id: associated_account_id,
       description,
       amount,
       status,
