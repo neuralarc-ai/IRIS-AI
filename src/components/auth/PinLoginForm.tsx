@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef, ChangeEvent, KeyboardEvent, useEffect } from 'react';
@@ -125,7 +124,7 @@ export default function PinLoginForm() {
             onChange={(e) => handleChange(e, index)}
             onKeyDown={(e) => handleKeyDown(e, index)}
             onPaste={index === 0 ? handlePaste : undefined} // Allow paste only on the first input
-            ref={(el) => (inputRefs.current[index] = el)}
+            ref={(el) => { inputRefs.current[index] = el; }}
             className="w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-mono border-2 focus:border-primary focus:ring-primary rounded-md shadow-sm"
             aria-label={`PIN digit ${index + 1}`}
             disabled={isLoading}

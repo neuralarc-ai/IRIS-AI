@@ -32,7 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 const CreateUserForm = ({ onUserCreated, closeDialog }: { onUserCreated: () => void, closeDialog: () => void }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [animatedPinDisplay, setAnimatedPinDisplay] = useState<string[]>(Array(4).fill('')); // Initial empty
+  const [animatedPinDisplay, setAnimatedPinDisplay] = useState<string[]>(Array(6).fill(''));
   const [isGeneratingPin, setIsGeneratingPin] = useState(false);
   const [role, setRole] = useState('user');
   const { toast } = useToast();
@@ -49,10 +49,10 @@ const CreateUserForm = ({ onUserCreated, closeDialog }: { onUserCreated: () => v
 
   const startPinAnimation = () => {
     setIsGeneratingPin(true);
-    finalPinRef.current = Math.floor(1000 + Math.random() * 9000).toString();
+    finalPinRef.current = Math.floor(100000 + Math.random() * 900000).toString();
     let animationCount = 0;
     const totalAnimationFramesPerDigit = 5; // How many times each digit "flips"
-    const totalCycles = 4 * totalAnimationFramesPerDigit; // Total "flips" across all digits
+    const totalCycles = 6 * totalAnimationFramesPerDigit; // Total "flips" across all digits
     let currentDigitAnimating = 0;
 
     animationIntervalRef.current = setInterval(() => {
@@ -73,9 +73,9 @@ const CreateUserForm = ({ onUserCreated, closeDialog }: { onUserCreated: () => v
 
       setAnimatedPinDisplay(newPinDisplay);
 
-      if (currentDigitAnimating >= 4) { // All digits have revealed their final number
+      if (currentDigitAnimating >= 6) { // All digits have revealed their final number
         if (animationIntervalRef.current) clearInterval(animationIntervalRef.current);
-        setAnimatedPinDisplay(finalPinRef.current!.split('')); // Ensure final PIN is displayed
+        setAnimatedPinDisplay(Array(6).fill(''));
 
         setTimeout(() => {
           createUserWithPin();
@@ -133,7 +133,7 @@ const CreateUserForm = ({ onUserCreated, closeDialog }: { onUserCreated: () => v
   const resetFormAndAnimation = () => {
     setName('');
     setEmail('');
-    setAnimatedPinDisplay(Array(4).fill(''));
+    setAnimatedPinDisplay(Array(6).fill(''));
     setIsGeneratingPin(false);
     setRole('user');
     if (animationIntervalRef.current) {
@@ -160,7 +160,7 @@ const CreateUserForm = ({ onUserCreated, closeDialog }: { onUserCreated: () => v
     <DialogContent>
       <DialogHeader>
         <DialogTitle>Create New User</DialogTitle>
-        <DialogDescription>Enter the user's details. A 4-digit PIN will be automatically generated.</DialogDescription>
+        <DialogDescription>Enter the user's details. A 6-digit PIN will be automatically generated.</DialogDescription>
       </DialogHeader>
       <form onSubmit={handleSubmit} className="space-y-4 pt-4">
         <div>
@@ -234,8 +234,8 @@ const EditPinDialog = ({ user, onPinUpdated, open, onOpenChange }: { user: UserA
   }, [user, open]);
 
   const handleUpdatePin = async () => {
-    if (!user || !newPin || newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
-      toast({ title: "Error", description: "PIN must be 4 digits and contain only numbers.", variant: "destructive" });
+    if (!user || !newPin || newPin.length !== 6 || !/^\d{6}$/.test(newPin)) {
+      toast({ title: "Error", description: "PIN must be 6 digits and contain only numbers.", variant: "destructive" });
       return;
     }
 
@@ -275,14 +275,14 @@ const EditPinDialog = ({ user, onPinUpdated, open, onOpenChange }: { user: UserA
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Manage PIN for {user.name}</DialogTitle>
-          <DialogDescription>View or update the 4-digit PIN for this user.</DialogDescription>
+          <DialogDescription>View or update the 6-digit PIN for this user.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="flex items-center justify-between">
             <Label>Current PIN:</Label>
             <div className="flex items-center gap-2">
               <span className="font-mono text-lg tracking-widest">
-                {currentPinVisible ? user.pin : "••••"}
+                {currentPinVisible ? user.pin : "••••••••"}
               </span>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentPinVisible(!currentPinVisible)}>
                 {currentPinVisible ? <EyeOffIcon className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -291,13 +291,13 @@ const EditPinDialog = ({ user, onPinUpdated, open, onOpenChange }: { user: UserA
             </div>
           </div>
           <div>
-            <Label htmlFor="edit-newPin">New 4-Digit PIN</Label>
+            <Label htmlFor="edit-newPin">New 6-Digit PIN</Label>
             <Input
               id="edit-newPin"
               value={newPin}
-              onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-              placeholder="Enter new 4-digit PIN"
-              maxLength={4}
+              onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="Enter new 6-digit PIN"
+              maxLength={6}
               className="font-mono tracking-widest"
               disabled={isLoading}
             />
@@ -408,7 +408,7 @@ export default function UserManagementPage() {
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell className="font-mono tracking-widest">{user.pin}</TableCell>
+                    <TableCell className="font-mono tracking-widest">{'••••••'}</TableCell>
                     <TableCell className="text-left">
                       <Button variant="outline" size="sm" onClick={() => handleOpenEditDialog(user)} className="flex items-center gap-2">
                         <Edit className="h-4 w-4 mr-1" /> Manage PIN

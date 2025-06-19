@@ -49,4 +49,21 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
   return NextResponse.json({ data }, { status: 200 });
+}
+
+export async function PATCH(req: Request) {
+  const { id, status } = await req.json();
+  if (!id || !status) {
+    return NextResponse.json({ error: 'Missing id or status' }, { status: 400 });
+  }
+  const { data, error } = await supabase
+    .from('opportunities')
+    .update({ status })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+  return NextResponse.json({ data }, { status: 200 });
 } 

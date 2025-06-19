@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, BarChartBig, DollarSign, CalendarDays, Clock, Briefcase, AlertTriangle, CheckCircle2, Lightbulb, TrendingUp } from 'lucide-react';
+import { ArrowLeft, BarChartBig, DollarSign, CalendarDays, Clock, Briefcase, AlertTriangle, CheckCircle2, Lightbulb, TrendingUp, Edit } from 'lucide-react';
 import { format, parseISO, formatDistanceToNowStrict } from 'date-fns';
 import { Progress } from '@/components/ui/progress';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -13,6 +13,7 @@ import { getOpportunityById, getAccountById, getUpdatesForOpportunity } from '@/
 import type { Opportunity, OpportunityForecast, Account, Update } from '@/types';
 import { aiPoweredOpportunityForecasting } from '@/ai/flows/ai-powered-opportunity-forecasting';
 import UpdateItem from '@/components/updates/UpdateItem';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const getStatusBadgeColorClasses = (status: Opportunity['status']): string => {
   switch (status) {
@@ -54,6 +55,17 @@ export default function OpportunityDetailsPage() {
   const [forecast, setForecast] = useState<OpportunityForecast | null>(null);
   const [updates, setUpdates] = useState<Update[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [status, setStatus] = useState<Opportunity['status'] | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isEditingStatus, setIsEditingStatus] = useState(false);
+  const statusOptions = [
+    'Need Analysis',
+    'Negotiation',
+    'In Progress',
+    'On Hold',
+    'Completed',
+    'Cancelled',
+  ];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -68,15 +80,15 @@ export default function OpportunityDetailsPage() {
         }
 
         setOpportunity(opportunityData);
-        setAccount(getAccountById(opportunityData.accountId) || null);
+        setAccount(getAccountById(opportunityData.associated_account_id) || null);
         setUpdates(getUpdatesForOpportunity(opportunityId));
 
         if (opportunityData.status !== 'Completed' && opportunityData.status !== 'Cancelled') {
           const forecastData = await aiPoweredOpportunityForecasting({
             opportunityName: opportunityData.name,
             opportunityDescription: opportunityData.description,
-            opportunityTimeline: `Start: ${format(parseISO(opportunityData.startDate), 'MMM dd, yyyy')}, End: ${format(parseISO(opportunityData.endDate), 'MMM dd, yyyy')}`,
-            opportunityValue: opportunityData.value,
+            opportunityTimeline: `Start: ${format(parseISO(opportunityData.created_at), 'MMM dd, yyyy')}, End: ${format(parseISO(opportunityData.expected_close_date || opportunityData.created_at), 'MMM dd, yyyy')}`,
+            opportunityValue: opportunityData.amount,
             opportunityStatus: opportunityData.status,
             recentUpdates: "Recent updates indicate steady progress.",
           });
@@ -92,6 +104,31 @@ export default function OpportunityDetailsPage() {
     fetchData();
   }, [params.id, router]);
 
+  useEffect(() => {
+    if (opportunity) setStatus(opportunity.status);
+  }, [opportunity]);
+
+  const handleStatusChange = async (newStatus: Opportunity['status']) => {
+    if (!opportunity) return;
+    setIsUpdatingStatus(true);
+    try {
+      const res = await fetch(`/api/opportunities/${opportunity.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        setStatus(newStatus);
+        setOpportunity({ ...opportunity, status: newStatus });
+        setIsEditingStatus(false);
+      } else {
+        // Optionally handle error
+      }
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -106,7 +143,7 @@ export default function OpportunityDetailsPage() {
     return null;
   }
 
-  const progress = calculateProgress(opportunity.startDate, opportunity.endDate, opportunity.status);
+  const progress = calculateProgress(opportunity.created_at, opportunity.expected_close_date || opportunity.created_at, opportunity.status);
   const isAtRisk = forecast?.bottleneckIdentification && 
     forecast.bottleneckIdentification.toLowerCase() !== "none identified" && 
     forecast.bottleneckIdentification.toLowerCase() !== "none" && 
@@ -114,7 +151,7 @@ export default function OpportunityDetailsPage() {
 
   const timeRemaining = (status: Opportunity['status']): string => {
     if (status === 'Completed' || status === 'Cancelled') return status;
-    const end = parseISO(opportunity.endDate);
+    const end = parseISO(opportunity.expected_close_date || opportunity.created_at);
     const now = new Date();
     if (now > end) return `Overdue by ${formatDistanceToNowStrict(end, { addSuffix: false })}`;
     return `${formatDistanceToNowStrict(end, { addSuffix: false })} left`;
@@ -128,9 +165,29 @@ export default function OpportunityDetailsPage() {
           Back
         </Button>
         <h1 className="text-2xl font-semibold">{opportunity.name}</h1>
-        <Badge variant="secondary" className={`capitalize ${getStatusBadgeColorClasses(opportunity.status)}`}>
-          {opportunity.status}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+          {isEditingStatus ? (
+            <Select value={status || ''} onValueChange={handleStatusChange} disabled={isUpdatingStatus}>
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map(opt => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <>
+              <Badge variant="secondary" className={`capitalize ${getStatusBadgeColorClasses(status || (opportunity && opportunity.status))}`}>{status || (opportunity && opportunity.status)}</Badge>
+              <Button variant="ghost" size="icon" onClick={() => setIsEditingStatus(true)} aria-label="Edit Status">
+                <Edit className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+          <span>{timeRemaining(status || (opportunity && opportunity.status))}</span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -155,7 +212,7 @@ export default function OpportunityDetailsPage() {
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Value</h3>
                 <div className="flex items-center">
                   <DollarSign className="mr-2 h-4 w-4 text-green-600" />
-                  <span>${opportunity.value.toLocaleString()}</span>
+                  <span>${opportunity.amount.toLocaleString()}</span>
                 </div>
               </div>
               <div>
@@ -163,15 +220,8 @@ export default function OpportunityDetailsPage() {
                 <div className="flex items-center">
                   <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
                   <span>
-                    {format(parseISO(opportunity.startDate), 'MMM dd, yyyy')} - {format(parseISO(opportunity.endDate), 'MMM dd, yyyy')}
+                    {format(parseISO(opportunity.created_at), 'MMM dd, yyyy')} - {format(parseISO(opportunity.expected_close_date || opportunity.created_at), 'MMM dd, yyyy')}
                   </span>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">Status</h3>
-                <div className="flex items-center">
-                  <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span>{timeRemaining(opportunity.status)}</span>
                 </div>
               </div>
             </div>

@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BarChartBig, DollarSign, CalendarDays, Eye, AlertTriangle, CheckCircle2, Briefcase, Lightbulb, TrendingUp, Users, Clock } from 'lucide-react';
+import { BarChartBig, DollarSign, CalendarDays, Eye, AlertTriangle, CheckCircle2, Briefcase, Lightbulb, TrendingUp, Users, Clock, Edit } from 'lucide-react';
 import type { Opportunity, OpportunityForecast as AIOpportunityForecast, Account } from '@/types';
 import { Progress } from "@/components/ui/progress";
 import {format, differenceInDays, parseISO, formatDistanceToNowStrict} from 'date-fns';
 import { aiPoweredOpportunityForecasting } from '@/ai/flows/ai-powered-opportunity-forecasting';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { getAccountById } from '@/lib/data';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface OpportunityCardProps {
   opportunity: Opportunity;
@@ -29,6 +30,17 @@ const getStatusBadgeColorClasses = (status: Opportunity['status']): string => {
   }
 };
 
+const getStatusPillStyles = (status: Opportunity['status']) => {
+  switch (status) {
+    case 'Need Analysis': return 'bg-sky-100 text-sky-800';
+    case 'Negotiation': return 'bg-amber-100 text-amber-800';
+    case 'In Progress': return 'bg-blue-100 text-blue-800';
+    case 'On Hold': return 'bg-slate-100 text-slate-800';
+    case 'Completed': return 'bg-green-100 text-green-800';
+    case 'Cancelled': return 'bg-red-100 text-red-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+};
 
 const calculateProgress = (startDate: string | undefined, endDate: string | undefined, status: Opportunity['status']): number => {
   if (!startDate || !endDate) return 0; // Defensive: if missing, show 0 progress
@@ -67,6 +79,17 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
   const [forecast, setForecast] = useState<AIOpportunityForecast | null>(null);
   const [isLoadingForecast, setIsLoadingForecast] = useState(false);
   const [associatedAccount, setAssociatedAccount] = useState<Account | undefined>(undefined);
+  const [status, setStatus] = useState<Opportunity['status']>(opportunity.status);
+  const [isEditingStatus, setIsEditingStatus] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const statusOptions = [
+    'Need Analysis',
+    'Negotiation',
+    'In Progress',
+    'On Hold',
+    'Completed',
+    'Cancelled',
+  ];
 
   useEffect(() => {
     if (opportunity.associated_account_id) {
@@ -128,6 +151,26 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
     return `${formatDistanceToNowStrict(end, {addSuffix: false})} left`;
   }
 
+  const handleStatusChange = async (newStatus: Opportunity['status']) => {
+    setIsUpdatingStatus(true);
+    try {
+      const res = await fetch('/api/opportunities', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: opportunity.id, status: newStatus }),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        setStatus(result.data.status);
+        setIsEditingStatus(false);
+      } else {
+        // Optionally handle error
+      }
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   // Debug: log the date fields
   console.log('Opportunity dates:', opportunity.created_at, opportunity.expected_close_date);
 
@@ -140,7 +183,18 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
               <BarChartBig className="mr-2 h-5 w-5 text-primary shrink-0" />
               <CardTitle className="text-xl font-headline mb-0 ml-2">{opportunity.name}</CardTitle>
             </div>
-            <Badge variant="secondary" className={`capitalize whitespace-nowrap ml-2 ${getStatusBadgeColorClasses(opportunity.status)}`}>{opportunity.status}</Badge>
+            <div className="flex items-center gap-2">
+              <Select value={status} onValueChange={handleStatusChange} disabled={isUpdatingStatus}>
+                <SelectTrigger className={`w-36 rounded-full px-4 py-1 font-semibold border-0 shadow-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors duration-150 ${getStatusPillStyles(status)}`}> 
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map(opt => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="flex-grow space-y-3 text-sm px-6 text-left">

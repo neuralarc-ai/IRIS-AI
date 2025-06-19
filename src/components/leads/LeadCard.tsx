@@ -8,6 +8,7 @@ import { Users, User, Mail, Phone, Eye, CheckSquare, FileWarning, CalendarPlus, 
 import type { Lead } from '@/types';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface LeadCardProps {
   lead: Lead;
@@ -38,9 +39,32 @@ const getStatusBadgeColorClasses = (status: Lead['status']): string => {
   }
 }
 
+// Add a helper to get pill styles for each status
+const getStatusPillStyles = (status: Lead['status']) => {
+  switch (status) {
+    case 'New': return 'bg-blue-100 text-blue-800';
+    case 'Contacted': return 'bg-sky-100 text-sky-800';
+    case 'Qualified': return 'bg-teal-100 text-teal-800';
+    case 'Proposal Sent': return 'bg-indigo-100 text-indigo-800';
+    case 'Converted to Account': return 'bg-green-100 text-green-800';
+    case 'Lost': return 'bg-red-100 text-red-800';
+    default: return 'bg-slate-100 text-slate-800';
+  }
+};
+
 export default function LeadCard({ lead, onLeadConverted }: LeadCardProps) {
   const { toast } = useToast();
   const [isConverting, setIsConverting] = useState(false);
+  const [status, setStatus] = useState<Lead['status']>(lead.status);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const statusOptions: Lead['status'][] = [
+    'New',
+    'Contacted',
+    'Qualified',
+    'Proposal Sent',
+    'Converted to Account',
+    'Lost',
+  ];
 
   const handleConvertLead = async () => {
     if (lead.status === "Converted to Account" || lead.status === "Lost") {
@@ -86,6 +110,24 @@ export default function LeadCard({ lead, onLeadConverted }: LeadCardProps) {
     }
   };
 
+  const handleStatusChange = async (newStatus: Lead['status']) => {
+    setIsUpdatingStatus(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        setStatus(newStatus);
+      } else {
+        // Optionally handle error
+      }
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   const canConvert = lead.status !== "Converted to Account" && lead.status !== "Lost";
 
   const formatDate = (dateString: string) => {
@@ -106,12 +148,18 @@ export default function LeadCard({ lead, onLeadConverted }: LeadCardProps) {
               <User className="mr-2 h-5 w-5 text-primary shrink-0" />
               {lead.companyName}
             </CardTitle>
-             <Badge
-              variant={getStatusBadgeVariant(lead.status)}
-              className={`capitalize whitespace-nowrap ml-2 ${getStatusBadgeColorClasses(lead.status)}`}
-            >
-              {lead.status}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Select value={status} onValueChange={handleStatusChange} disabled={isUpdatingStatus}>
+                <SelectTrigger className={`w-40 rounded-full px-4 py-1 font-semibold border-0 shadow-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors duration-150 ${getStatusPillStyles(status)}`}> 
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map(opt => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <CardDescription className="text-sm text-muted-foreground flex items-center">
               <Users className="mr-2 h-4 w-4 shrink-0"/> {lead.personName}

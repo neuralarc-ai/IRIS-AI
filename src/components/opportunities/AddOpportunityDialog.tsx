@@ -36,36 +36,53 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
   const [expectedCloseDate, setExpectedCloseDate] = useState('');
   const [status, setStatus] = useState('Need Analysis');
   const { toast } = useToast();
+  const [accountOptions, setAccountOptions] = useState<{ id: string, name: string, type: string }[]>(accounts);
+  const [accountSearch, setAccountSearch] = useState('');
+  const [accountDetails, setAccountDetails] = useState<any>(null);
 
   // Debug logging
   console.log('AddOpportunityDialog render - open:', open);
   console.log('Accounts prop in AddOpportunityDialog:', accounts);
 
-  // Fetch account name if initialAccountId is provided
+  // Fetch accounts in real-time when dialog opens or search changes
+  useEffect(() => {
+    if (!open) return;
+    const fetchAccounts = async () => {
+      let url = '/api/accounts';
+      if (accountSearch) {
+        url += `?search=${encodeURIComponent(accountSearch)}`;
+      }
+      const response = await fetch(url);
+      const result = await response.json();
+      setAccountOptions((result.data || []).map((acc: any) => ({ id: acc.id, name: acc.name, type: acc.type })));
+    };
+    fetchAccounts();
+  }, [open, accountSearch]);
+
+  // Always fetch account details from backend using indexed id column if initialAccountId is provided
   useEffect(() => {
     if (initialAccountId) {
       setSelectedAccountId(initialAccountId);
-      // Try to get account name from accounts prop first
-      const found = accounts.find(a => a.id === initialAccountId);
-      if (found) {
-        setAccountName(found.name);
-      } else {
-        // Fetch from backend if not found in prop
-        fetch(`/api/accounts?id=${initialAccountId}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.data && data.data.length > 0) {
-              setAccountName(data.data[0].name);
-            } else {
-              setAccountName('');
-            }
-          })
-          .catch(() => setAccountName(''));
-      }
+      fetch(`/api/accounts?id=${encodeURIComponent(initialAccountId)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.data && data.data.length > 0) {
+            setAccountName(data.data[0].name);
+            setAccountDetails(data.data[0]);
+          } else {
+            setAccountName('');
+            setAccountDetails(null);
+          }
+        })
+        .catch(() => {
+          setAccountName('');
+          setAccountDetails(null);
+        });
     } else {
       setAccountName('');
+      setAccountDetails(null);
     }
-  }, [initialAccountId, accounts]);
+  }, [initialAccountId, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,13 +155,50 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
             <Input id="opportunity-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Q4 Enterprise Deal" disabled={isLoading} />
           </div>
 
-          {/* Associated Account as read-only field */}
-          {selectedAccountId && (
-            <div>
-              <Label htmlFor="opportunity-account">Associated Account <span className="text-destructive">*</span></Label>
-              <Input id="opportunity-account" value={accountName} disabled />
+          {/* Show only account name if initialAccountId is set and accountDetails is available */}
+          {initialAccountId && accountDetails && (
+            <div className="mb-2 p-3 rounded bg-muted/30 border text-xs">
+              <div><span className="font-semibold">Name:</span> {accountDetails.name}</div>
             </div>
           )}
+
+          {/* Associated Account as searchable dropdown or disabled input if initialAccountId is set */}
+          <div>
+            <Label htmlFor="opportunity-account">Associated Account <span className="text-destructive">*</span></Label>
+            {initialAccountId ? (
+              <Input id="opportunity-account" value={accountName} disabled />
+            ) : (
+              <Select
+                value={selectedAccountId}
+                onValueChange={(val) => {
+                  setSelectedAccountId(val);
+                  const found = accountOptions.find(a => a.id === val);
+                  setAccountName(found ? found.name : '');
+                }}
+                disabled={isLoading}
+                required
+              >
+                <SelectTrigger id="opportunity-account">
+                  <SelectValue placeholder="Search or select account" />
+                </SelectTrigger>
+                <SelectContent>
+                  <div className="px-2 py-1">
+                    <input
+                      type="text"
+                      placeholder="Search accounts..."
+                      value={accountSearch}
+                      onChange={e => setAccountSearch(e.target.value)}
+                      className="w-full px-2 py-1 border rounded mb-2 text-sm"
+                      disabled={isLoading}
+                    />
+                  </div>
+                  {accountOptions.map(acc => (
+                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
 
           <div>
             <Label htmlFor="opportunity-description">Description</Label>
