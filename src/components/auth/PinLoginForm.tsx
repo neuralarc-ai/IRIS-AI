@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef, ChangeEvent, KeyboardEvent, useEffect } from 'react';
@@ -12,6 +11,7 @@ const PIN_LENGTH = 6;
 
 export default function PinLoginForm() {
   const [pin, setPin] = useState<string[]>(Array(PIN_LENGTH).fill(''));
+  const [visible, setVisible] = useState<boolean[]>(Array(PIN_LENGTH).fill(false));
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -22,11 +22,26 @@ export default function PinLoginForm() {
   const handleChange = (e: ChangeEvent<HTMLInputElement>, index: number) => {
     const { value } = e.target;
     const newPin = [...pin];
+    const newVisible = [...visible];
 
     if (/^[0-9]$/.test(value) || value === '') {
       newPin[index] = value;
       setPin(newPin);
       setError(null);
+      if (value) {
+        newVisible[index] = true;
+        setVisible(newVisible);
+        setTimeout(() => {
+          setVisible((prev) => {
+            const updated = [...prev];
+            updated[index] = false;
+            return updated;
+          });
+        }, 500);
+      } else {
+        newVisible[index] = false;
+        setVisible(newVisible);
+      }
 
       if (value && index < PIN_LENGTH - 1) {
         inputRefs.current[index + 1]?.focus();
@@ -121,7 +136,7 @@ export default function PinLoginForm() {
             inputMode="numeric"
             pattern="[0-9]*"
             maxLength={1}
-            value={digit}
+            value={visible[index] ? digit : digit ? '•' : ''}
             onChange={(e) => handleChange(e, index)}
             onKeyDown={(e) => handleKeyDown(e, index)}
             onPaste={index === 0 ? handlePaste : undefined} // Allow paste only on the first input

@@ -23,6 +23,7 @@ import {
   History,
   Linkedin,
   MapPin,
+  Briefcase,
 } from "lucide-react";
 import type { Lead } from "@/types";
 import { formatDistanceToNow, parseISO } from "date-fns";
@@ -89,7 +90,11 @@ const VALID_STATUSES: Lead["status"][] = [
   "Lost",
 ];
 
-export default function LeadCard({ lead: initialLead, onLeadConverted, onStatusChange }: LeadCardProps) {
+export default function LeadCard({
+  lead: initialLead,
+  onLeadConverted,
+  onStatusChange,
+}: LeadCardProps) {
   const { toast } = useToast();
   const [lead, setLead] = useState(initialLead);
   const [isConverting, setIsConverting] = useState(false);
@@ -108,7 +113,11 @@ export default function LeadCard({ lead: initialLead, onLeadConverted, onStatusC
       if (!response.ok) {
         throw new Error(result.error || "Failed to update status");
       }
-      setLead((prev) => ({ ...prev, status: newStatus, updatedAt: new Date().toISOString() }));
+      setLead((prev) => ({
+        ...prev,
+        status: newStatus,
+        updatedAt: new Date().toISOString(),
+      }));
       if (onStatusChange) {
         onStatusChange(lead.id, newStatus);
       }
@@ -123,11 +132,49 @@ export default function LeadCard({ lead: initialLead, onLeadConverted, onStatusC
     } catch (error) {
       toast({
         title: "Status Update Failed",
-        description: error instanceof Error ? error.message : "Could not update status.",
+        description:
+          error instanceof Error ? error.message : "Could not update status.",
         variant: "destructive",
       });
     } finally {
       setIsStatusUpdating(false);
+    }
+  };
+
+  const handleConvert = async () => {
+    setIsConverting(true);
+    try {
+      const response = await fetch(`/api/leads/${lead.id}/convert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to convert lead");
+      }
+      setLead((prev) => ({
+        ...prev,
+        status: "Converted to Account",
+        updatedAt: new Date().toISOString(),
+      }));
+      toast({
+        title: "Lead Converted!",
+        description: "Lead has been successfully converted to an account.",
+        className: "bg-green-100 dark:bg-green-900 border-green-500",
+      });
+      if (result.data?.account?.id) {
+        onLeadConverted(lead.id, result.data.account.id);
+      }
+    } catch (error) {
+      toast({
+        title: "Conversion Failed",
+        description:
+          error instanceof Error ? error.message : "Could not convert lead.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConverting(false);
     }
   };
 
@@ -145,20 +192,26 @@ export default function LeadCard({ lead: initialLead, onLeadConverted, onStatusC
       <CardHeader className="pb-3 px-6 pt-6">
         <div className="flex justify-between items-start mb-1">
           <CardTitle className="text-xl font-headline flex items-center">
-            <User className="mr-2 h-5 w-5 text-primary shrink-0" />
+            <Briefcase className="mr-2 h-5 w-5 text-primary shrink-0" />
             {lead.companyName}
           </CardTitle>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className={`capitalize whitespace-nowrap ml-2 focus:outline-none ${getStatusBadgeColorClasses(lead.status)} inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors`}
-                disabled={isStatusUpdating || lead.status === "Converted to Account" || lead.status === "Lost"}
+                className={`capitalize whitespace-nowrap ml-2 focus:outline-none ${getStatusBadgeColorClasses(
+                  lead.status
+                )} inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors`}
+                disabled={
+                  isStatusUpdating ||
+                  lead.status === "Converted to Account" ||
+                  lead.status === "Lost"
+                }
                 aria-label="Change status"
               >
                 {isStatusUpdating ? (
                   <span className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
                 ) : null}
-            {lead.status}
+                {lead.status}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -166,8 +219,18 @@ export default function LeadCard({ lead: initialLead, onLeadConverted, onStatusC
                 <DropdownMenuItem
                   key={status}
                   onSelect={() => handleStatusChange(status)}
-                  disabled={status === lead.status || lead.status === "Converted to Account" || lead.status === "Lost"}
-                  className={`capitalize ${getStatusBadgeColorClasses(status)} ${status === lead.status ? "opacity-60 font-bold" : "cursor-pointer"}`}
+                  disabled={
+                    status === lead.status ||
+                    lead.status === "Converted to Account" ||
+                    lead.status === "Lost"
+                  }
+                  className={`capitalize ${getStatusBadgeColorClasses(
+                    status
+                  )} ${
+                    status === lead.status
+                      ? "opacity-60 font-bold"
+                      : "cursor-pointer"
+                  }`}
                 >
                   {status}
                 </DropdownMenuItem>
@@ -176,7 +239,8 @@ export default function LeadCard({ lead: initialLead, onLeadConverted, onStatusC
           </DropdownMenu>
         </div>
         <CardDescription className="text-sm text-muted-foreground flex items-center">
-          <Users className="mr-2 h-4 w-4 shrink-0 text-gray-700" /> {lead.personName}
+          <Users className="mr-2 h-4 w-4 shrink-0 text-gray-700" />{" "}
+          {lead.personName}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow space-y-2.5 text-sm px-6">
@@ -236,17 +300,36 @@ export default function LeadCard({ lead: initialLead, onLeadConverted, onStatusC
             View Details
           </Link>
         </Button>
-        {lead.status !== "Converted to Account" && lead.status !== "Lost" && (
-          <Button size="sm" onClick={() => setIsConverting(true)} disabled={isConverting}>
-            {isConverting ? (
-              <>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                Converting...
-              </>
-            ) : (
-              <CheckSquare className="mr-2 h-4 w-4" />
-            )}
+        {lead.status === "Converted to Account" ? (
+          <Button
+            size="sm"
+            disabled
+            className="ml-2 cursor-not-allowed opacity-70"
+          >
+            <CheckSquare className="mr-2 h-4 w-4" />
+            Converted
           </Button>
+        ) : (
+          lead.status !== "Lost" && (
+            <Button
+              size="sm"
+              onClick={handleConvert}
+              disabled={isConverting}
+              className="ml-2"
+            >
+              {isConverting ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Converting...
+                </>
+              ) : (
+                <>
+                  <CheckSquare className="mr-2 h-4 w-4" />
+                  Convert
+                </>
+              )}
+            </Button>
+          )
         )}
       </CardFooter>
     </Card>

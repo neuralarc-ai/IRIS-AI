@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type')
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50
     const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0
+    const id = searchParams.get('id');
 
     // Get user info from headers
     const userId = request.headers.get('x-user-id');
@@ -42,9 +43,35 @@ export async function GET(request: NextRequest) {
       query = query.eq('type', type)
     }
 
+    // Filter by id if provided
+    if (id) {
+      query = query.eq('id', id);
+    }
+
     // Filter by created_by_user_id if not admin
     if (!isAdmin && userId) {
-      query = query.eq('created_by_user_id', userId);
+      // First, get all lead IDs created by this user
+      const { data: userLeads, error: leadsError } = await supabase
+        .from('leads')
+        .select('id')
+        .eq('created_by_user_id', userId);
+
+      if (leadsError) {
+        console.error('Error fetching user leads:', leadsError);
+        return NextResponse.json(
+          { error: 'Failed to fetch user leads for filtering accounts' },
+          { status: 500 }
+        );
+      }
+
+      const userLeadIds = (userLeads || []).map((lead: any) => lead.id);
+
+      // Filter accounts where created_by_user_id = userId OR converted_from_lead_id in userLeadIds
+      if (userLeadIds.length > 0) {
+        query = query.or(`created_by_user_id.eq.${userId},converted_from_lead_id.in.(${userLeadIds.join(',')})`);
+      } else {
+        query = query.eq('created_by_user_id', userId);
+      }
     }
 
     const { data, error, count } = await query

@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/hooks/use-auth';
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -22,12 +23,18 @@ export default function AccountsPage() {
   const [typeFilter, setTypeFilter] = useState<AccountType | 'all'>('all');
   const [isAddAccountDialogOpen, setIsAddAccountDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { user, isAdmin, isLoading: authLoading } = useAuth();
 
   // Fetch accounts from Supabase
   const fetchAccounts = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/accounts');
+      const response = await fetch('/api/accounts', {
+        headers: {
+          'x-user-id': user?.id || '',
+          'x-user-admin': isAdmin() ? 'true' : 'false',
+        },
+      });
       
       if (!response.ok) {
         throw new Error('Failed to fetch accounts');
@@ -66,8 +73,10 @@ export default function AccountsPage() {
   };
 
   useEffect(() => {
-    fetchAccounts();
-  }, []);
+    if (!authLoading && user) {
+      fetchAccounts();
+    }
+  }, [authLoading, user]);
 
   const filteredAccounts = accounts.filter(account => {
     const matchesSearch = account.name.toLowerCase().includes(searchTerm.toLowerCase()) || 

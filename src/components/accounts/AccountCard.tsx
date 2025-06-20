@@ -43,13 +43,23 @@ export default function AccountCard({
   isConverted,
 }: AccountCardProps) {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [totalOpportunityAmount, setTotalOpportunityAmount] = useState<number>(0);
   const [dailySummary, setDailySummary] = useState<AIDailySummary | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [isAddOpportunityDialogOpen, setIsAddOpportunityDialogOpen] =
     useState(false);
 
   useEffect(() => {
-    setOpportunities(getOpportunitiesByAccount(account.id));
+    async function fetchOpportunities() {
+      const res = await fetch(`/api/opportunities?account_id=${account.id}`);
+      const result = await res.json();
+      const opps = result.data || [];
+      setOpportunities(opps);
+      // Sum the amount/amount field for all opportunities
+      const total = opps.reduce((sum: number, opp: any) => sum + (Number(opp.amount) || 0), 0);
+      setTotalOpportunityAmount(total);
+    }
+    fetchOpportunities();
   }, [account.id]);
 
   const fetchDailySummary = async () => {
@@ -92,12 +102,25 @@ export default function AccountCard({
       <Card className="flex flex-col h-full bg-white text-black rounded-[8px] shadow-lg p-2 border-none">
         <CardHeader className="pb-3 px-6 pt-6">
           <div className="flex flex-row items-center justify-between w-full mb-1">
-            <div className="flex flex-row items-center">
-              <Briefcase className="mr-2 h-5 w-5 text-primary shrink-0" />
-              <CardTitle className="text-xl font-headline mb-0 ml-2">
-                {account.name}
-              </CardTitle>
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-2">
+                <Briefcase className=" h-5 w-5 text-primary" />
+                <CardTitle className="text-xl font-headline mb-0">
+                  {account.name}
+                </CardTitle>
+              </div>
+              {(account.type || account.industry) && (
+                <div className="flex items-center mt-2 text-muted-foreground text-sm">
+                  <Tag className="mr-1 h-4 w-4 shrink-0" />
+                  <span>
+                    {account.type}
+                    {account.type && account.industry ? " | " : ""}
+                    {account.industry}
+                  </span>
+                </div>
+              )}
             </div>
+
             <Badge
               variant={account.status === "Active" ? "default" : "secondary"}
               className={`capitalize whitespace-nowrap ml-2 ${
@@ -117,28 +140,27 @@ export default function AccountCard({
 
           {account.contactPersonName && (
             <div className="flex items-center text-muted-foreground">
-              <Users className="mr-2 h-4 w-4 shrink-0" />
+              <Users className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
               {account.contactPersonName}
             </div>
           )}
           {account.contactEmail && (
             <div className="flex items-center text-muted-foreground">
-              <Mail className="mr-2 h-4 w-4 shrink-0" />
+              <Mail className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
               {account.contactEmail}
             </div>
           )}
           {account.contactPhone && (
             <div className="flex items-center text-muted-foreground">
-              <Phone className="mr-2 h-4 w-4 shrink-0" />
+              <Phone className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
               {account.contactPhone}
             </div>
           )}
 
           <div className="text-sm flex items-center text-foreground font-medium">
-            <ListChecks className="mr-2 h-4 w-4 text-primary" />
+            <ListChecks className="mr-2 h-4 w-4" />
             <span>
-              {opportunities.length} Active Opportunit
-              {opportunities.length !== 1 ? "ies" : "y"}
+              {opportunities.length} Active Opportunit{opportunities.length !== 1 ? "ies" : "y"}
             </span>
           </div>
 

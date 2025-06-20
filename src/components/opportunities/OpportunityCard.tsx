@@ -39,7 +39,6 @@ import {
 } from "date-fns";
 import { aiPoweredOpportunityForecasting } from "@/ai/flows/ai-powered-opportunity-forecasting";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
-import { getAccountById } from "@/lib/data";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -126,7 +125,7 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
   const [opportunity, setOpportunity] = useState(initialOpportunity);
   const [forecast, setForecast] = useState<AIOpportunityForecast | null>(null);
   const [isLoadingForecast, setIsLoadingForecast] = useState(false);
-  const [associatedAccount, setAssociatedAccount] = useState<Account | undefined>(undefined);
+  const [associatedAccount, setAssociatedAccount] = useState<any>(null);
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
 
   const handleStatusChange = async (newStatus: Opportunity["status"]) => {
@@ -163,9 +162,16 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
   };
 
   useEffect(() => {
-    if (opportunity.associated_account_id) {
-      setAssociatedAccount(getAccountById(opportunity.associated_account_id));
+    async function fetchAccount() {
+      if (opportunity.associated_account_id) {
+        const res = await fetch(`/api/accounts?id=${opportunity.associated_account_id}`);
+        const result = await res.json();
+        if (result.data && result.data.length > 0) {
+          setAssociatedAccount(result.data[0]);
+        }
+      }
     }
+    fetchAccount();
   }, [opportunity.associated_account_id]);
 
   const fetchForecast = async () => {
@@ -279,11 +285,13 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
     <Card className="flex flex-col h-full bg-white text-black rounded-[8px] shadow-lg p-2 border-none">
       <CardHeader className="pb-3 px-6 pt-6">
         <div className="flex flex-row items-center justify-between w-full">
-          <div className="flex flex-row items-center">
-            <BarChartBig className="mr-2 h-5 w-5 text-primary shrink-0" />
-            <CardTitle className="text-xl font-headline mb-0 ml-2">
-              {opportunity.name}
-            </CardTitle>
+          <div className="flex flex-col items-start">
+            <div className="flex flex-row items-center">
+              <BarChartBig className="mr-2 h-5 w-5 text-primary shrink-0" />
+              <CardTitle className="text-xl font-headline mb-0 ml-2">
+                {initialOpportunity.name}
+              </CardTitle>
+            </div>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -314,10 +322,10 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
         </div>
       </CardHeader>
       <CardContent className="flex-grow space-y-3 text-sm px-6 text-left">
-        {accountName && (
+        {associatedAccount?.name && (
           <div className="flex items-center mb-1">
             <Briefcase className="mr-2 h-4 w-4 shrink-0" />
-            <span className="font-semibold mr-1">For:</span> {accountName}
+            <span className="font-semibold mr-1">For:</span> {associatedAccount.name}
           </div>
         )}
         {typeof opportunity.amount !== "undefined" &&

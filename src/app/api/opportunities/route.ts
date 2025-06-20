@@ -19,11 +19,15 @@ export async function POST(req: Request) {
     expected_close_date
   } = body;
 
+  if (!name || !associated_account_id || !amount || !expected_close_date) {
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  }
+
   const { data, error } = await supabase
     .from('opportunities')
     .insert([{
       name,
-      account_id: associated_account_id,
+      associated_account_id,
       description,
       amount,
       status,
@@ -39,11 +43,20 @@ export async function POST(req: Request) {
   return NextResponse.json({ data }, { status: 201 });
 }
 
-export async function GET() {
-  const { data, error } = await supabase
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const accountId = searchParams.get('account_id') || searchParams.get('associated_account_id');
+
+  let query = supabase
     .from('opportunities')
     .select('*')
     .order('created_at', { ascending: false });
+
+  if (accountId) {
+    query = query.eq('associated_account_id', accountId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
