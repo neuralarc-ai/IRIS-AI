@@ -99,13 +99,13 @@ export default function AccountCard({
 
   return (
     <>
-      <Card className="flex flex-col h-full bg-white text-black rounded-[8px] shadow-lg p-2 border-none">
+      <Card className="flex flex-col h-full bg-white text-black rounded-[8px] p-2 border-none">
         <CardHeader className="pb-3 px-6 pt-6">
           <div className="flex flex-row items-center justify-between w-full mb-1">
             <div className="flex flex-col items-center">
               <div className="flex items-center gap-2">
-                <Briefcase className=" h-5 w-5 text-primary" />
-                <CardTitle className="text-xl font-headline mb-0">
+                <Briefcase className="h-5 w-5" style={{ color: '#97A88C' }} />
+                <CardTitle className="text-xl font-headline mb-0" style={{ color: '#97A88C' }}>
                   {account.name}
                 </CardTitle>
               </div>
@@ -127,7 +127,7 @@ export default function AccountCard({
                 account.status === "Active"
                   ? "bg-green-500/20 text-green-700 border-green-500/30"
                   : "bg-amber-500/20 text-amber-700 border-amber-500/30"
-              }`}
+              } !hover:bg-inherit !hover:text-inherit !hover:border-inherit`}
             >
               {account.status}
             </Badge>
@@ -210,7 +210,7 @@ export default function AccountCard({
             </Link>
           </Button>
           */}
-          <Button size="sm" onClick={() => setIsAddOpportunityDialogOpen(true)}>
+          <Button size="sm" onClick={() => setIsAddOpportunityDialogOpen(true)} variant="beige">
             <PlusCircle className="mr-2 h-4 w-4" />
             New Opportunity
           </Button>

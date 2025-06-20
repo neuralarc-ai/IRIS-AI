@@ -81,74 +81,71 @@ export default function UpdatesPage() {
   return (
     <div className="container mx-auto space-y-6 mt-6">
       <PageTitle title="Communication Updates" subtitle="Log and review all opportunity-related communications.">
-        <Button onClick={() => setIsAddUpdateDialogOpen(true)}> 
+        <Button onClick={() => setIsAddUpdateDialogOpen(true)} variant="beige"> 
           <PlusCircle className="mr-2 h-4 w-4" /> Log New Update
         </Button>
       </PageTitle>
 
-      <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-        <CardHeader className="pb-4">
-            <CardTitle className="text-lg flex items-center">
-                <ListFilter className="mr-2 h-5 w-5 text-primary"/> Filter & Search Updates
-            </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-            <div>
-              <Label htmlFor="search-updates">Search Content</Label>
-               <div className="relative mt-1">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                    id="search-updates"
-                    type="text"
-                    placeholder="Keywords..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="type-filter">Type</Label>
-              <Select value={typeFilter} onValueChange={(value: UpdateType | 'all') => setTypeFilter(value)}>
-                <SelectTrigger id="type-filter" className="w-full mt-1">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {updateTypeOptions.map(type => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="opportunity-filter">Opportunity</Label>
-              <Select value={opportunityFilter} onValueChange={(value: string | 'all') => setOpportunityFilter(value)}>
-                <SelectTrigger id="opportunity-filter" className="w-full mt-1">
-                  <SelectValue placeholder="Filter by opportunity" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Opportunities</SelectItem>
-                  {opportunities.map(opportunity => ( 
-                    <SelectItem key={opportunity.id} value={opportunity.id}>{opportunity.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="date-filter">Date</Label>
+      <div className="w-full bg-white rounded-lg shadow p-5 mb-6">
+        <div className="flex items-center mb-4">
+          <ListFilter className="mr-2 h-5 w-5 text-primary" />
+          <span className="font-semibold text-lg">Filter & Search Updates</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+          <div>
+            <Label htmlFor="search-updates">Search Content</Label>
+             <div className="relative mt-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                id="date-filter"
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="mt-1"
+                  id="search-updates"
+                  type="text"
+                  placeholder="Keywords..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
+          <div>
+            <Label htmlFor="type-filter">Type</Label>
+            <Select value={typeFilter} onValueChange={(value: UpdateType | 'all') => setTypeFilter(value)}>
+              <SelectTrigger id="type-filter" className="w-full mt-1">
+                <SelectValue placeholder="Filter by type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {updateTypeOptions.map(type => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="opportunity-filter">Opportunity</Label>
+            <Select value={opportunityFilter} onValueChange={(value: string | 'all') => setOpportunityFilter(value)}>
+              <SelectTrigger id="opportunity-filter" className="w-full mt-1">
+                <SelectValue placeholder="Filter by opportunity" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Opportunities</SelectItem>
+                {opportunities.map(opportunity => ( 
+                  <SelectItem key={opportunity.id} value={opportunity.id}>{opportunity.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="date-filter">Date</Label>
+            <Input
+              id="date-filter"
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+        </div>
+      </div>
 
 
       {filteredUpdates.length > 0 ? (

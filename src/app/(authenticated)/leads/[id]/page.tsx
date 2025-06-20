@@ -147,10 +147,10 @@ export default function LeadDetailsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Lead Details */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2" style={{ backgroundColor: "#FFFFFF" }}>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Building2 className="mr-2 h-5 w-5 text-primary" />
+            <CardTitle className="flex items-center" style={{ color: "rgb(151, 168, 140)" }}>
+              <Building2 className="mr-2 h-5 w-5" style={{ color: "rgb(151, 168, 140)" }} />
               Lead Details
             </CardTitle>
           </CardHeader>
@@ -270,10 +270,10 @@ export default function LeadDetailsPage() {
         </Card>
 
         {/* Additional Information */}
-        <Card className="lg:col-span-1">
+        <Card className="lg:col-span-1" style={{ backgroundColor: "#FFFFFF" }}>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Users className="mr-2 h-5 w-5 text-primary" />
+            <CardTitle className="flex items-center" style={{ color: "rgb(151, 168, 140)" }}>
+              <Users className="mr-2 h-5 w-5" style={{ color: "rgb(151, 168, 140)" }} />
               Additional Information
             </CardTitle>
           </CardHeader>

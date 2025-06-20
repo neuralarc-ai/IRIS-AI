@@ -129,7 +129,7 @@ const CreateUserForm = ({ onUserCreated, closeDialog }: { onUserCreated: () => v
   };
 
   return (
-    <DialogContent>
+    <DialogContent className="bg-[#FAF8F5]">
       <DialogHeader>
         <DialogTitle>Create New User</DialogTitle>
         <DialogDescription>Enter the user's details and generate a 6-digit PIN.</DialogDescription>
@@ -137,17 +137,17 @@ const CreateUserForm = ({ onUserCreated, closeDialog }: { onUserCreated: () => v
       <form onSubmit={handleSubmit} className="space-y-4 pt-4">
         <div>
           <Label htmlFor="create-name">Name</Label>
-          <Input id="create-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter user's name" />
+          <Input id="create-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter user's name" className="bg-[#E2D4C3]/60" />
         </div>
         <div>
           <Label htmlFor="create-email">Email</Label>
-          <Input id="create-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter user's email" />
+          <Input id="create-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter user's email" className="bg-[#E2D4C3]/60" />
         </div>
 
         <div>
           <Label htmlFor="create-role">Role</Label>
           <Select value={role} onValueChange={setRole}>
-            <SelectTrigger id="create-role">
+            <SelectTrigger id="create-role" className="bg-[#E2D4C3]/60">
               <SelectValue placeholder="Select role" />
             </SelectTrigger>
             <SelectContent>
@@ -279,7 +279,7 @@ const EditPinDialog = ({ user, onPinUpdated, open, onOpenChange }: { user: UserA
               onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="Enter new 6-digit PIN"
               maxLength={6}
-              className="font-mono tracking-widest"
+              className="font-mono tracking-widest bg-[#E2D4C3]/60"
               disabled={isLoading}
             />
           </div>
@@ -465,7 +465,7 @@ export default function UserManagementPage() {
         </Dialog>
       </PageTitle>
 
-      <Card className="shadow-lg">
+      <Card className="shadow-lg bg-[#FAF8F5] p-6">
         <CardHeader>
           <CardTitle className="flex items-center">
             <Users2 className="mr-2 h-6 w-6 text-primary" /> User Accounts

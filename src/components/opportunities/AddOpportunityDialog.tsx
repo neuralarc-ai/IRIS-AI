@@ -122,7 +122,7 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
       if (!isOpen) resetForm();
       onOpenChange(isOpen);
     }}>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="sm:max-w-[525px] bg-[#FAF8F5]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <BarChartBig className="mr-2 h-5 w-5" /> Add New Opportunity
@@ -134,7 +134,7 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div>
             <Label htmlFor="opportunity-name">Opportunity Name <span className="text-destructive">*</span></Label>
-            <Input id="opportunity-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Q4 Enterprise Deal" disabled={isLoading} />
+            <Input id="opportunity-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Q4 Enterprise Deal" disabled={isLoading} className="bg-[#E2D4C3]/60" />
           </div>
 
           {/* Source Type Radio Filter */}
@@ -166,7 +166,7 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
                 disabled={isLoading || filteredAccounts.length === 0}
                 required
               >
-                <SelectTrigger id="opportunity-account">
+                <SelectTrigger id="opportunity-account" className="bg-[#E2D4C3]/60">
                   <SelectValue placeholder={filteredAccounts.length === 0 ? 'No active accounts' : 'Select account'} />
                 </SelectTrigger>
                 <SelectContent>
@@ -182,7 +182,7 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
                 disabled={isLoading || filteredLeads.length === 0}
                 required
               >
-                <SelectTrigger id="opportunity-lead">
+                <SelectTrigger id="opportunity-lead" className="bg-[#E2D4C3]/60">
                   <SelectValue placeholder={filteredLeads.length === 0 ? 'No available leads' : 'Select lead'} />
                 </SelectTrigger>
                 <SelectContent>
@@ -203,6 +203,7 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
               placeholder="Brief overview of the opportunity, client needs, etc."
               disabled={isLoading}
               rows={3}
+              className="bg-[#E2D4C3]/60"
             />
           </div>
           <div>
@@ -215,6 +216,7 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
               placeholder="e.g., 50000"
               disabled={isLoading}
               min="0"
+              className="bg-[#E2D4C3]/60"
             />
           </div>
           {/* Expected Close Date */}
@@ -227,6 +229,7 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
               onChange={(e) => setExpectedCloseDate(e.target.value)}
               disabled={isLoading}
               required
+              className="bg-[#E2D4C3]/60"
             />
           </div>
           {/* Status Dropdown */}
@@ -238,7 +241,7 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
               disabled={isLoading}
               required
             >
-              <SelectTrigger id="opportunity-status">
+              <SelectTrigger id="opportunity-status" className="bg-[#E2D4C3]/60">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>

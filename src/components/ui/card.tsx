@@ -31,7 +31,7 @@ const Card = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "rounded-lg border shadow-sm relative overflow-hidden",
+        "rounded-lg border  relative overflow-hidden",
         isInner ? "bg-[#FFFFFF]" : "bg-card text-card-foreground",
         gradient ? gradientClasses[gradient] : "bg-background",
         className

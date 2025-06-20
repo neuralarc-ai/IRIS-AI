@@ -73,65 +73,62 @@ export default function OpportunitiesPage() {
     <div className="container mx-auto space-y-6 mt-6">
       <PageTitle title="Opportunity Management" subtitle="Track and manage all ongoing and potential sales opportunities.">
         <div className="flex gap-2">
-          <Button onClick={() => setIsAddOpportunityDialogOpen(true)}>
+          <Button onClick={() => setIsAddOpportunityDialogOpen(true)} variant="beige">
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Opportunity
           </Button>
         </div>
       </PageTitle>
 
-      <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-        <CardHeader className="pb-4">
-            <CardTitle className="text-lg flex items-center">
-                <ListFilter className="mr-2 h-5 w-5 text-primary"/> Filter & Search Opportunities
-            </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            <div>
-              <Label htmlFor="search-opportunities">Search Opportunities</Label>
-              <div className="relative mt-1">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="search-opportunities"
-                  type="text"
-                  placeholder="Search by name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="status-filter">Status</Label>
-              <Select value={statusFilter} onValueChange={(value: OpportunityStatus | 'all') => setStatusFilter(value)}>
-                <SelectTrigger id="status-filter" className="w-full mt-1">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  {opportunityStatusOptions.map(status => (
-                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="account-filter">Account</Label>
-              <Select value={accountFilter} onValueChange={(value: string | 'all') => setAccountFilter(value)}>
-                <SelectTrigger id="account-filter" className="w-full mt-1">
-                  <SelectValue placeholder="Filter by account" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Accounts</SelectItem>
-                  {accounts.map(account => (
-                    <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      <div className="w-full bg-white rounded-lg shadow p-5 mb-6">
+        <div className="flex items-center mb-4">
+          <ListFilter className="mr-2 h-5 w-5 text-primary" />
+          <span className="font-semibold text-lg">Filter & Search Opportunities</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div>
+            <Label htmlFor="search-opportunities">Search Opportunities</Label>
+            <div className="relative mt-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="search-opportunities"
+                type="text"
+                placeholder="Search by name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
             </div>
           </div>
-        </CardContent>
-      </Card>
+          <div>
+            <Label htmlFor="status-filter">Status</Label>
+            <Select value={statusFilter} onValueChange={(value: OpportunityStatus | 'all') => setStatusFilter(value)}>
+              <SelectTrigger id="status-filter" className="w-full mt-1">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                {opportunityStatusOptions.map(status => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="account-filter">Account</Label>
+            <Select value={accountFilter} onValueChange={(value: string | 'all') => setAccountFilter(value)}>
+              <SelectTrigger id="account-filter" className="w-full mt-1">
+                <SelectValue placeholder="Filter by account" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Accounts</SelectItem>
+                {accounts.map(account => (
+                  <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
 
       {filteredOpportunities.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">

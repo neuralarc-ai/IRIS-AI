@@ -152,13 +152,26 @@ export default function DashboardPage() {
         setForecastedOpportunities(results);
 
         if (results.length > 0) {
-        setOverallSalesForecast(
-          `Optimistic outlook for next quarter with strong potential from key deals like ${results[0]?.name}. Predicted revenue growth is positive, with several opportunities nearing completion.`
-        );
+          // Calculate total forecasted revenue and soonest completion date
+          const totalRevenue = results.reduce((sum, opp) => {
+            return sum + (opp.forecast?.revenueForecast || 0);
+          }, 0);
+          const soonestCompletion = results
+            .map((opp) => opp.forecast?.completionDateEstimate)
+            .filter(Boolean)
+            .sort()[0];
+          const keyDeals = results.map((opp) => opp.name).join(", ");
+          setOverallSalesForecast(
+            `<strong>AI Sales Forecast:</strong> The system predicts a <strong>total potential revenue</strong> of <strong>$${totalRevenue.toLocaleString()}</strong> from <strong>${results.length}</strong> key deal${results.length > 1 ? "s" : ""} (${keyDeals}). <br />` +
+            (soonestCompletion
+              ? `The <strong>earliest estimated completion</strong> is <strong>${soonestCompletion}</strong>. <br />`
+              : "") +
+            `Opportunities are showing <strong>positive momentum</strong> with strong client engagement. Stay focused on high-value deals to maximize your sales outcomes.`
+          );
         } else {
-        setOverallSalesForecast(
-          "No active opportunities to forecast. Add new opportunities to see AI-powered sales predictions."
-        );
+          setOverallSalesForecast(
+            "No active opportunities to forecast. Add new opportunities to see <strong>AI-powered sales predictions</strong>."
+          );
         }
         setRecentUpdates(updates.slice(0, 2));
         setLastRefreshed(new Date());
@@ -225,7 +238,7 @@ export default function DashboardPage() {
       </div>
 
         {/* Main Forecast Card */}
-      <Card>
+      <Card className="bg-white">
           <CardHeader>
             <CardTitle className="text-xl flex items-center">
               <TrendingUp className="mr-3 h-6 w-6 text-primary" />
@@ -236,9 +249,7 @@ export default function DashboardPage() {
             {isLoading && !overallSalesForecast ? (
               <div className="h-10 bg-muted/50 rounded animate-pulse w-3/4"></div>
             ) : (
-            <p className="text-foreground text-base leading-relaxed">
-              {overallSalesForecast || "No forecast available."}
-            </p>
+            <p className="text-foreground text-base leading-relaxed" dangerouslySetInnerHTML={{ __html: overallSalesForecast || "No forecast available." }} />
             )}
           </CardContent>
         </Card>
@@ -260,7 +271,7 @@ export default function DashboardPage() {
                   ? Array.from({ length: 2 }).map((_, i) => (
                       <Card
                         key={`update-skeleton-${i}`}
-                        className="h-full bg-white text-black rounded-[8px] shadow-lg p-2 border-none"
+                        className="h-full bg-white text-black rounded-[8px]  p-2 border-none"
                         isInner={true}
                       >
                         <CardHeader>
@@ -287,10 +298,10 @@ export default function DashboardPage() {
         </div>
         {/* Opportunities Pipeline on the right */}
         <div className="w-full lg:w-[400px] flex-shrink-0 mt-2">
-          <Card className="h-full bg-[#F0FDF4] text-black rounded-[8px] shadow-lg p-2 border-none">
+          <Card className="h-full bg-white text-black rounded-[8px] p-2 border-none">
             <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                <BarChartHorizontalBig className="mr-3 h-5 w-5 text-primary" />
+              <CardTitle className="text-lg flex items-center text-black">
+                <BarChartHorizontalBig className="mr-3 h-5 w-5 text-black" />
                 Opportunities Pipeline
               </CardTitle>
             </CardHeader>
@@ -303,7 +314,7 @@ export default function DashboardPage() {
                     <BarChart
                       data={opportunityStatusData}
                       layout="vertical"
-                      margin={{ top: 5, right: 20, left: 20, bottom: 5 }}
+                      margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
                     >
                       <CartesianGrid
                         strokeDasharray="3 3"
@@ -330,7 +341,7 @@ export default function DashboardPage() {
                       />
                       <Bar
                         dataKey="count"
-                        fill="hsl(var(--primary))"
+                        fill="#222"
                         radius={[0, 4, 4, 0]}
                         barSize={20}
                       />
@@ -377,7 +388,7 @@ export default function DashboardPage() {
                   ? forecastedOpportunities.map((opp) => (
                       <Card
                         key={opp.id}
-                        className="flex flex-col h-full bg-white text-black rounded-[8px] shadow-lg p-2 border-none"
+                        className="flex flex-col h-full bg-white text-black rounded-[8px]  p-2 border-none"
                       >
                         <CardHeader className="pb-3 px-6 pt-6">
                           <div className="flex flex-row items-center justify-between w-full">
@@ -454,10 +465,9 @@ export default function DashboardPage() {
                     </CardContent>
                         <CardFooter className="pt-4 border-t mt-auto px-6 pb-6">
                           <Button
-                            variant="outline"
                             size="sm"
                             asChild
-                            className="ml-auto"
+                            className="ml-auto bg-[#6FCF97] text-white border-none shadow-none hover:bg-[#8FE6B5] dark:hover:bg-[#4B8B6F] hover:text-white focus:bg-[#6FCF97] focus:text-white"
                           >
                             <Link href={`/opportunities/${opp.id}`}>
                               <Eye className="mr-2 h-4 w-4" />
@@ -479,10 +489,10 @@ export default function DashboardPage() {
 
         {/* Lead Engagement */}
         <div className="w-full lg:w-[400px] flex-shrink-0 mt-2">
-          <Card className="h-full bg-[#FEFBEA ] text-black rounded-[8px] shadow-lg p-2 border-none">
+          <Card className="h-full bg-white text-black rounded-[8px]  p-2 border-none">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              <Users className="mr-3 h-5 w-5 text-primary" />
+            <CardTitle className="text-lg flex items-center text-black">
+              <Users className="mr-3 h-5 w-5 text-black" />
               Lead Engagement
             </CardTitle>
           </CardHeader>

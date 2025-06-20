@@ -188,11 +188,11 @@ export default function LeadCard({
   };
 
   return (
-    <Card className="flex flex-col h-full bg-white text-black rounded-[8px] shadow-xl p-2 border-none">
+    <Card className="flex flex-col h-full bg-white text-black rounded-[8px] p-2 border-none">
       <CardHeader className="pb-3 px-6 pt-6">
         <div className="flex justify-between items-start mb-1">
-          <CardTitle className="text-xl font-headline flex items-center">
-            <Briefcase className="mr-2 h-5 w-5 text-primary shrink-0" />
+          <CardTitle className="text-xl font-headline flex items-center" style={{ color: '#97A88C' }}>
+            <Briefcase className="mr-2 h-5 w-5 shrink-0" style={{ color: '#97A88C' }} />
             {lead.companyName}
           </CardTitle>
           <DropdownMenu>
@@ -224,13 +224,7 @@ export default function LeadCard({
                     lead.status === "Converted to Account" ||
                     lead.status === "Lost"
                   }
-                  className={`capitalize ${getStatusBadgeColorClasses(
-                    status
-                  )} ${
-                    status === lead.status
-                      ? "opacity-60 font-bold"
-                      : "cursor-pointer"
-                  }`}
+                  className={`capitalize ${status === lead.status ? "opacity-60 font-bold" : "cursor-pointer"}`}
                 >
                   {status}
                 </DropdownMenuItem>
@@ -294,7 +288,7 @@ export default function LeadCard({
         </div>
       </CardContent>
       <CardFooter className="pt-4 border-t mt-auto px-6 pb-6">
-        <Button variant="outline" size="sm" asChild className="mr-auto">
+        <Button size="sm" asChild className="mr-auto bg-[#6FCF97] text-white border-none shadow-none hover:bg-[#8FE6B5] dark:hover:bg-[#4B8B6F] hover:text-white focus:bg-[#6FCF97] focus:text-white">
           <Link href={`/leads/${lead.id}`}>
             <Eye className="mr-2 h-4 w-4" />
             View Details
@@ -304,6 +298,7 @@ export default function LeadCard({
           <Button
             size="sm"
             disabled
+            variant="beige"
             className="ml-2 cursor-not-allowed opacity-70"
           >
             <CheckSquare className="mr-2 h-4 w-4" />
@@ -315,6 +310,7 @@ export default function LeadCard({
               size="sm"
               onClick={handleConvert}
               disabled={isConverting}
+              variant="beige"
               className="ml-2"
             >
               {isConverting ? (

@@ -117,62 +117,59 @@ export default function AccountsPage() {
   return (
     <div className="container mx-auto space-y-6 mt-6">
       <PageTitle title="Accounts Management" subtitle="Oversee all client and partner accounts.">
-        <Button onClick={() => setIsAddAccountDialogOpen(true)}>
+        <Button onClick={() => setIsAddAccountDialogOpen(true)} variant="beige">
           <PlusCircle className="mr-2 h-4 w-4" /> Add New Account
         </Button>
       </PageTitle>
 
-      <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-        <CardHeader className="pb-4">
-            <CardTitle className="text-lg flex items-center">
-                <ListFilter className="mr-2 h-5 w-5 text-primary"/> Filter & Search Accounts
-            </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            <div>
-              <Label htmlFor="search-accounts">Search Accounts</Label>
-              <div className="relative mt-1">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="search-accounts"
-                  type="text"
-                  placeholder="Search by name or email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="status-filter">Status</Label>
-              <Select value={statusFilter} onValueChange={(value: AccountStatus | 'all') => setStatusFilter(value)}>
-                <SelectTrigger id="status-filter" className="w-full mt-1">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="type-filter">Type</Label>
-              <Select value={typeFilter} onValueChange={(value: AccountType | 'all') => setTypeFilter(value)}>
-                <SelectTrigger id="type-filter" className="w-full mt-1">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="Client">Client</SelectItem>
-                  <SelectItem value="Channel Partner">Channel Partner</SelectItem>
-                </SelectContent>
-              </Select>
+      <div className="w-full bg-white rounded-lg shadow p-5 mb-6">
+        <div className="flex items-center mb-4">
+          <ListFilter className="mr-2 h-5 w-5 text-primary" />
+          <span className="font-semibold text-lg">Filter & Search Accounts</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div>
+            <Label htmlFor="search-accounts">Search Accounts</Label>
+            <div className="relative mt-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="search-accounts"
+                type="text"
+                placeholder="Search by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
             </div>
           </div>
-        </CardContent>
-      </Card>
+          <div>
+            <Label htmlFor="status-filter">Status</Label>
+            <Select value={statusFilter} onValueChange={(value: AccountStatus | 'all') => setStatusFilter(value)}>
+              <SelectTrigger id="status-filter" className="w-full mt-1">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="type-filter">Type</Label>
+            <Select value={typeFilter} onValueChange={(value: AccountType | 'all') => setTypeFilter(value)}>
+              <SelectTrigger id="type-filter" className="w-full mt-1">
+                <SelectValue placeholder="Filter by type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="Client">Client</SelectItem>
+                <SelectItem value="Channel Partner">Channel Partner</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
 
       {accounts.length === 0 ? (
         <div className="text-center py-12">
@@ -181,7 +178,7 @@ export default function AccountsPage() {
             <h3 className="text-lg font-semibold mb-2">No accounts yet</h3>
             <p className="text-sm">Get started by adding your first account or converting a lead.</p>
           </div>
-          <Button onClick={() => setIsAddAccountDialogOpen(true)}>
+          <Button onClick={() => setIsAddAccountDialogOpen(true)} variant="beige">
             <PlusCircle className="mr-2 h-4 w-4" /> Add First Account
           </Button>
         </div>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -165,8 +164,8 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
         </div>
       </CardContent>
       <CardFooter className="flex justify-end pt-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/opportunities?id=${opportunity.id}#details`}>  {/* Renamed */}
+        <Button size="sm" asChild className="bg-[#6FCF97] text-white border-none shadow-none hover:bg-[#8FE6B5] dark:hover:bg-[#4B8B6F] hover:text-white focus:bg-[#6FCF97] focus:text-white">
+          <Link href={`/opportunities?id=${opportunity.id}#details`}>
             <Eye className="mr-2 h-4 w-4" />
             View Details
           </Link>

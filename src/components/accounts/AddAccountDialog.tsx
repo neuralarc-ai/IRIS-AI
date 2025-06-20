@@ -253,7 +253,7 @@ export default function AddAccountDialog({ open, onOpenChange, onAccountAdded, o
       }
       onOpenChange(isOpen);
     }}>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="sm:max-w-[525px] bg-[#FAF8F5]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <PlusCircle className="mr-2 h-5 w-5" /> Add New Account
@@ -272,7 +272,7 @@ export default function AddAccountDialog({ open, onOpenChange, onAccountAdded, o
               onValueChange={(value) => setSelectedLeadToConvert(value || '')} // Ensure '' if value becomes undefined/null from Select
               disabled={isLoading}
             >
-              <SelectTrigger id="convert-lead-select">
+              <SelectTrigger id="convert-lead-select" className="bg-[#E2D4C3]/60">
                 <SelectValue placeholder="Select a lead to convert..." />
               </SelectTrigger>
               <SelectContent>
@@ -290,11 +290,11 @@ export default function AddAccountDialog({ open, onOpenChange, onAccountAdded, o
           <fieldset disabled={isLoading} className="space-y-4">
             <div>
               <Label htmlFor="account-name">Account Name <span className="text-destructive">*</span></Label>
-              <Input id="account-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Acme Corp" />
+              <Input id="account-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Acme Corp" className="bg-[#E2D4C3]/60" />
             </div>
             <div>
               <Label htmlFor="account-type">Account Type <span className="text-destructive">*</span></Label>
-              <Select value={type || undefined} onValueChange={(value: string) => setType(value as AccountType || 'Client')}>
+              <Select value={type || undefined} onValueChange={(value: string) => setType(value as AccountType || 'Client')} className="bg-[#E2D4C3]/60">
                 <SelectTrigger id="account-type">
                   <SelectValue placeholder="Select account type" />
                 </SelectTrigger>
@@ -306,19 +306,19 @@ export default function AddAccountDialog({ open, onOpenChange, onAccountAdded, o
             </div>
             <div>
               <Label htmlFor="account-person-name">Contact Person Name</Label>
-              <Input id="account-person-name" value={contactPersonName} onChange={(e) => setContactPersonName(e.target.value)} placeholder="e.g., Jane Doe" />
+              <Input id="account-person-name" value={contactPersonName} onChange={(e) => setContactPersonName(e.target.value)} placeholder="e.g., Jane Doe" className="bg-[#E2D4C3]/60" />
             </div>
             <div>
               <Label htmlFor="account-email">Contact Email</Label>
-              <Input id="account-email" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="e.g., contact@acme.com" />
+              <Input id="account-email" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="e.g., contact@acme.com" className="bg-[#E2D4C3]/60" />
             </div>
              <div>
               <Label htmlFor="account-phone">Contact Phone</Label>
-              <Input id="account-phone" type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="e.g., (555) 123-4567" />
+              <Input id="account-phone" type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="e.g., (555) 123-4567" className="bg-[#E2D4C3]/60" />
             </div>
             <div>
               <Label htmlFor="account-industry">Industry</Label>
-              <Input id="account-industry" value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="e.g., Technology, Finance" />
+              <Input id="account-industry" value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="e.g., Technology, Finance" className="bg-[#E2D4C3]/60" />
             </div>
             <div>
               <Label htmlFor="account-description">Description</Label>
@@ -328,6 +328,7 @@ export default function AddAccountDialog({ open, onOpenChange, onAccountAdded, o
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Brief overview of the account..."
                 rows={3}
+                className="bg-[#E2D4C3]/60"
               />
             </div>
           </fieldset>

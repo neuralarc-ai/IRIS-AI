@@ -98,15 +98,62 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    background: #F7F5F2;
+    color: #B88A5A;
+    font-family: 'Inter', sans-serif;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline;
+    color: #C89B6B;
   }
   code, pre {
     @apply font-code;
   }
   .font-fustat {
     font-family: 'Fustat', sans-serif;
+  }
+  .card {
+    background: #fff;
+    border-radius: 1.25rem;
+    box-shadow: 0 2px 12px 0 rgba(200, 155, 107, 0.06);
+    border: 1px solid #ECECEC;
+    padding: 2rem;
+  }
+  .text-secondary {
+    color: #A6A6A6;
+  }
+  .btn-primary {
+    background: #6FCF97;
+    color: #fff;
+    border-radius: 0.75rem;
+  }
+  .btn-secondary {
+    background: #ECECEC;
+    color: #B88A5A;
+    border-radius: 0.75rem;
+  }
+  .tab {
+    background: #ECECEC;
+    color: #B88A5A;
+    border-radius: 0.75rem;
+    padding: 0.5rem 1.5rem;
+  }
+  .tab-active {
+    background: #fff;
+    color: #C89B6B;
+    box-shadow: 0 2px 8px 0 rgba(200, 155, 107, 0.08);
+  }
+  .btn-beige {
+    background: #c8b89b;
+    color: #fff;
+    border-radius: 0.75rem;
+    font-weight: 500;
+    padding: 0.75rem 2rem;
+    font-size: 1.25rem;
+    transition: background 0.2s;
+  }
+  .btn-beige:hover, .btn-beige:focus {
+    background: #b8a885;
   }
 }
 

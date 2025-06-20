@@ -180,7 +180,7 @@ export default function LeadsPage() {
             >
                 <Upload className="mr-2 h-4 w-4" /> Import CSV
             </Button>
-            <Button onClick={() => setIsAddLeadDialogOpen(true)}>
+            <Button onClick={() => setIsAddLeadDialogOpen(true)} variant="beige">
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Lead
             </Button>
         </div>
@@ -211,7 +211,7 @@ export default function LeadsPage() {
             <p className="text-sm">Get started by adding your first lead or importing from CSV.</p>
               </div>
           <div className="flex justify-center gap-2">
-            <Button onClick={() => setIsAddLeadDialogOpen(true)}>
+            <Button onClick={() => setIsAddLeadDialogOpen(true)} variant="beige">
               <PlusCircle className="mr-2 h-4 w-4" /> Add First Lead
             </Button>
             <Button variant="outline" onClick={() => setShowImport(true)}>

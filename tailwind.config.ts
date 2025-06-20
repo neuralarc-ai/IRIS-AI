@@ -19,25 +19,19 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['var(--font-space-grotesk)'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
         body: ['Fustat', 'sans-serif'],
         headline: ['Fustat', 'sans-serif'],
         code: ['var(--font-source-code-pro)', 'monospace'],
       },
       colors: {
-        border: 'hsl(var(--border))',
+        border: '#ECECEC',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
-        background: 'hsl(var(--background))',
+        background: '#F7F5F2',
         foreground: 'hsl(var(--foreground))',
-        primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
-        },
-        secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
-        },
+        primary: '#C89B6B',
+        secondary: '#A6A6A6',
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
@@ -46,18 +40,12 @@ export default {
           DEFAULT: 'hsl(var(--muted))',
           foreground: 'hsl(var(--muted-foreground))',
         },
-        accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
-        },
+        accent: '#6FCF97', // soft green
         popover: {
           DEFAULT: 'hsl(var(--popover))',
           foreground: 'hsl(var(--popover-foreground))',
         },
-        card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
-        },
+        card: '#FFFFFF',
         chart: {
           '1': 'hsl(var(--chart-1))',
           '2': 'hsl(var(--chart-2))',
@@ -71,6 +59,7 @@ export default {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+        card: '1.25rem',
       },
       keyframes: {
         'accordion-down': {
@@ -93,6 +82,9 @@ export default {
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+      },
+      boxShadow: {
+        card: '0 2px 12px 0 rgba(200, 155, 107, 0.06)',
       },
     },
   },

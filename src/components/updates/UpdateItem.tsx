@@ -153,13 +153,13 @@ export default function UpdateItem({ update, gradient }: UpdateItemProps) {
   };
 
   return (
-    <Card className="flex flex-col h-full bg-white text-black rounded-[8px] shadow-lg p-2 border-none">
+    <Card className="flex flex-col h-full bg-white text-black rounded-[8px]  p-2 border-none">
       <CardHeader className="pb-3 px-6 pt-6 flex justify-between items-start">
         <div className="flex flex-row items-center gap-2 min-h-[32px]">
           <span className="flex items-center h-8">
-            {getUpdateIcon(update.type)}
+            <MessageSquare className="h-4 w-4" style={{ color: '#97A88C' }} />
           </span>
-          <CardTitle className="text-xl font-headline mb-0 flex items-center h-8">
+          <CardTitle className="text-xl font-headline mb-0 flex items-center h-8" style={{ color: '#97A88C' }}>
             Update: {formattedDate}
           </CardTitle>
         </div>
@@ -291,7 +291,7 @@ export default function UpdateItem({ update, gradient }: UpdateItemProps) {
       </CardContent>
       <CardFooter className="pt-4 border-t mt-auto px-6 pb-6">
         <Button
-          variant="outline"
+          variant="beige"
           size="sm"
           onClick={toggleAiInsights}
           className="mr-2"

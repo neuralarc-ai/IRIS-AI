@@ -24,6 +24,7 @@ const buttonVariants = cva(
           "bg-secondary text-white hover:bg-secondary/80 font-medium text-base leading-6 tracking-normal",
         ghost: "text-[#2B2521] hover:bg-accent hover:text-[#2B2521] font-medium text-base leading-6 tracking-normal",
         link: "text-[#2B2521] underline-offset-4 hover:underline font-medium text-base leading-6 tracking-normal",
+        beige: "bg-[#c8b89b] text-white rounded-xl font-medium px-8 py-3 text-lg hover:bg-[#b8a885] transition",
       },
       size: {
         default: "min-w-[128px] rounded-[4px] py-4 px-[27px] gap-2",

@@ -153,7 +153,7 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded }: A
       if (!isOpen) resetForm();
       onOpenChange(isOpen);
     }}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg bg-[#FAF8F5]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <MessageSquarePlus className="mr-2 h-5 w-5" /> Log New Communication Update
@@ -189,7 +189,7 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded }: A
             <div>
               <Label htmlFor="update-lead">Lead <span className="text-destructive">*</span></Label>
               <Select value={selectedLeadId} onValueChange={setSelectedLeadId} disabled={isLoading || isLoadingData}>
-                <SelectTrigger id="update-lead">
+                <SelectTrigger id="update-lead" className="bg-[#E2D4C3]/60">
                   <SelectValue placeholder={isLoadingData ? "Loading leads..." : "Select a lead"} />
                 </SelectTrigger>
                 <SelectContent>
@@ -211,7 +211,7 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded }: A
               <div>
                 <Label htmlFor="update-account">Account <span className="text-destructive">*</span></Label>
                 <Select value={selectedAccountId} onValueChange={setSelectedAccountId} disabled={isLoading || isLoadingData}>
-                  <SelectTrigger id="update-account">
+                  <SelectTrigger id="update-account" className="bg-[#E2D4C3]/60">
                     <SelectValue placeholder={isLoadingData ? "Loading accounts..." : "Select an account"} />
                   </SelectTrigger>
                   <SelectContent>
@@ -235,7 +235,7 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded }: A
                     onValueChange={setSelectedOpportunityId} 
                     disabled={isLoading || isLoadingData || availableOpportunities.length === 0}
                   >
-                    <SelectTrigger id="update-opportunity">
+                    <SelectTrigger id="update-opportunity" className="bg-[#E2D4C3]/60">
                       <SelectValue placeholder={availableOpportunities.length === 0 ? "No opportunities for this account" : "Select an opportunity"} />
                     </SelectTrigger>
                     <SelectContent>
@@ -262,7 +262,7 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded }: A
           <div>
             <Label htmlFor="update-type">Update Type <span className="text-destructive">*</span></Label>
             <Select value={updateType} onValueChange={(value) => setUpdateTypeState(value as UpdateType)} disabled={isLoading || isLoadingData}>
-              <SelectTrigger id="update-type">
+              <SelectTrigger id="update-type" className="bg-[#E2D4C3]/60">
                 <SelectValue placeholder="Select update type" />
               </SelectTrigger>
               <SelectContent>
@@ -282,6 +282,7 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded }: A
               placeholder="Describe the call, meeting, email, or general update..."
               rows={5}
               disabled={isLoading || isLoadingData}
+              className="bg-[#E2D4C3]/60"
             />
           </div>
           <DialogFooter className="pt-4">

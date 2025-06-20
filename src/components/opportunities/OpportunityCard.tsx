@@ -282,13 +282,13 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
   );
 
   return (
-    <Card className="flex flex-col h-full bg-white text-black rounded-[8px] shadow-lg p-2 border-none">
+    <Card className="flex flex-col h-full bg-white text-black rounded-[8px]  p-2 border-none">
       <CardHeader className="pb-3 px-6 pt-6">
         <div className="flex flex-row items-center justify-between w-full">
           <div className="flex flex-col items-start">
             <div className="flex flex-row items-center">
-              <BarChartBig className="mr-2 h-5 w-5 text-primary shrink-0" />
-              <CardTitle className="text-xl font-headline mb-0 ml-2">
+              <BarChartBig className="mr-2 h-5 w-5 shrink-0" style={{ color: '#97A88C' }} />
+              <CardTitle className="text-xl font-headline mb-0 ml-2" style={{ color: '#97A88C' }}>
                 {initialOpportunity.name}
               </CardTitle>
             </div>
@@ -312,7 +312,7 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
                   key={status}
                   onSelect={() => handleStatusChange(status)}
                   disabled={status === opportunity.status || opportunity.status === "Completed" || opportunity.status === "Cancelled"}
-                  className={`capitalize ${getStatusBadgeColorClasses(status)} ${status === opportunity.status ? "opacity-60 font-bold" : "cursor-pointer"}`}
+                  className={`capitalize ${status === opportunity.status ? "opacity-60 font-bold" : "cursor-pointer"}`}
                 >
                   {status}
                 </DropdownMenuItem>
@@ -361,7 +361,7 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
           </div>
         )}
         <div className="mb-2">
-          <Progress value={progress} className="h-2" />
+          <Progress value={progress} className="h-2 bg-[#E5E7E0] [&>div]:bg-[#97A88C]" />
         </div>
         <div className="flex justify-between text-xs text-muted-foreground mb-1">
           <span className="flex items-center">

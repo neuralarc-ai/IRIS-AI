@@ -183,7 +183,7 @@ export default function AddLeadDialog({ open, onOpenChange, onLeadAdded, user }:
       if (!isOpen) resetForm();
       onOpenChange(isOpen);
     }}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg bg-[#FAF8F5]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <UserPlus className="mr-2 h-5 w-5" /> Add New Lead
@@ -230,28 +230,28 @@ export default function AddLeadDialog({ open, onOpenChange, onLeadAdded, user }:
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
               <Label htmlFor="lead-person-name">Person's Name <span className="text-destructive">*</span></Label>
-              <Input id="lead-person-name" value={personName} onChange={(e) => setPersonName(e.target.value)} placeholder="e.g., John Doe" disabled={isLoading || isOcrLoading} />
+              <Input id="lead-person-name" value={personName} onChange={(e) => setPersonName(e.target.value)} placeholder="e.g., John Doe" disabled={isLoading || isOcrLoading} className="bg-[#E2D4C3]/60" />
             </div>
              <div>
               <Label htmlFor="lead-company-name">Company Name <span className="text-destructive">*</span></Label>
-              <Input id="lead-company-name" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="e.g., Acme Innovations" disabled={isLoading || isOcrLoading} />
+              <Input id="lead-company-name" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="e.g., Acme Innovations" disabled={isLoading || isOcrLoading} className="bg-[#E2D4C3]/60" />
             </div>
             <div>
               <Label htmlFor="lead-email">Email <span className="text-destructive">*</span></Label>
-              <Input id="lead-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g., john.doe@acme.com" disabled={isLoading || isOcrLoading} />
+              <Input id="lead-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g., john.doe@acme.com" disabled={isLoading || isOcrLoading} className="bg-[#E2D4C3]/60" />
             </div>
             <div>
               <Label htmlFor="lead-phone">Phone</Label>
-              <Input id="lead-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g., (555) 123-4567" disabled={isLoading || isOcrLoading} />
+              <Input id="lead-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g., (555) 123-4567" disabled={isLoading || isOcrLoading} className="bg-[#E2D4C3]/60" />
             </div>
             <div>
               <Label htmlFor="lead-linkedin">LinkedIn Profile URL</Label>
-              <Input id="lead-linkedin" type="url" value={linkedinProfileUrl} onChange={(e) => setLinkedinProfileUrl(e.target.value)} placeholder="e.g., https://linkedin.com/in/johndoe" disabled={isLoading || isOcrLoading} />
+              <Input id="lead-linkedin" type="url" value={linkedinProfileUrl} onChange={(e) => setLinkedinProfileUrl(e.target.value)} placeholder="e.g., https://linkedin.com/in/johndoe" disabled={isLoading || isOcrLoading} className="bg-[#E2D4C3]/60" />
             </div>
             <div>
               <Label htmlFor="lead-country">Country</Label>
               <Select value={country} onValueChange={setCountry} disabled={isLoading || isOcrLoading}>
-                <SelectTrigger id="lead-country">
+                <SelectTrigger id="lead-country" className="bg-[#E2D4C3]/60">
                   <SelectValue placeholder="Select country" />
                 </SelectTrigger>
                 <SelectContent>
