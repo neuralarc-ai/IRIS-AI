@@ -121,7 +121,7 @@ export function useAuth() {
     // Check if it's the admin user (PIN 111111)
     if (user.pin === DEMO_PIN) return true;
     // Check if user has admin privileges from database
-    return user.is_admin === true;
+    return user.role === 'admin';
   }, [user]);
 
   return { isAuthenticated, isLoading, login, logout, user, isAdmin };
