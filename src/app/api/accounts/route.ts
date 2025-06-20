@@ -22,6 +22,10 @@ export async function GET(request: NextRequest) {
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50
     const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0
 
+    // Get user info from headers
+    const userId = request.headers.get('x-user-id');
+    const isAdmin = request.headers.get('x-user-admin') === 'true';
+
     let query = supabase
       .from('accounts')
       .select('*')
@@ -36,6 +40,11 @@ export async function GET(request: NextRequest) {
     // Filter by type if provided
     if (type) {
       query = query.eq('type', type)
+    }
+
+    // Filter by created_by_user_id if not admin
+    if (!isAdmin && userId) {
+      query = query.eq('created_by_user_id', userId);
     }
 
     const { data, error, count } = await query
@@ -128,7 +137,8 @@ export async function POST(request: NextRequest) {
         contact_email: body.contact_email || null,
         contact_phone: body.contact_phone || null,
         industry: body.industry || null,
-        converted_from_lead_id: body.converted_from_lead_id || null
+        converted_from_lead_id: body.converted_from_lead_id || null,
+        created_by_user_id: body.created_by_user_id || null
       })
       .select()
       .single()

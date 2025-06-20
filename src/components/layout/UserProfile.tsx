@@ -16,7 +16,22 @@ import { LogOut, UserCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 
 export default function UserProfile() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+
+  // Get user initials for avatar fallback
+  const getUserInitials = () => {
+    if (!user?.name) return 'U';
+    return user.name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  // Get display name and email
+  const displayName = user?.name || 'Admin User';
+  const displayEmail = user?.email || 'admin@iris.ai';
 
   return (
     <DropdownMenu>
@@ -25,8 +40,8 @@ export default function UserProfile() {
           <Avatar className="h-12 w-12 ">
             {/* User icon from public directory */}
             <AvatarImage src="/user.svg" alt="User" data-ai-hint="user avatar" />
-            <AvatarFallback>
-              <UserCircle className="h-8 w-8" />
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {getUserInitials()}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -34,9 +49,9 @@ export default function UserProfile() {
       <DropdownMenuContent className="w-56 mt-3" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">Admin User</p>
+            <p className="text-sm font-medium leading-none">{displayName}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              admin@iris.ai
+              {displayEmail}
             </p>
           </div>
         </DropdownMenuLabel>

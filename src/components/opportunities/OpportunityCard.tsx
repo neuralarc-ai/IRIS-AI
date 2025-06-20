@@ -40,9 +40,17 @@ import {
 import { aiPoweredOpportunityForecasting } from "@/ai/flows/ai-powered-opportunity-forecasting";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { getAccountById } from "@/lib/data";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 
 interface OpportunityCardProps {
   opportunity: Opportunity;
+  onStatusChange?: (opportunityId: string, newStatus: Opportunity["status"]) => void;
 }
 
 const getStatusBadgeColorClasses = (status: Opportunity["status"]): string => {
@@ -63,6 +71,15 @@ const getStatusBadgeColorClasses = (status: Opportunity["status"]): string => {
       return "bg-gray-500/20 text-gray-700 border-gray-500/30";
   }
 };
+
+const VALID_OPPORTUNITY_STATUSES: Opportunity["status"][] = [
+  "Need Analysis",
+  "Negotiation",
+  "In Progress",
+  "On Hold",
+  "Completed",
+  "Cancelled",
+];
 
 const calculateProgress = (
   startDate: string | undefined,
@@ -104,12 +121,46 @@ const calculateProgress = (
   return Math.min(98, Math.max(5, (elapsedDuration / totalDuration) * 100)); // Ensure progress is between 5 and 98 unless completed/cancelled
 };
 
-export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
+export default function OpportunityCard({ opportunity: initialOpportunity, onStatusChange }: OpportunityCardProps) {
+  const { toast } = useToast();
+  const [opportunity, setOpportunity] = useState(initialOpportunity);
   const [forecast, setForecast] = useState<AIOpportunityForecast | null>(null);
   const [isLoadingForecast, setIsLoadingForecast] = useState(false);
-  const [associatedAccount, setAssociatedAccount] = useState<
-    Account | undefined
-  >(undefined);
+  const [associatedAccount, setAssociatedAccount] = useState<Account | undefined>(undefined);
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
+
+  const handleStatusChange = async (newStatus: Opportunity["status"]) => {
+    if (opportunity.status === newStatus) return;
+    setIsStatusUpdating(true);
+    try {
+      const response = await fetch('/api/opportunities', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: opportunity.id, status: newStatus })
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update status');
+      }
+      setOpportunity((prev) => ({ ...prev, status: newStatus, updated_at: new Date().toISOString() }));
+      if (onStatusChange) {
+        onStatusChange(opportunity.id, newStatus);
+      }
+      toast({
+        title: 'Status Updated!',
+        description: `Opportunity status changed to ${newStatus}.`,
+        className: 'bg-green-100 dark:bg-green-900 border-green-500'
+      });
+    } catch (error) {
+      toast({
+        title: "Status Update Failed",
+        description: error instanceof Error ? error.message : "Could not update status.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStatusUpdating(false);
+    }
+  };
 
   useEffect(() => {
     if (opportunity.associated_account_id) {
@@ -234,14 +285,32 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
               {opportunity.name}
             </CardTitle>
           </div>
-          <Badge
-            variant="secondary"
-            className={`capitalize whitespace-nowrap ml-2 ${getStatusBadgeColorClasses(
-              opportunity.status
-            )}`}
-          >
-            {opportunity.status}
-          </Badge>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={`capitalize whitespace-nowrap ml-2 focus:outline-none ${getStatusBadgeColorClasses(opportunity.status)} inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors`}
+                disabled={isStatusUpdating || opportunity.status === "Completed" || opportunity.status === "Cancelled"}
+                aria-label="Change status"
+              >
+                {isStatusUpdating ? (
+                  <span className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : null}
+                {opportunity.status}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {VALID_OPPORTUNITY_STATUSES.map((status) => (
+                <DropdownMenuItem
+                  key={status}
+                  onSelect={() => handleStatusChange(status)}
+                  disabled={status === opportunity.status || opportunity.status === "Completed" || opportunity.status === "Cancelled"}
+                  className={`capitalize ${getStatusBadgeColorClasses(status)} ${status === opportunity.status ? "opacity-60 font-bold" : "cursor-pointer"}`}
+                >
+                  {status}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </CardHeader>
       <CardContent className="flex-grow space-y-3 text-sm px-6 text-left">

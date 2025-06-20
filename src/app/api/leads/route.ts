@@ -21,6 +21,10 @@ export async function GET(request: NextRequest) {
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50
     const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0
 
+    // Get user info from headers
+    const userId = request.headers.get('x-user-id');
+    const isAdmin = request.headers.get('x-user-admin') === 'true';
+
     let query = supabase
       .from('leads')
       .select('*')
@@ -30,6 +34,10 @@ export async function GET(request: NextRequest) {
     // Filter by status if provided
     if (status) {
       query = query.eq('status', status)
+    }
+    // Filter by created_by_user_id if not admin
+    if (!isAdmin && userId) {
+      query = query.eq('created_by_user_id', userId);
     }
 
     const { data, error, count } = await query
@@ -109,7 +117,8 @@ export async function POST(request: NextRequest) {
         phone: body.phone || null,
         linkedin_profile_url: body.linkedin_profile_url || null,
         country: body.country || null,
-        status: body.status || 'New'
+        status: body.status || 'New',
+        created_by_user_id: body.created_by_user_id || null
       })
       .select()
       .single()

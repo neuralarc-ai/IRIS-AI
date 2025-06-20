@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import type { Lead, ExtractedLeadInfo } from '@/types';
+import type { Lead, ExtractedLeadInfo, User } from '@/types';
 import { countries } from '@/lib/countryData';
 import { extractLeadInfoFromCard } from '@/ai/flows/extract-lead-from-card';
 import { Loader2, UserPlus, UploadCloud, ScanLine, FileText } from 'lucide-react';
@@ -23,9 +23,10 @@ interface AddLeadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onLeadAdded?: (newLead: Lead) => void;
+  user: User;
 }
 
-export default function AddLeadDialog({ open, onOpenChange, onLeadAdded }: AddLeadDialogProps) {
+export default function AddLeadDialog({ open, onOpenChange, onLeadAdded, user }: AddLeadDialogProps) {
   const [companyName, setCompanyName] = useState('');
   const [personName, setPersonName] = useState('');
   const [email, setEmail] = useState('');
@@ -120,7 +121,8 @@ export default function AddLeadDialog({ open, onOpenChange, onLeadAdded }: AddLe
           phone: phone || null,
           linkedin_profile_url: linkedinProfileUrl || null,
           country: country || null,
-          status: 'New'
+          status: 'New',
+          created_by_user_id: user.id,
         })
       });
 

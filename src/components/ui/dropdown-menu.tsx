@@ -70,8 +70,8 @@ const DropdownMenuContent = React.forwardRef<
       className={cn(
         "z-50 overflow-auto shadow-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2", // Base structure & animations
         "w-[330px] rounded-xl p-2", // Dimensions & Padding & Rounded corners
-        "bg-[#38312C] text-gray-100", // Background and Text color
-        "border-[1.5px] border-gray-500/60", // Border width and color
+        "bg-gray-50 text-gray-900", // Light grey background and normal text
+        "border-[1.5px] border-gray-300", // Border width and color
         className
       )}
       {...props}
@@ -89,7 +89,7 @@ const DropdownMenuItem = React.forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-white/10 focus:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0", // Adjusted focus style for dark background
+      "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-gray-100 focus:text-gray-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0", // Light focus style
       inset && "pl-8",
       className
     )}

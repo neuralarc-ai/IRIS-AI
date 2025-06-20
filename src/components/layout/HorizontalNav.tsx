@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import AddAccountDialog from '@/components/accounts/AddAccountDialog';
 import Papa, { ParseResult } from 'papaparse';
+import { useAuth } from '@/hooks/use-auth';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -18,12 +19,21 @@ const navItems = [
   { href: '/accounts', label: 'Accounts', icon: Briefcase },
   { href: '/opportunities', label: 'Opportunities', icon: BarChartBig },
   { href: '/updates', label: 'Updates', icon: MessageSquare },
-  { href: '/settings/users', label: 'User Management', icon: Users2 },
+  { href: '/settings/users', label: 'User Management', icon: Users2, adminOnly: true },
 ];
 
 export default function HorizontalNav() {
   const pathname = usePathname();
   const [isAddAccountDialogOpen, setIsAddAccountDialogOpen] = useState(false);
+  const { isAdmin } = useAuth();
+
+  // Filter navigation items based on admin status
+  const filteredNavItems = navItems.filter(item => {
+    if (item.adminOnly) {
+      return isAdmin();
+    }
+    return true;
+  });
 
   return (
     <>
@@ -49,7 +59,7 @@ export default function HorizontalNav() {
             </Button>
 
             <nav className="hidden md:flex items-center gap-2">
-              {navItems.map((item) => (
+              {filteredNavItems.map((item) => (
                 <Button
                   key={item.href}
                   variant="ghost"
@@ -97,7 +107,7 @@ export default function HorizontalNav() {
         )}
         style={{ height: '50px' }} 
       >
-        {navItems.map((item) => (
+        {filteredNavItems.map((item) => (
           <Button
             key={item.href}
             variant="ghost"

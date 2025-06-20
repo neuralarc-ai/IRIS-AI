@@ -11,6 +11,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from "@/hooks/use-toast";
 import type { Lead } from '@/types';
 import LeadsListWithFilter from '@/components/leads/LeadsListWithFilter';
+import { useAuth } from "@/hooks/use-auth";
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -18,19 +19,23 @@ export default function LeadsPage() {
   const [isAddLeadDialogOpen, setIsAddLeadDialogOpen] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const { toast } = useToast();
+  const { user, isAdmin, isLoading: authLoading } = useAuth();
 
   // Fetch leads from Supabase
   const fetchLeads = async () => {
+    if (!user) return;
     try {
       setIsLoading(true);
-      const response = await fetch('/api/leads');
-      
+      const response = await fetch('/api/leads', {
+        headers: {
+          'x-user-id': user.id,
+          'x-user-admin': isAdmin() ? 'true' : 'false',
+        },
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch leads');
       }
-      
       const result = await response.json();
-      
       // Transform API response from snake_case to camelCase
       const transformedLeads: Lead[] = (result.data || []).map((apiLead: any) => ({
         id: apiLead.id,
@@ -46,7 +51,6 @@ export default function LeadsPage() {
         createdAt: apiLead.created_at,
         updatedAt: apiLead.updated_at,
       }));
-      
       setLeads(transformedLeads);
     } catch (error) {
       console.error('Error fetching leads:', error);
@@ -61,10 +65,13 @@ export default function LeadsPage() {
   };
 
   useEffect(() => {
-    fetchLeads();
-  }, []);
+    if (!authLoading && user) {
+      fetchLeads();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user]);
 
-  const handleLeadAdded = async (newLead: Lead) => {
+  const handleLeadAdded = (newLead: Lead) => {
     setLeads(prevLeads => [newLead, ...prevLeads]);
     toast({
       title: "Lead Added",
@@ -89,6 +96,7 @@ export default function LeadsPage() {
 
   const handleImport = async (importedData: any[]) => {
     try {
+      if (!user) return;
       // Process imported data and add to leads
       const processedLeads = importedData.map((item, index) => ({
         id: `imported_${Date.now()}_${index}`,
@@ -99,10 +107,10 @@ export default function LeadsPage() {
         linkedinProfileUrl: item.linkedin_profile_url || item.linkedinProfileUrl || '',
         country: item.country || '',
         status: 'New' as const,
-                opportunityIds: [],
-                updateIds: [],
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+        opportunityIds: [],
+        updateIds: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }));
 
       // Add each imported lead via API
@@ -119,7 +127,8 @@ export default function LeadsPage() {
             phone: lead.phone,
             linkedin_profile_url: lead.linkedinProfileUrl,
             country: lead.country,
-            status: lead.status
+            status: lead.status,
+            created_by_user_id: user.id,
           })
         });
 
@@ -222,6 +231,7 @@ export default function LeadsPage() {
         open={isAddLeadDialogOpen}
         onOpenChange={setIsAddLeadDialogOpen}
         onLeadAdded={handleLeadAdded}
+        user={user}
       />
     </div>
   );

@@ -105,6 +105,7 @@ export interface User {
   role?: string;
   isActive?: boolean;
   lastLoginAt?: string;
+  is_admin?: boolean;
 }
 
 export interface ApiSettings {
@@ -133,4 +134,5 @@ export interface UserApiResponse {
   last_login_at?: string;
   created_at: string;
   updated_at: string;
+  is_admin?: boolean;
 }

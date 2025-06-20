@@ -27,10 +27,17 @@ import {
 import type { Lead } from "@/types";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 interface LeadCardProps {
   lead: Lead;
   onLeadConverted: (leadId: string, newAccountId: string) => void;
+  onStatusChange?: (leadId: string, newStatus: Lead["status"]) => void;
 }
 
 const getStatusBadgeVariant = (
@@ -73,63 +80,56 @@ const getStatusBadgeColorClasses = (status: Lead["status"]): string => {
   }
 };
 
-export default function LeadCard({ lead, onLeadConverted }: LeadCardProps) {
+const VALID_STATUSES: Lead["status"][] = [
+  "New",
+  "Contacted",
+  "Qualified",
+  "Proposal Sent",
+  "Converted to Account",
+  "Lost",
+];
+
+export default function LeadCard({ lead: initialLead, onLeadConverted, onStatusChange }: LeadCardProps) {
   const { toast } = useToast();
+  const [lead, setLead] = useState(initialLead);
   const [isConverting, setIsConverting] = useState(false);
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
 
-  const handleConvertLead = async () => {
-    if (lead.status === "Converted to Account" || lead.status === "Lost") {
-      toast({
-        title: "Action not allowed",
-        description: "This lead has already been processed.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsConverting(true);
+  const handleStatusChange = async (newStatus: Lead["status"]) => {
+    if (lead.status === newStatus) return;
+    setIsStatusUpdating(true);
     try {
-      const response = await fetch(`/api/leads/${lead.id}/convert`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          notes: "Converted via lead card",
-        }),
+      const response = await fetch(`/api/leads/${lead.id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to convert lead");
-      }
-
       const result = await response.json();
-
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update status");
+      }
+      setLead((prev) => ({ ...prev, status: newStatus, updatedAt: new Date().toISOString() }));
+      if (onStatusChange) {
+        onStatusChange(lead.id, newStatus);
+      }
       toast({
-        title: "Lead Converted!",
-        description: `${lead.companyName} has been converted to account: ${result.data.account.name}.`,
+        title: "Status Updated!",
+        description: `Lead status changed to ${newStatus}.`,
         className: "bg-green-100 dark:bg-green-900 border-green-500",
       });
-
-      onLeadConverted(lead.id, result.data.account.id);
+      if (newStatus === "Converted to Account" && result.data?.id) {
+        onLeadConverted(lead.id, result.data.id);
+      }
     } catch (error) {
-      console.error("Error converting lead:", error);
       toast({
-        title: "Conversion Failed",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Could not convert lead to account.",
+        title: "Status Update Failed",
+        description: error instanceof Error ? error.message : "Could not update status.",
         variant: "destructive",
       });
     } finally {
-      setIsConverting(false);
+      setIsStatusUpdating(false);
     }
   };
-
-  const canConvert =
-    lead.status !== "Converted to Account" && lead.status !== "Lost";
 
   const formatDate = (dateString: string) => {
     try {
@@ -148,14 +148,32 @@ export default function LeadCard({ lead, onLeadConverted }: LeadCardProps) {
             <User className="mr-2 h-5 w-5 text-primary shrink-0" />
             {lead.companyName}
           </CardTitle>
-          <Badge
-            variant={getStatusBadgeVariant(lead.status)}
-            className={`capitalize whitespace-nowrap ml-2 ${getStatusBadgeColorClasses(
-              lead.status
-            )}`}
-          >
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={`capitalize whitespace-nowrap ml-2 focus:outline-none ${getStatusBadgeColorClasses(lead.status)} inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors`}
+                disabled={isStatusUpdating || lead.status === "Converted to Account" || lead.status === "Lost"}
+                aria-label="Change status"
+              >
+                {isStatusUpdating ? (
+                  <span className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : null}
             {lead.status}
-          </Badge>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {VALID_STATUSES.map((status) => (
+                <DropdownMenuItem
+                  key={status}
+                  onSelect={() => handleStatusChange(status)}
+                  disabled={status === lead.status || lead.status === "Converted to Account" || lead.status === "Lost"}
+                  className={`capitalize ${getStatusBadgeColorClasses(status)} ${status === lead.status ? "opacity-60 font-bold" : "cursor-pointer"}`}
+                >
+                  {status}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <CardDescription className="text-sm text-muted-foreground flex items-center">
           <Users className="mr-2 h-4 w-4 shrink-0 text-gray-700" /> {lead.personName}
@@ -218,27 +236,16 @@ export default function LeadCard({ lead, onLeadConverted }: LeadCardProps) {
             View Details
           </Link>
         </Button>
-        {canConvert ? (
-          <Button size="sm" onClick={handleConvertLead} disabled={isConverting}>
+        {lead.status !== "Converted to Account" && lead.status !== "Lost" && (
+          <Button size="sm" onClick={() => setIsConverting(true)} disabled={isConverting}>
             {isConverting ? (
               <>
                 <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                 Converting...
               </>
             ) : (
-              <>
-                <CheckSquare className="mr-2 h-4 w-4" /> Convert
-              </>
-            )}
-          </Button>
-        ) : (
-          <Button size="sm" variant="outline" disabled>
-            {lead.status === "Lost" ? (
-              <FileWarning className="mr-2 h-4 w-4" />
-            ) : (
               <CheckSquare className="mr-2 h-4 w-4" />
             )}
-            {lead.status === "Lost" ? "Lost" : "Converted"}
           </Button>
         )}
       </CardFooter>

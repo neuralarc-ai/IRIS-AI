@@ -27,9 +27,20 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('All Statuses');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [localLeads, setLocalLeads] = useState(leads);
+
+  React.useEffect(() => {
+    setLocalLeads(leads);
+  }, [leads]);
+
+  const handleStatusChange = (leadId: string, newStatus: Lead["status"]) => {
+    setLocalLeads((prev) => prev.map((lead) =>
+      lead.id === leadId ? { ...lead, status: newStatus } : lead
+    ));
+  };
 
   const filteredLeads = useMemo(() => {
-    return leads.filter(lead => {
+    return localLeads.filter(lead => {
       const matchesStatus = status === 'All Statuses' || lead.status === status;
       const matchesSearch =
         lead.companyName.toLowerCase().includes(search.toLowerCase()) ||
@@ -38,7 +49,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
         (lead.country && lead.country.toLowerCase().includes(search.toLowerCase()));
       return matchesStatus && matchesSearch;
     });
-  }, [leads, search, status]);
+  }, [localLeads, search, status]);
 
   return (
     <div className="w-full flex flex-col gap-6">
@@ -82,7 +93,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
           <div className="col-span-full text-center text-muted-foreground mt-12">No leads found.</div>
         ) : (
           filteredLeads.map(lead => (
-            <LeadCard key={lead.id} lead={lead} onLeadConverted={onLeadConverted} />
+            <LeadCard key={lead.id} lead={lead} onLeadConverted={onLeadConverted} onStatusChange={handleStatusChange} />
           ))
         )}
       </div>
