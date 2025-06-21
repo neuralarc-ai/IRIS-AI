@@ -1,4 +1,4 @@
-companyName,personName,email,phone,status,source,notes
-Acme Corp,John Doe,john@acmecorp.com,+1234567890,New Lead,Website,Interested in enterprise solution
-TechStart Inc,Jane Smith,jane@techstart.com,+1987654321,Contacted,Referral,Follow up next week
-Global Services,Robert Johnson,robert@globalservices.com,+1122334455,Qualified,LinkedIn,Requested demo 
+company_name,person_name,email,phone,linkedin_profile_url,country,status
+Acme Corp,John Doe,john@acmecorp.com,+1234567890,https://linkedin.com/in/johndoe,United States,New
+TechStart Inc,Jane Smith,jane@techstart.com,+1987654321,https://linkedin.com/in/janesmith,Canada,New
+Global Services,Robert Johnson,robert@globalservices.com,+1122334455,https://linkedin.com/in/robertjohnson,United Kingdom,New 

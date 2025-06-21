@@ -39,7 +39,7 @@ export default function HorizontalNav() {
     <>
       <header 
         className={cn(
-          "w-full mb-6"
+          "w-full mb-6 border-b border-b-gray-200 pb-6"
         )}
         style={{ height: '80px' }} 
       >

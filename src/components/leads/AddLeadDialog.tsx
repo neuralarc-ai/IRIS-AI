@@ -183,7 +183,7 @@ export default function AddLeadDialog({ open, onOpenChange, onLeadAdded, user }:
       if (!isOpen) resetForm();
       onOpenChange(isOpen);
     }}>
-      <DialogContent className="sm:max-w-lg bg-[#FAF8F5]">
+      <DialogContent className="sm:max-w-xl bg-[#FAF8F5]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <UserPlus className="mr-2 h-5 w-5" /> Add New Lead

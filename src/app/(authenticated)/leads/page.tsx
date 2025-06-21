@@ -96,60 +96,150 @@ export default function LeadsPage() {
 
   const handleImport = async (importedData: any[]) => {
     try {
-      if (!user) return;
+      if (!user) {
+        console.error('❌ No user found for import');
+        toast({
+          title: "Import Failed",
+          description: "User not authenticated. Please log in again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      console.log('🔄 Starting CSV import process...');
+      console.log('📊 Imported data:', importedData);
+      console.log('👤 Current user:', user);
+      
+      if (!importedData || importedData.length === 0) {
+        console.error('❌ No data to import');
+        toast({
+          title: "Import Failed",
+          description: "No valid data found in the CSV file.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       // Process imported data and add to leads
-      const processedLeads = importedData.map((item, index) => ({
-        id: `imported_${Date.now()}_${index}`,
-        companyName: item.company_name || item.companyName || '',
-        personName: item.person_name || item.personName || '',
-        email: item.email || '',
-        phone: item.phone || '',
-        linkedinProfileUrl: item.linkedin_profile_url || item.linkedinProfileUrl || '',
-        country: item.country || '',
-        status: 'New' as const,
-        opportunityIds: [],
-        updateIds: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }));
+      const processedLeads = importedData.map((item, index) => {
+        const processed = {
+          companyName: item.company_name || item.companyName || item['Company Name'] || '',
+          personName: item.person_name || item.personName || item['Person Name'] || item['Contact Name'] || '',
+          email: item.email || item.Email || item['Email Address'] || '',
+          phone: item.phone || item.Phone || item['Phone Number'] || '',
+          linkedinProfileUrl: item.linkedin_profile_url || item.linkedinProfileUrl || item['LinkedIn Profile'] || item['LinkedIn URL'] || '',
+          country: item.country || item.Country || '',
+          status: 'New' as const,
+        };
+        
+        console.log(`🔄 Processed lead ${index}:`, processed);
+        return processed;
+      });
+
+      console.log('🔄 All processed leads:', processedLeads);
+
+      // Validate that we have required fields
+      const invalidLeads = processedLeads.filter(lead => !lead.companyName || !lead.personName || !lead.email);
+      if (invalidLeads.length > 0) {
+        console.error('❌ Invalid leads found:', invalidLeads);
+        toast({
+          title: "Import Failed",
+          description: `${invalidLeads.length} leads are missing required fields (company name, person name, or email).`,
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Add each imported lead via API
-      for (const lead of processedLeads) {
-        const response = await fetch('/api/leads', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            company_name: lead.companyName,
-            person_name: lead.personName,
-            email: lead.email,
-            phone: lead.phone,
-            linkedin_profile_url: lead.linkedinProfileUrl,
-            country: lead.country,
-            status: lead.status,
-            created_by_user_id: user.id,
-          })
-        });
+      const newLeads: Lead[] = [];
+      
+      for (let i = 0; i < processedLeads.length; i++) {
+        const leadData = processedLeads[i];
+        console.log(`🔄 Creating lead ${i + 1}/${processedLeads.length}:`, leadData);
+        
+        const requestBody = {
+          company_name: leadData.companyName,
+          person_name: leadData.personName,
+          email: leadData.email,
+          phone: leadData.phone,
+          linkedin_profile_url: leadData.linkedinProfileUrl,
+          country: leadData.country,
+          status: leadData.status,
+          created_by_user_id: user.id,
+        };
+        
+        console.log('📤 API request body:', requestBody);
+        
+        try {
+          const response = await fetch('/api/leads', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+          });
 
-        if (response.ok) {
-          const result = await response.json();
-          setLeads(prevLeads => [result.data, ...prevLeads]);
+          console.log('📥 API response status:', response.status);
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log('✅ Lead created successfully:', result);
+            
+            // Transform the API response to match the Lead interface
+            const newLead: Lead = {
+              id: result.data.id,
+              companyName: result.data.company_name,
+              personName: result.data.person_name,
+              email: result.data.email,
+              phone: result.data.phone,
+              linkedinProfileUrl: result.data.linkedin_profile_url,
+              country: result.data.country,
+              status: result.data.status,
+              opportunityIds: [],
+              updateIds: [],
+              createdAt: result.data.created_at,
+              updatedAt: result.data.updated_at,
+            };
+            
+            console.log('🔄 Transformed lead:', newLead);
+            newLeads.push(newLead);
+          } else {
+            const errorData = await response.json();
+            console.error('❌ Failed to create lead:', errorData);
+            throw new Error(`Failed to create lead: ${errorData.error || 'Unknown error'}`);
+          }
+        } catch (error) {
+          console.error(`❌ Error creating lead ${i + 1}:`, error);
+          throw error;
         }
       }
 
-        toast({
+      console.log('🔄 All leads created, updating state...');
+      console.log('📊 New leads to add:', newLeads);
+      console.log('📊 Current leads count:', leads.length);
+
+      // Update local state with all new leads
+      setLeads(prevLeads => {
+        const updatedLeads = [...newLeads, ...prevLeads];
+        console.log('🔄 Updated leads state:', updatedLeads);
+        return updatedLeads;
+      });
+
+      console.log('✅ State updated successfully');
+
+      toast({
         title: "Import Successful",
-        description: `${processedLeads.length} leads have been imported successfully.`,
-        });
+        description: `${newLeads.length} leads have been imported successfully.`,
+      });
+      
       setShowImport(false);
     } catch (error) {
-      console.error('Error importing leads:', error);
-        toast({
+      console.error('❌ Error importing leads:', error);
+      toast({
         title: "Import Failed",
-        description: "Failed to import leads. Please check your file format.",
+        description: error instanceof Error ? error.message : "Failed to import leads. Please check your file format.",
         variant: "destructive",
-        });
+      });
     }
   };
 

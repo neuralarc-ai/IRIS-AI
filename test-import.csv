@@ -1,0 +1,4 @@
+company_name,person_name,email,phone,linkedin_profile_url,country,status
+Test Company 1,John Smith,john@testcompany1.com,+1234567890,https://linkedin.com/in/johnsmith,United States,New
+Test Company 2,Jane Doe,jane@testcompany2.com,+1987654321,https://linkedin.com/in/janedoe,Canada,New
+Test Company 3,Bob Wilson,bob@testcompany3.com,+1122334455,https://linkedin.com/in/bobwilson,United Kingdom,New 

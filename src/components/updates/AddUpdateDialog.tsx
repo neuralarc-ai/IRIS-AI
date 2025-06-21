@@ -153,7 +153,7 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded }: A
       if (!isOpen) resetForm();
       onOpenChange(isOpen);
     }}>
-      <DialogContent className="sm:max-w-lg bg-[#FAF8F5]">
+      <DialogContent className="sm:max-w-xl bg-[#FAF8F5]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <MessageSquarePlus className="mr-2 h-5 w-5" /> Log New Communication Update

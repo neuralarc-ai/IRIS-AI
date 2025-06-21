@@ -371,6 +371,7 @@ export default function UserManagementPage() {
   const [isEditPinDialogOpen, setIsEditPinDialogOpen] = useState(false);
   const [deletingUser, setDeletingUser] = useState<UserApiResponse | null>(null);
   const [isDeleteUserDialogOpen, setIsDeleteUserDialogOpen] = useState(false);
+  const [visiblePins, setVisiblePins] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { isAdmin, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -438,6 +439,18 @@ export default function UserManagementPage() {
     setIsCreateUserDialogOpen(open);
   };
 
+  const togglePinVisibility = (userId: string) => {
+    setVisiblePins(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
+      return newSet;
+    });
+  };
+
   if (authLoading || !isAdmin()) {
     return (
       <div className="container mx-auto mt-6">
@@ -485,7 +498,7 @@ export default function UserManagementPage() {
                   <TableHead className="text-left">Name</TableHead>
                   <TableHead className="text-left">Email</TableHead>
                   <TableHead className="text-left">Role</TableHead>
-                  <TableHead className="text-left">PIN (Visible to Admin)</TableHead>
+                  <TableHead className="text-left">PIN</TableHead>
                   <TableHead className="text-left">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -495,7 +508,24 @@ export default function UserManagementPage() {
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell className="capitalize">{user.role}</TableCell>
-                    <TableCell className="font-mono tracking-widest">{user.pin}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono tracking-widest">
+                          {visiblePins.has(user.id) ? user.pin : "••••••"}
+                        </span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6" 
+                          onClick={() => togglePinVisibility(user.id)}
+                        >
+                          {visiblePins.has(user.id) ? <EyeOffIcon className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                          <span className="sr-only">
+                            {visiblePins.has(user.id) ? "Hide PIN" : "Show PIN"}
+                          </span>
+                        </Button>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-left">
                       <TooltipProvider>
                         <div className="flex items-center gap-1">
