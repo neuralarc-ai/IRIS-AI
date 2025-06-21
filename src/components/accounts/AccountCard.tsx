@@ -99,18 +99,18 @@ export default function AccountCard({
 
   return (
     <>
-      <Card className="flex flex-col h-full bg-white text-black rounded-[8px] p-2 border-none">
-        <CardHeader className="pb-3 px-6 pt-6">
-          <div className="flex flex-row items-center justify-between w-full mb-1">
-            <div className="flex flex-col items-center">
-              <div className="flex items-center gap-2">
+      <Card className="flex flex-col h-full bg-white text-black rounded-[8px] p-2 border-none text-left">
+        <CardHeader className="pb-3 px-6 pt-6 text-left">
+          <div className="flex flex-row items-center justify-between w-full mb-1 text-left">
+            <div className="flex flex-col items-start text-left">
+              <div className="flex items-center gap-2 text-left">
                 <Briefcase className="h-5 w-5" style={{ color: '#97A88C' }} />
-                <CardTitle className="text-xl font-headline mb-0" style={{ color: '#97A88C' }}>
+                <CardTitle className="text-xl font-headline mb-0 text-left" style={{ color: '#97A88C' }}>
                   {account.name}
                 </CardTitle>
               </div>
               {(account.type || account.industry) && (
-                <div className="flex items-center mt-2 text-muted-foreground text-sm">
+                <div className="flex items-center mt-2 text-muted-foreground text-sm text-left">
                   <Tag className="mr-1 h-4 w-4 shrink-0" />
                   <span>
                     {account.type}
@@ -133,8 +133,8 @@ export default function AccountCard({
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="flex-grow space-y-3 text-sm px-6">
-          <p className="text-muted-foreground line-clamp-2">
+        <CardContent className="flex-grow space-y-3 text-sm px-6 text-left">
+          <p className="text-muted-foreground line-clamp-2 text-left">
             {account.description}
           </p>
 
@@ -157,7 +157,7 @@ export default function AccountCard({
             </div>
           )}
 
-          <div className="text-sm flex items-center text-foreground font-medium">
+          <div className="text-sm flex items-center text-foreground font-medium text-left">
             <ListChecks className="mr-2 h-4 w-4" />
             <span>
               {opportunities.length} Active Opportunit{opportunities.length !== 1 ? "ies" : "y"}
@@ -166,7 +166,7 @@ export default function AccountCard({
 
           {account.status === "Active" && (
             <div className="pt-3 border-t mt-3">
-              <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1.5 flex items-center">
+              <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1.5 flex items-center text-left">
                 <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" /> AI
                 Daily Brief
               </h4>
@@ -179,10 +179,10 @@ export default function AccountCard({
                 </div>
               ) : dailySummary ? (
                 <div className="space-y-1">
-                  <p className="text-xs text-foreground line-clamp-2">
+                  <p className="text-xs text-foreground line-clamp-2 text-left">
                     {dailySummary.summary}
                   </p>
-                  <div className="flex items-center text-xs">
+                  <div className="flex items-center text-xs text-left">
                     <MessageSquareHeart className="mr-1.5 h-3.5 w-3.5 text-pink-500" />
                     <span className="font-medium text-foreground">Health:</span>
                     &nbsp;
@@ -192,7 +192,7 @@ export default function AccountCard({
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground h-10 flex items-center">
+                <p className="text-xs text-muted-foreground h-10 flex items-center text-left">
                   No AI brief available for this account.
                 </p>
               )}

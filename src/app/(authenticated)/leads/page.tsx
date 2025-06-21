@@ -311,18 +311,20 @@ export default function LeadsPage() {
         </div>
       ) : (
         <LeadsListWithFilter
-          leads={leads}
-              onLeadConverted={handleLeadConverted}
+          leads={leads.filter(lead => lead.status !== 'Converted to Account')}
+          onLeadConverted={handleLeadConverted}
           onLeadAdded={handleLeadAdded}
-            />
+        />
       )}
 
-      <AddLeadDialog
-        open={isAddLeadDialogOpen}
-        onOpenChange={setIsAddLeadDialogOpen}
-        onLeadAdded={handleLeadAdded}
-        user={user}
-      />
+      {user && (
+        <AddLeadDialog
+          open={isAddLeadDialogOpen}
+          onOpenChange={setIsAddLeadDialogOpen}
+          onLeadAdded={handleLeadAdded}
+          user={user}
+        />
+      )}
     </div>
   );
 }
