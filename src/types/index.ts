@@ -1,6 +1,6 @@
 export type AccountType = "Client" | "Channel Partner";
 export type AccountStatus = "Active" | "Inactive";
-export type OpportunityStatus = "Need Analysis" | "Negotiation" | "In Progress" | "On Hold" | "Completed" | "Cancelled";
+export type OpportunityStatus = "Scope Of Work" | "Proposal" | "Negotiation" | "Win" | "Loss";
 export type UpdateType = "General" | "Call" | "Meeting" | "Email";
 export type LeadStatus = "New" | "Contacted" | "Qualified" | "Proposal Sent" | "Converted to Account" | "Lost";
 
@@ -33,6 +33,10 @@ export interface Lead {
   updateIds?: string[]; // Direct updates to this lead
   createdAt: string;
   updatedAt: string;
+  assigned_user_id?: string;
+  assignedUser?: User;
+  created_by_user_id?: string;
+  createdByUser?: User;
 }
 
 // API response interface for Supabase leads (snake_case)
@@ -55,7 +59,7 @@ export interface Opportunity {
   associated_account_id: string;
   description: string;
   amount: number;
-  status: string;
+  status: OpportunityStatus;
   probability?: number;
   expected_close_date?: string;
   created_at: string;

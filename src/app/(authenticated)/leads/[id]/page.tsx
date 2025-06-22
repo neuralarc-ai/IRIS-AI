@@ -10,6 +10,8 @@ import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import type { Lead } from '@/types';
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { User as UserIcon } from 'lucide-react';
 
 const getStatusBadgeColorClasses = (status: Lead['status']): string => {
   switch (status) {
@@ -30,6 +32,8 @@ export default function LeadDetailsPage() {
   const [lead, setLead] = useState<Lead | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConverting, setIsConverting] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [assignLoading, setAssignLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -65,6 +69,10 @@ export default function LeadDetailsPage() {
         };
 
         setLead(leadData);
+        // Fetch users for assignment
+        const usersRes = await fetch('/api/users');
+        const usersJson = await usersRes.json();
+        setUsers(usersJson.data || []);
       } catch (error) {
         console.error('Error fetching lead details:', error);
         router.push('/leads');
@@ -113,6 +121,26 @@ export default function LeadDetailsPage() {
       });
     } finally {
       setIsConverting(false);
+    }
+  };
+
+  const handleAssignUser = async (userId: string) => {
+    if (!lead) return;
+    setAssignLoading(true);
+    try {
+      const response = await fetch(`/api/leads/${lead.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assigned_user_id: userId })
+      });
+      if (!response.ok) throw new Error('Failed to assign user');
+      const result = await response.json();
+      setLead((prev) => prev ? { ...prev, assigned_user_id: userId } : prev);
+      toast({ title: 'Lead Assigned', description: 'Lead has been assigned successfully.' });
+    } catch (e) {
+      toast({ title: 'Error', description: 'Failed to assign user.', variant: 'destructive' });
+    } finally {
+      setAssignLoading(false);
     }
   };
 
@@ -279,6 +307,26 @@ export default function LeadDetailsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">Assigned To</h3>
+                <div className="flex items-center gap-2">
+                  <UserIcon className="h-4 w-4 text-muted-foreground" />
+                  <Select
+                    value={lead.assigned_user_id || ''}
+                    onValueChange={handleAssignUser}
+                    disabled={assignLoading || users.length === 0}
+                  >
+                    <SelectTrigger className="w-full bg-[#E2D4C3]/60">
+                      <SelectValue placeholder={users.length === 0 ? 'No users' : 'Assign user'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>{user.name} ({user.email})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">LinkedIn Profile</h3>
                 <p className="text-sm">{lead.linkedinProfileUrl ? 'Available' : 'Not provided'}</p>

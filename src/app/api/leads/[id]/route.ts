@@ -104,6 +104,13 @@ export async function PUT(
       }
     }
 
+    // Fetch previous lead to check assignment change
+    const { data: prevLead } = await supabase
+      .from('leads')
+      .select('assigned_user_id')
+      .eq('id', id)
+      .single();
+
     // Update lead
     const { data, error } = await supabase
       .from('leads')
@@ -114,7 +121,8 @@ export async function PUT(
         phone: body.phone !== undefined ? body.phone : undefined,
         linkedin_profile_url: body.linkedin_profile_url !== undefined ? body.linkedin_profile_url : undefined,
         country: body.country !== undefined ? body.country : undefined,
-        status: body.status || undefined
+        status: body.status || undefined,
+        assigned_user_id: body.assigned_user_id !== undefined ? body.assigned_user_id : undefined
       })
       .eq('id', id)
       .select()
@@ -132,6 +140,24 @@ export async function PUT(
         { error: 'Failed to update lead' },
         { status: 500 }
       )
+    }
+
+    // If assigned_user_id changed, create a notification
+    if (
+      body.assigned_user_id &&
+      prevLead &&
+      body.assigned_user_id !== prevLead.assigned_user_id
+    ) {
+      console.log('Creating notification for user:', body.assigned_user_id);
+      console.log('Previous assigned user:', prevLead.assigned_user_id);
+      console.log('New assigned user:', body.assigned_user_id);
+      await supabase.from('notifications').insert([
+        {
+          user_id: body.assigned_user_id,
+          message: 'You have a new lead assigned by admin.'
+        }
+      ]);
+      console.log('Notification created successfully');
     }
 
     return NextResponse.json({

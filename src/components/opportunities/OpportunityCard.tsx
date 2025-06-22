@@ -54,17 +54,15 @@ interface OpportunityCardProps {
 
 const getStatusBadgeColorClasses = (status: Opportunity["status"]): string => {
   switch (status) {
-    case "Need Analysis":
+    case "Scope Of Work":
       return "bg-sky-500/20 text-sky-700 border-sky-500/30";
+    case "Proposal":
+      return "bg-blue-500/20 text-blue-700 border-blue-500/30";
     case "Negotiation":
       return "bg-amber-500/20 text-amber-700 border-amber-500/30";
-    case "In Progress":
-      return "bg-blue-500/20 text-blue-700 border-blue-500/30";
-    case "On Hold":
-      return "bg-slate-500/20 text-slate-700 border-slate-500/30";
-    case "Completed":
+    case "Win":
       return "bg-green-500/20 text-green-700 border-green-500/30";
-    case "Cancelled":
+    case "Loss":
       return "bg-red-500/20 text-red-700 border-red-500/30";
     default:
       return "bg-gray-500/20 text-gray-700 border-gray-500/30";
@@ -72,12 +70,11 @@ const getStatusBadgeColorClasses = (status: Opportunity["status"]): string => {
 };
 
 const VALID_OPPORTUNITY_STATUSES: Opportunity["status"][] = [
-  "Need Analysis",
+  "Scope Of Work",
+  "Proposal",
   "Negotiation",
-  "In Progress",
-  "On Hold",
-  "Completed",
-  "Cancelled",
+  "Win",
+  "Loss",
 ];
 
 const calculateProgress = (
@@ -85,39 +82,29 @@ const calculateProgress = (
   endDate: string | undefined,
   status: Opportunity["status"]
 ): number => {
-  if (!startDate || !endDate) return 0; // Defensive: if missing, show 0 progress
-  if (status === "Completed") return 100;
-  if (status === "Cancelled") return 0;
-
-  if (status === "Need Analysis") {
-    if (new Date() < parseISO(startDate)) {
-      return 0;
-    }
-  }
+  if (status === "Win") return 100;
+  if (status === "Loss") return 0;
+  if (!startDate || !endDate) return 0;
 
   const start = parseISO(startDate);
   const end = parseISO(endDate);
   const today = new Date();
 
-  if (today < start) return 5; // Slight progress if it hasn't started but not cancelled
-  if (today >= end && status !== "Completed") return 95; // Near completion if past end date but not marked complete
+  if (today >= end) return 95; // Past due but not won/lost
+  if (today < start) return 5; // Not yet started
 
   const totalDuration = differenceInDays(end, start);
   const elapsedDuration = differenceInDays(today, start);
 
   if (totalDuration <= 0) {
-    if (
-      status === "In Progress" ||
-      status === "Negotiation" ||
-      status === "On Hold"
-    ) {
-      return 50;
-    } else {
-      return 0;
+    if (status === "Scope Of Work" || status === "Proposal" || status === "Negotiation") {
+        return 50; // In progress, but no valid date range
     }
+    return 10;
   }
 
-  return Math.min(98, Math.max(5, (elapsedDuration / totalDuration) * 100)); // Ensure progress is between 5 and 98 unless completed/cancelled
+  const progress = (elapsedDuration / totalDuration) * 100;
+  return Math.min(98, Math.max(5, progress)); // Cap progress between 5% and 98%
 };
 
 export default function OpportunityCard({ opportunity: initialOpportunity, onStatusChange }: OpportunityCardProps) {
@@ -207,8 +194,8 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
 
   useEffect(() => {
     if (
-      opportunity.status !== "Completed" &&
-      opportunity.status !== "Cancelled" &&
+      opportunity.status !== "Win" &&
+      opportunity.status !== "Loss" &&
       opportunity.name &&
       opportunity.created_at &&
       opportunity.expected_close_date &&
@@ -261,7 +248,7 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
   }
 
   const timeRemaining = (status: Opportunity["status"]): string => {
-    if (status === "Completed" || status === "Cancelled") return status;
+    if (status === "Win" || status === "Loss") return status;
     if (!opportunity.expected_close_date) return "N/A";
     const end = opportunity.expected_close_date
       ? parseISO(opportunity.expected_close_date)
@@ -297,7 +284,7 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
             <DropdownMenuTrigger asChild>
               <button
                 className={`capitalize whitespace-nowrap ml-2 focus:outline-none ${getStatusBadgeColorClasses(opportunity.status)} inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors`}
-                disabled={isStatusUpdating || opportunity.status === "Completed" || opportunity.status === "Cancelled"}
+                disabled={isStatusUpdating || opportunity.status === "Win" || opportunity.status === "Loss"}
                 aria-label="Change status"
               >
                 {isStatusUpdating ? (
@@ -311,7 +298,7 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
                 <DropdownMenuItem
                   key={status}
                   onSelect={() => handleStatusChange(status)}
-                  disabled={status === opportunity.status || opportunity.status === "Completed" || opportunity.status === "Cancelled"}
+                  disabled={status === opportunity.status || opportunity.status === "Win" || opportunity.status === "Loss"}
                   className={`capitalize ${status === opportunity.status ? "opacity-60 font-bold" : "cursor-pointer"}`}
                 >
                   {status}
@@ -373,8 +360,8 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
           </div>
         </div>
         {(forecast || isLoadingForecast) &&
-          opportunity.status !== "Completed" &&
-          opportunity.status !== "Cancelled" && (
+          opportunity.status !== "Win" &&
+          opportunity.status !== "Loss" && (
             <div className="pt-3 border-t mt-3">
               <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1.5 flex items-center">
                 <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" /> AI

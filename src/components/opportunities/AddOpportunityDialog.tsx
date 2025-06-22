@@ -34,7 +34,7 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
   const [selectedAccountId, setSelectedAccountId] = useState<string | ''>(initialAccountId || '');
   const [isLoading, setIsLoading] = useState(false);
   const [expectedCloseDate, setExpectedCloseDate] = useState('');
-  const [status, setStatus] = useState('Need Analysis');
+  const [status, setStatus] = useState('Scope Of Work');
   const { toast } = useToast();
   const [selectedSourceType, setSelectedSourceType] = useState<'account' | 'lead'>('account');
   const [leads, setLeads] = useState<any[]>([]);
@@ -114,7 +114,7 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
     setValue('');
     setSelectedAccountId('');
     setExpectedCloseDate('');
-    setStatus('Need Analysis');
+    setStatus('Scope Of Work');
   };
 
   return (
@@ -207,13 +207,13 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
             />
           </div>
           <div>
-            <Label htmlFor="opportunity-value">Quoted Amount <span className="text-destructive">*</span></Label>
+            <Label htmlFor="opportunity-value">Quoted Amount (USD) <span className="text-destructive">*</span></Label>
             <Input
               id="opportunity-value"
               type="number"
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder="e.g., 50000"
+              placeholder="e.g., 50000 (USD)"
               disabled={isLoading}
               min="0"
               className="bg-[#E2D4C3]/60"
@@ -236,21 +236,19 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
           <div>
             <Label htmlFor="opportunity-status">Status <span className="text-destructive">*</span></Label>
             <Select
-              value={status}
               onValueChange={setStatus}
+              value={status}
               disabled={isLoading}
-              required
             >
-              <SelectTrigger id="opportunity-status" className="bg-[#E2D4C3]/60">
-                <SelectValue placeholder="Select status" />
+              <SelectTrigger id="opportunity-status" className="w-full bg-[#E2D4C3]/60">
+                <SelectValue placeholder="Select a status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Need Analysis">Need Analysis</SelectItem>
+                <SelectItem value="Scope Of Work">Scope Of Work</SelectItem>
+                <SelectItem value="Proposal">Proposal</SelectItem>
                 <SelectItem value="Negotiation">Negotiation</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
-                <SelectItem value="On Hold">On Hold</SelectItem>
-                <SelectItem value="Completed">Completed</SelectItem>
-                <SelectItem value="Cancelled">Cancelled</SelectItem>
+                <SelectItem value="Win">Win</SelectItem>
+                <SelectItem value="Loss">Loss</SelectItem>
               </SelectContent>
             </Select>
           </div>

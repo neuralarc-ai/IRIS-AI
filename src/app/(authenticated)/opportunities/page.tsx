@@ -22,7 +22,7 @@ export default function OpportunitiesPage() {
   const [accounts, setAccounts] = useState<{id: string, name: string, type: string}[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const opportunityStatusOptions: OpportunityStatus[] = ["Need Analysis", "Negotiation", "In Progress", "On Hold", "Completed", "Cancelled"];
+  const opportunityStatusOptions: OpportunityStatus[] = ["Scope Of Work", "Proposal", "Negotiation", "Win", "Loss"];
 
   // Fetch opportunities from API
   const fetchOpportunities = async () => {

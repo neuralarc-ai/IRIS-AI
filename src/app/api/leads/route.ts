@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     }
     // Filter by created_by_user_id if not admin
     if (!isAdmin && userId) {
-      query = query.eq('created_by_user_id', userId);
+      query = query.or(`created_by_user_id.eq.${userId},assigned_user_id.eq.${userId}`);
     }
 
     const { data, error, count } = await query

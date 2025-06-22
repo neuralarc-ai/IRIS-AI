@@ -213,7 +213,10 @@ export default function DashboardPage() {
   }, [forecastedOpportunities]);
 
   return (
-    <div className="container mx-auto p-6 mt-6">
+    <div
+      className="mx-auto mt-6 px-0"
+      style={{ maxWidth: '1376px', paddingLeft: 0, paddingRight: 0 }}
+    >
       <div className="mb-6 flex items-center justify-between">
         <PageTitle 
           title="Dashboard" 
@@ -513,28 +516,28 @@ export default function DashboardPage() {
                     </div>
                 ))
               ) : leads.length > 0 ? (
-                  (leads as any[])
-                    .filter((lead) => lead.status !== "Converted to Account")
-                    .map((lead) => (
-                      <div
-                        key={lead.id}
-                        className="w-full bg-gray-50/50 rounded-sm p-3 border-l-4 border-blue-400 hover:bg-gray-100/50 transition-colors"
-                      >
-                        <div className="flex flex-col gap-1">
-                          <p className="font-medium text-gray-900">{lead.person_name}</p>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500">({lead.company_name})</span>
-                            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
-                              {lead.status}
-                            </span>
-                          </div>
+                (leads as any[])
+                  .filter((lead) => lead.status !== "Converted to Account")
+                  .map((lead) => (
+                    <div
+                      key={lead.id}
+                      className="w-full bg-gray-50/50 rounded-sm p-3 border-l-4 border-blue-400 hover:bg-gray-100/50 transition-colors"
+                    >
+                      <div className="flex flex-col gap-1">
+                        <p className="font-medium text-gray-900">{lead.person_name}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">({lead.company_name})</span>
+                          <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
+                            {lead.status}
+                          </span>
                         </div>
                       </div>
+                    </div>
                 ))
               ) : (
-                  <p className="text-muted-foreground text-center py-4">
-                    No leads available.
-                  </p>
+                <p className="text-muted-foreground text-center py-4">
+                  No leads available.
+                </p>
               )}
             </div>
           </CardContent>

@@ -24,10 +24,13 @@ import {
   Linkedin,
   MapPin,
   Briefcase,
+  UserCheck,
+  UserPlus,
 } from "lucide-react";
 import type { Lead } from "@/types";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -96,9 +99,13 @@ export default function LeadCard({
   onStatusChange,
 }: LeadCardProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [lead, setLead] = useState(initialLead);
   const [isConverting, setIsConverting] = useState(false);
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
+
+  const isAssignedToMe = lead.assigned_user_id === user?.id;
+  const isCreatedByMe = lead.created_by_user_id === user?.id;
 
   const handleStatusChange = async (newStatus: Lead["status"]) => {
     if (lead.status === newStatus) return;
@@ -194,6 +201,12 @@ export default function LeadCard({
           <CardTitle className="text-xl font-headline flex items-center" style={{ color: '#97A88C' }}>
             <Briefcase className="mr-2 h-5 w-5 shrink-0" style={{ color: '#97A88C' }} />
             {lead.companyName}
+            {isAssignedToMe && !isCreatedByMe && (
+              <UserCheck className="ml-2 h-4 w-4 text-blue-500" title="Assigned to you" />
+            )}
+            {isCreatedByMe && (
+              <UserPlus className="ml-2 h-4 w-4 text-green-500" title="Created by you" />
+            )}
           </CardTitle>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

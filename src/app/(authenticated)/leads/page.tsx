@@ -50,6 +50,8 @@ export default function LeadsPage() {
         updateIds: [],
         createdAt: apiLead.created_at,
         updatedAt: apiLead.updated_at,
+        assigned_user_id: apiLead.assigned_user_id,
+        created_by_user_id: apiLead.created_by_user_id,
       }));
       setLeads(transformedLeads);
     } catch (error) {
@@ -199,6 +201,8 @@ export default function LeadsPage() {
               updateIds: [],
               createdAt: result.data.created_at,
               updatedAt: result.data.updated_at,
+              assigned_user_id: result.data.assigned_user_id,
+              created_by_user_id: result.data.created_by_user_id,
             };
             
             console.log('🔄 Transformed lead:', newLead);
