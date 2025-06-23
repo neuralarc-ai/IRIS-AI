@@ -8,10 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, User, Users, Mail, Phone, Building2, CalendarDays, Clock, Linkedin, MapPin, CheckSquare, FileWarning } from 'lucide-react';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import type { Lead } from '@/types';
+import type { Lead, Update } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User as UserIcon } from 'lucide-react';
+import UpdateItem from '@/components/updates/UpdateItem';
+import AddUpdateDialog from '@/components/updates/AddUpdateDialog';
 
 const getStatusBadgeColorClasses = (status: Lead['status']): string => {
   switch (status) {
@@ -34,6 +36,44 @@ export default function LeadDetailsPage() {
   const [isConverting, setIsConverting] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [assignLoading, setAssignLoading] = useState(false);
+
+  // Fetch updates for this lead
+  const [leadUpdates, setLeadUpdates] = useState<Update[]>([]);
+  const [isLoadingUpdates, setIsLoadingUpdates] = useState(true);
+  const [isAddUpdateDialogOpen, setIsAddUpdateDialogOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchLeadUpdates = async () => {
+      setIsLoadingUpdates(true);
+      try {
+        const response = await fetch(`/api/updates?lead_id=${params.id}`);
+        const result = await response.json();
+        setLeadUpdates(
+          (result.data || []).map((u: any) => ({
+            id: u.id,
+            opportunityId: u.opportunity_id,
+            leadId: u.lead_id,
+            accountId: u.account_id,
+            date: u.date,
+            content: u.content,
+            type: u.type,
+            createdAt: u.created_at,
+            updatedByUserId: u.updated_by_user_id,
+            opportunity: u.opportunity,
+            account: u.account,
+            updatedByUser: u.user,
+          }))
+        );
+      } catch (error) {
+        console.error('Error fetching lead updates:', error);
+      } finally {
+        setIsLoadingUpdates(false);
+      }
+    };
+    if (params.id) {
+      fetchLeadUpdates();
+    }
+  }, [params.id]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -343,6 +383,34 @@ export default function LeadDetailsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Lead Updates Section */}
+      <Button onClick={() => setIsAddUpdateDialogOpen(true)} variant="beige" className="mb-4">
+        Log Update
+      </Button>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Lead Updates</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoadingUpdates ? (
+            <LoadingSpinner size={24} />
+          ) : leadUpdates.length === 0 ? (
+            <p className="text-muted-foreground">No updates for this lead yet.</p>
+          ) : (
+            <div className="space-y-4">
+              {leadUpdates.map(update => (
+                <UpdateItem key={update.id} update={update} />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      <AddUpdateDialog
+        open={isAddUpdateDialogOpen}
+        onOpenChange={setIsAddUpdateDialogOpen}
+        onUpdateAdded={fetchLeadUpdates}
+      />
     </div>
   );
 } 

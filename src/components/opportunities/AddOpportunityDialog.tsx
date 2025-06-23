@@ -70,22 +70,27 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !selectedAccountId || value === '' || Number(value) <= 0 || !expectedCloseDate || !status) {
-      toast({ title: "Error", description: "Opportunity Name, associated Account, a valid positive Quoted Amount, Status, and Expected Close Date are required.", variant: "destructive" });
+      toast({ title: "Error", description: "Opportunity Name, associated Account/Lead, a valid positive Quoted Amount, Status, and Expected Close Date are required.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
     try {
+      const requestBody: any = {
+        name,
+        description,
+        amount: Number(value),
+        expected_close_date: expectedCloseDate,
+        status,
+      };
+      if (selectedSourceType === 'account') {
+        requestBody.associated_account_id = selectedAccountId;
+      } else if (selectedSourceType === 'lead') {
+        requestBody.associated_lead_id = selectedAccountId;
+      }
       const response = await fetch('/api/opportunities', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          associated_account_id: selectedAccountId,
-          description,
-          amount: Number(value),
-          expected_close_date: expectedCloseDate,
-          status,
-        })
+        body: JSON.stringify(requestBody)
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -95,7 +100,7 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
       const newOpportunity = result.data;
       toast({
         title: "Opportunity Created",
-        description: `Opportunity "${name}" has been successfully added for account ${accounts.find(a => a.id === selectedAccountId)?.name}.`,
+        description: `Opportunity "${name}" has been successfully added.`,
       });
       onOpportunityAdded?.(newOpportunity);
       resetForm();

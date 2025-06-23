@@ -12,6 +12,7 @@ export async function POST(req: Request) {
   const {
     name,
     associated_account_id,
+    associated_lead_id,
     description,
     amount,
     status = 'Open',
@@ -19,15 +20,17 @@ export async function POST(req: Request) {
     expected_close_date
   } = body;
 
-  if (!name || !associated_account_id || !amount || !expected_close_date) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  // Require at least one association
+  if (!name || !amount || !expected_close_date || (!associated_account_id && !associated_lead_id)) {
+    return NextResponse.json({ error: 'Missing required fields: name, amount, expected_close_date, and at least one of associated_account_id or associated_lead_id' }, { status: 400 });
   }
 
   const { data, error } = await supabase
     .from('opportunities')
     .insert([{
       name,
-      associated_account_id,
+      associated_account_id: associated_account_id || null,
+      associated_lead_id: associated_lead_id || null,
       description,
       amount,
       status,

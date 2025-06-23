@@ -140,9 +140,6 @@ export default function HorizontalNav() {
                 </a>
               </Button>
             )}
-          </nav>
-
-          <div className="flex items-center gap-6 ml-6 flex-shrink-0">
             <Button
               variant="ghost" 
               size="sm"
@@ -153,6 +150,9 @@ export default function HorizontalNav() {
               <PlusCircle className="h-7 w-7" />
               <span className="text-[15px] leading-tight text-center">Quick Create</span>
             </Button>
+          </nav>
+
+          <div className="flex items-center">
             <UserProfile />
           </div>
         </div>

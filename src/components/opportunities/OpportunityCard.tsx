@@ -269,7 +269,7 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
   );
 
   return (
-    <Card className="flex flex-col h-full bg-white text-black rounded-[8px]  p-2 border-none">
+    <Card className="flex flex-col h-full bg-white text-black rounded-[8px] border-none">
       <CardHeader className="pb-3 px-6 pt-6">
         <div className="flex flex-row items-center justify-between w-full">
           <div className="flex flex-col items-start">

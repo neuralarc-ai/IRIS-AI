@@ -34,23 +34,31 @@ export default function UpdatesPage() {
   const [newActivityTypes, setNewActivityTypes] = useState<{ [accountId: string]: string }>({});
   const [aiLoading, setAiLoading] = useState<{ [accountId: string]: boolean }>({});
 
+  // Centralized fetchUpdates function
+  const fetchUpdates = async () => {
+    const response = await fetch('/api/updates');
+    const result = await response.json();
+    setUpdates((result.data || []).map((apiUpdate: any) => ({
+      id: apiUpdate.id,
+      type: apiUpdate.type,
+      content: apiUpdate.content,
+      date: apiUpdate.date,
+      account: apiUpdate.account,
+      opportunity: apiUpdate.opportunity,
+      updatedByUser: apiUpdate.user,
+      lead: apiUpdate.lead,
+      leadId: apiUpdate.lead_id,
+      leadName: apiUpdate.lead?.company_name || apiUpdate.lead?.person_name || '',
+    })));
+  };
+
   useEffect(() => {
-    const fetchUpdates = async () => {
-      const response = await fetch('/api/updates');
-      const result = await response.json();
-      console.log('Raw /api/updates response:', result);
-      setUpdates((result.data || []).map((apiUpdate: any) => ({
-        id: apiUpdate.id,
-        type: apiUpdate.type,
-        content: apiUpdate.content,
-        date: apiUpdate.date,
-        account: apiUpdate.account,
-        opportunity: apiUpdate.opportunity,
-        updatedByUser: apiUpdate.user,
-      })));
-    };
     fetchUpdates();
   }, []);
+
+  const handleUpdateAdded = async () => {
+    await fetchUpdates();
+  };
 
   useEffect(() => {
     const fetchOpportunities = async () => {
@@ -60,12 +68,6 @@ export default function UpdatesPage() {
     };
     fetchOpportunities();
   }, []);
-
-  const handleUpdateAdded = async () => {
-    const response = await fetch('/api/updates');
-    const result = await response.json();
-    setUpdates(result.data || []);
-  };
 
   const updateTypeOptions: UpdateType[] = ["General", "Call", "Meeting", "Email"];
 
@@ -90,54 +92,68 @@ export default function UpdatesPage() {
     return matchesSearch && matchesType && matchesOpportunity && matchesDate;
   });
 
-  // Group updates by account only (no grouping by opportunity)
+  // Group updates by entity (account or lead)
   const grouped = React.useMemo(() => {
     const acc: any = {};
-    for (const update of filteredUpdates) {
-      const accountId = update.account?.id;
-      if (!accountId) continue;
-      if (!acc[accountId]) {
-        acc[accountId] = {
-          account: update.account,
-          updates: [],
-        };
+    // First, collect all lead IDs and their names
+    const leadMap: Record<string, { id: string; name: string }> = {};
+    filteredUpdates.forEach(update => {
+      if (update.leadId && update.leadName) {
+        leadMap[update.leadId] = { id: update.leadId, name: update.leadName };
       }
-      acc[accountId].updates.push(update);
+    });
+    // Group by account or lead
+    for (const update of filteredUpdates) {
+      // If update is for an account, group by account
+      if (update.account?.id) {
+        if (!acc[update.account.id]) {
+          acc[update.account.id] = {
+            entity: update.account,
+            updates: [],
+          };
+        }
+        acc[update.account.id].updates.push(update);
+      }
+      // If update is for a lead (direct or via opportunity), group by lead
+      if (update.leadId && leadMap[update.leadId]) {
+        if (!acc[update.leadId]) {
+          acc[update.leadId] = {
+            entity: { id: update.leadId, name: update.leadName, isLead: true },
+            updates: [],
+          };
+        }
+        acc[update.leadId].updates.push(update);
+      }
     }
     return acc;
   }, [filteredUpdates]);
 
   // Handler for logging new activity
-  const handleLogActivity = async (accountId: string) => {
-    if (!newActivities[accountId]?.trim()) return;
-    setIsSaving(prev => ({ ...prev, [accountId]: true }));
+  const handleLogActivity = async (entityId: string, entityType: string) => {
+    if (!newActivities[entityId]?.trim()) return;
+    setIsSaving(prev => ({ ...prev, [entityId]: true }));
     try {
+      const body: any = {
+        content: newActivities[entityId],
+        type: newActivityTypes[entityId] || 'General',
+        date: new Date().toISOString(),
+      };
+      if (entityType === 'account') {
+        body.account_id = entityId;
+      } else if (entityType === 'lead') {
+        body.lead_id = entityId;
+      }
       await fetch('/api/updates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          account_id: accountId,
-          content: newActivities[accountId],
-          type: newActivityTypes[accountId] || 'General',
-          date: new Date().toISOString(),
-        }),
+        body: JSON.stringify(body),
       });
-      setNewActivities(prev => ({ ...prev, [accountId]: '' }));
-      setNewActivityTypes(prev => ({ ...prev, [accountId]: '' }));
+      setNewActivities(prev => ({ ...prev, [entityId]: '' }));
+      setNewActivityTypes(prev => ({ ...prev, [entityId]: '' }));
       // Refetch updates
-      const response = await fetch('/api/updates');
-      const result = await response.json();
-      setUpdates((result.data || []).map((apiUpdate: any) => ({
-        id: apiUpdate.id,
-        type: apiUpdate.type,
-        content: apiUpdate.content,
-        date: apiUpdate.date,
-        account: apiUpdate.account,
-        opportunity: apiUpdate.opportunity,
-        updatedByUser: apiUpdate.user,
-      })));
+      await fetchUpdates();
     } finally {
-      setIsSaving(prev => ({ ...prev, [accountId]: false }));
+      setIsSaving(prev => ({ ...prev, [entityId]: false }));
     }
   };
 
@@ -240,14 +256,21 @@ export default function UpdatesPage() {
       {/* Grouped Account Cards */}
       {Object.keys(grouped).length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-8">
-          {Object.values(grouped).map(({ account, updates }: any) => (
-            <div key={account.id} className="p-6 rounded-xl border border-gray-200 bg-white shadow relative">
-              <div className="flex flex-wrap items-center justify-between mb-2">
-                <div className="flex items-center">
-                  <span className="text-sm text-gray-600 font-medium mr-2">Account:</span>
-                  <Briefcase className="h-5 w-5 text-black mr-2" />
-                  <h2 className="text-2xl font-bold mb-0 text-black">{account.name}</h2>
-                </div>
+          {Object.values(grouped).map(({ entity, updates }: any) => (
+            <div key={entity.id} className="p-6 rounded-xl border border-gray-200 bg-white shadow relative">
+              <div className="flex items-center mb-2 gap-2">
+                {entity.isLead ? (
+                  <>
+                    <MessageSquare className="h-5 w-5 text-black" />
+                    <span className="text-base font-medium text-gray-700">Lead:</span>
+                  </>
+                ) : (
+                  <>
+                    <Briefcase className="h-5 w-5 text-black" />
+                    <span className="text-base font-medium text-gray-700">Account:</span>
+                  </>
+                )}
+                <h2 className="text-2xl font-bold text-black ml-2">{entity.name}</h2>
               </div>
               {/* Activity Log */}
               <div>
@@ -259,7 +282,6 @@ export default function UpdatesPage() {
                     </div>
                     <div className="text-xs text-gray-500">
                       Logged on: {format(parseISO(update.date), 'yyyy-MM-dd')}
-                      {update.next_action_date && ` | Next Action: ${update.next_action_date}`}
                     </div>
                   </div>
                 ))}
@@ -267,47 +289,48 @@ export default function UpdatesPage() {
               {/* Log New Activity Section */}
               <div className="mt-6">
                 <div className="font-bold text-lg mb-2">Log New Activity</div>
-                <label className="block text-sm font-medium mb-1" htmlFor={`activity-desc-${account.id}`}>Description</label>
+                <label className="block text-sm font-medium mb-1" htmlFor={`activity-desc-${entity.id}`}>Description</label>
                 <textarea
-                  id={`activity-desc-${account.id}`}
+                  id={`activity-desc-${entity.id}`}
                   className="w-full border rounded p-2 mb-2"
                   rows={3}
                   placeholder="e.g., Follow-up call, sent proposal..."
-                  value={newActivities[account.id] || ''}
-                  onChange={e => setNewActivities(prev => ({ ...prev, [account.id]: e.target.value }))}
-                  disabled={isSaving[account.id]}
+                  value={newActivities[entity.id] || ''}
+                  onChange={e => setNewActivities(prev => ({ ...prev, [entity.id]: e.target.value }))}
+                  disabled={isSaving[entity.id]}
                 />
                 {/* Update Type Dropdown */}
-                <label className="block text-sm font-medium mb-1" htmlFor={`activity-type-${account.id}`}>Update Type</label>
+                <label className="block text-sm font-medium mb-1" htmlFor={`activity-type-${entity.id}`}>Update Type</label>
                 <select
-                  id={`activity-type-${account.id}`}
-                  className="w-full border rounded p-2 mb-2"
-                  value={newActivityTypes[account.id] || 'General'}
-                  onChange={e => setNewActivityTypes(prev => ({ ...prev, [account.id]: e.target.value }))}
-                  disabled={isSaving[account.id]}
+                  id={`activity-type-${entity.id}`}
+                  className="w-full border rounded p-2 mb-4"
+                  value={newActivityTypes[entity.id] || 'General'}
+                  onChange={e => setNewActivityTypes(prev => ({ ...prev, [entity.id]: e.target.value }))}
+                  disabled={isSaving[entity.id]}
                 >
                   {updateTypeOptions.map(type => (
                     <option key={type} value={type}>{type}</option>
                   ))}
                 </select>
+                <div className="flex items-center gap-4 justify-between mt-2">
+                  <button
+                    className="bg-[#6FCF97] text-white px-4 py-2 rounded font-semibold"
+                    disabled={isSaving[entity.id] || !(newActivities[entity.id]?.trim())}
+                    onClick={() => handleLogActivity(entity.id, entity.isLead ? 'lead' : 'account')}
+                  >
+                    {isSaving[entity.id] ? 'Saving...' : 'Log Activity'}
+                  </button>
+                  <button
+                    className="flex items-center gap-2 bg-[#E2D4C3] hover:bg-[#C8B89B] text-black px-4 py-2 rounded shadow font-semibold"
+                    onClick={() => handleGetAIAdvice(entity.id, updates, entity.name)}
+                    type="button"
+                    disabled={aiLoading[entity.id]}
+                  >
+                    <Wand2 className="h-5 w-5" />
+                    {aiLoading[entity.id] ? 'Thinking...' : 'Get AI Advice'}
+                  </button>
+                </div>
               </div>
-               <button
-                  className="bg-[#6FCF97] text-white px-4 py-2 rounded font-semibold item-end"
-                  disabled={isSaving[account.id] || !(newActivities[account.id]?.trim())}
-                  onClick={() => handleLogActivity(account.id)}
-                >
-                  {isSaving[account.id] ? 'Saving...' : 'Log Activity'}
-                </button>
-              {/* Get AI Advice Button */}
-              <button
-                className="absolute right-6 bottom-6 flex items-center gap-2 bg-[#E2D4C3] hover:bg-[#C8B89B] text-black px-4 py-2 rounded shadow font-semibold"
-                onClick={() => handleGetAIAdvice(account.id, updates, account.name)}
-                type="button"
-                disabled={aiLoading[account.id]}
-              >
-                <Wand2 className="h-5 w-5" />
-                {aiLoading[account.id] ? 'Thinking...' : 'Get AI Advice'}
-              </button>
             </div>
           ))}
         </div>

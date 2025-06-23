@@ -268,7 +268,7 @@ export default function DashboardPage() {
               Recent Activity Stream
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {isLoading && recentUpdates.length === 0
                   ? Array.from({ length: 2 }).map((_, i) => (
@@ -372,7 +372,7 @@ export default function DashboardPage() {
               Key Opportunity Insights
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {isLoading && forecastedOpportunities.length === 0
                   ? Array.from({ length: 2 }).map((_, i) => (

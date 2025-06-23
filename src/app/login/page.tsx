@@ -11,9 +11,6 @@ import { Terminal } from "lucide-react";
 export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
-      <div className="absolute top-8 left-8">
-        <Logo textSize="text-3xl" iconSize={30}/>
-      </div>
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-headline">Welcome Back</CardTitle>

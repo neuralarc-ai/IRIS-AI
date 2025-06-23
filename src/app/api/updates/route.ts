@@ -74,17 +74,31 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50;
     const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0;
+    const leadId = searchParams.get('lead_id');
+    const accountId = searchParams.get('account_id');
+    const opportunityId = searchParams.get('opportunity_id');
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('updates')
       .select(`
         *,
         account:account_id (id, name),
         opportunity:opportunity_id (id, name),
-        user:updated_by_user_id (id, name)
+        user:updated_by_user_id (id, name),
+        lead:lead_id (id, company_name, person_name)
       `)
       .order('date', { ascending: false })
       .range(offset, offset + limit - 1);
+
+    if (leadId) {
+      query = query.eq('lead_id', leadId);
+    } else if (accountId) {
+      query = query.eq('account_id', accountId);
+    } else if (opportunityId) {
+      query = query.eq('opportunity_id', opportunityId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Error fetching updates:', error);
