@@ -164,7 +164,14 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
           {/* Associated Account selection */}
           <div>
             <Label htmlFor="opportunity-account">{selectedSourceType === 'account' ? 'Associated Account' : 'Associated Lead'} <span className="text-destructive">*</span></Label>
-            {selectedSourceType === 'account' ? (
+            {selectedSourceType === 'account' && initialAccountId ? (
+              <Input
+                id="opportunity-account"
+                value={accounts.find(acc => acc.id === initialAccountId)?.name || ''}
+                disabled
+                className="bg-[#E2D4C3]/60"
+              />
+            ) : selectedSourceType === 'account' ? (
               <Select
                 value={selectedAccountId}
                 onValueChange={setSelectedAccountId}

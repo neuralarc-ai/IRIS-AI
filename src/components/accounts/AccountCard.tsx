@@ -22,6 +22,7 @@ import {
   Mail,
   Phone,
   Tag,
+  Trash2,
 } from "lucide-react";
 import type {
   Account,
@@ -32,15 +33,29 @@ import { getOpportunitiesByAccount } from "@/lib/data";
 import { generateDailyAccountSummary } from "@/ai/flows/daily-account-summary";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import AddOpportunityDialog from "@/components/opportunities/AddOpportunityDialog";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface AccountCardProps {
   account: Account;
   isConverted?: boolean;
+  onDelete?: (accountId: string) => void;
 }
 
 export default function AccountCard({
   account,
   isConverted,
+  onDelete,
 }: AccountCardProps) {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [totalOpportunityAmount, setTotalOpportunityAmount] = useState<number>(0);
@@ -48,6 +63,8 @@ export default function AccountCard({
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [isAddOpportunityDialogOpen, setIsAddOpportunityDialogOpen] =
     useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     async function fetchOpportunities() {
@@ -95,6 +112,31 @@ export default function AccountCard({
   const handleOpportunityAdded = (newOpportunity: Opportunity) => {
     // Refresh the account data or update the UI as needed
     // This could be handled by a parent component if needed
+  };
+
+  const handleDelete = async () => {
+    setShowDeleteDialog(false);
+    try {
+      const response = await fetch(`/api/accounts/${account.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || "Failed to delete account");
+      }
+      toast({
+        title: "Account Deleted",
+        description: `${account.name} has been successfully deleted.`,
+      });
+      if (onDelete) onDelete(account.id);
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete account. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -199,21 +241,38 @@ export default function AccountCard({
             </div>
           )}
         </CardContent>
-        <CardFooter className="pt-4 border-t mt-auto px-6 pb-6">
-          {" "}
-          {/* mt-auto pushes footer to bottom */}
-          {/*
-          <Button variant="outline" size="sm" asChild className="mr-auto">
-            <Link href={`/accounts/${account.id}`}> 
-              <Eye className="mr-2 h-4 w-4" />
-              View Details
-            </Link>
-          </Button>
-          */}
+        <CardFooter className="pt-4 border-t mt-auto px-6 pb-6 flex justify-between items-center">
           <Button size="sm" onClick={() => setIsAddOpportunityDialogOpen(true)} variant="beige">
             <PlusCircle className="mr-2 h-4 w-4" />
             New Opportunity
           </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="ml-auto"
+            onClick={() => setShowDeleteDialog(true)}
+            title="Delete Account"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+          <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Account</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this account? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel asChild>
+                  <Button variant="outline">Cancel</Button>
+                </AlertDialogCancel>
+                <AlertDialogAction asChild>
+                  <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardFooter>
       </Card>
       <AddOpportunityDialog

@@ -49,6 +49,8 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const accountId = searchParams.get('account_id') || searchParams.get('associated_account_id');
+  const userId = req.headers.get('x-user-id');
+  const isAdmin = req.headers.get('x-user-admin') === 'true';
 
   let query = supabase
     .from('opportunities')
@@ -57,6 +59,24 @@ export async function GET(req: Request) {
 
   if (accountId) {
     query = query.eq('associated_account_id', accountId);
+  }
+
+  // User-specific filtering for non-admins
+  if (!isAdmin && userId) {
+    // Get all accounts and leads assigned to or created by the user
+    const [accountsRes, leadsRes] = await Promise.all([
+      supabase.from('accounts').select('id').or(`created_by_user_id.eq.${userId},assigned_user_id.eq.${userId}`),
+      supabase.from('leads').select('id').or(`created_by_user_id.eq.${userId},assigned_user_id.eq.${userId}`),
+    ]);
+    const userAccountIds = (accountsRes.data || []).map((a: any) => a.id);
+    const userLeadIds = (leadsRes.data || []).map((l: any) => l.id);
+    // Only show opportunities linked to user's accounts or leads
+    query = query.or(
+      [
+        userAccountIds.length > 0 ? `associated_account_id.in.(${userAccountIds.join(',')})` : '',
+        userLeadIds.length > 0 ? `associated_lead_id.in.(${userLeadIds.join(',')})` : ''
+      ].filter(Boolean).join(',')
+    );
   }
 
   const { data, error } = await query;
@@ -101,6 +121,50 @@ export async function PATCH(request: NextRequest) {
 
   } catch (error) {
     console.error('Unexpected error in PATCH handler:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// DELETE /api/opportunities?id=... - Delete an opportunity
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'Opportunity ID is required' }, { status: 400 });
+    }
+
+    // Check if opportunity exists before deleting
+    const { data: existingOpportunity, error: fetchError } = await supabase
+      .from('opportunities')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      if (fetchError.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Opportunity not found' }, { status: 404 });
+      }
+      console.error('Error checking opportunity:', fetchError);
+      return NextResponse.json({ error: 'Failed to check opportunity' }, { status: 500 });
+    }
+
+    // Delete opportunity
+    const { error } = await supabase
+      .from('opportunities')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting opportunity:', error);
+      return NextResponse.json({ error: 'Failed to delete opportunity' }, { status: 500 });
+    }
+
+    return NextResponse.json({ message: 'Opportunity deleted successfully' });
+
+  } catch (error) {
+    console.error('Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

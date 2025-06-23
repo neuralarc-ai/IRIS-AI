@@ -156,7 +156,10 @@ export default function UpdatesPage() {
       await fetch('/api/updates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          ...body,
+          updated_by_user_id: user?.id,
+        }),
       });
       setNewActivities(prev => ({ ...prev, [entityId]: '' }));
       setNewActivityTypes(prev => ({ ...prev, [entityId]: '' }));
@@ -340,6 +343,16 @@ export default function UpdatesPage() {
                     {aiLoading[entity.id] ? 'Thinking...' : 'Get AI Advice'}
                   </button>
                 </div>
+                {newActivities[entity.id] && (
+                  <div className={
+                    newActivities[entity.id] === 'AI could not generate advice. Try adding more activity or context.' ||
+                    newActivities[entity.id] === 'AI advice could not be generated.'
+                      ? 'mt-3 text-xs text-muted-foreground'
+                      : 'mt-3 p-3 rounded bg-yellow-50 border border-yellow-200 text-sm text-yellow-900 font-medium'
+                  }>
+                    {newActivities[entity.id]}
+                  </div>
+                )}
               </div>
             </div>
           ))}

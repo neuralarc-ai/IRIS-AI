@@ -26,6 +26,7 @@ import {
   Briefcase,
   UserCheck,
   UserPlus,
+  Trash2,
 } from "lucide-react";
 import type { Lead } from "@/types";
 import { formatDistanceToNow, parseISO } from "date-fns";
@@ -37,11 +38,23 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 interface LeadCardProps {
   lead: Lead;
   onLeadConverted: (leadId: string, newAccountId: string) => void;
   onStatusChange?: (leadId: string, newStatus: Lead["status"]) => void;
+  onDelete?: (leadId: string) => void;
 }
 
 const getStatusBadgeVariant = (
@@ -97,12 +110,14 @@ export default function LeadCard({
   lead: initialLead,
   onLeadConverted,
   onStatusChange,
+  onDelete,
 }: LeadCardProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [lead, setLead] = useState(initialLead);
   const [isConverting, setIsConverting] = useState(false);
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const isAssignedToMe = lead.assigned_user_id === user?.id;
   const isCreatedByMe = lead.created_by_user_id === user?.id;
@@ -182,6 +197,31 @@ export default function LeadCard({
       });
     } finally {
       setIsConverting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setShowDeleteDialog(false);
+    try {
+      const response = await fetch(`/api/leads/${lead.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || "Failed to delete lead");
+      }
+      toast({
+        title: "Lead Deleted!",
+        description: "Lead has been successfully deleted.",
+        className: "bg-red-100 dark:bg-red-900 border-red-500",
+      });
+      if (onDelete) onDelete(lead.id);
+    } catch (error) {
+      toast({
+        title: "Delete Failed",
+        description: error instanceof Error ? error.message : "Could not delete lead.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -319,28 +359,57 @@ export default function LeadCard({
           </Button>
         ) : (
           lead.status !== "Lost" && (
-            <Button
-              size="sm"
-              onClick={handleConvert}
-              disabled={isConverting}
-              variant="beige"
-              className="ml-2"
-            >
-              {isConverting ? (
-                <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  Converting...
-                </>
-              ) : (
-                <>
-                  <CheckSquare className="mr-2 h-4 w-4" />
-                  Convert
-                </>
-              )}
-            </Button>
+            <>
+              <Button
+                size="sm"
+                onClick={handleConvert}
+                disabled={isConverting}
+                variant="beige"
+                className="ml-2"
+              >
+                {isConverting ? (
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    Converting...
+                  </>
+                ) : (
+                  <>
+                    <CheckSquare className="mr-2 h-4 w-4" />
+                    Convert
+                  </>
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="ml-2"
+                onClick={() => setShowDeleteDialog(true)}
+                title="Delete Lead"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
           )
         )}
       </CardFooter>
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Lead</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this lead? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button variant="outline">Cancel</Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

@@ -24,6 +24,7 @@ import {
   TrendingUp,
   Users,
   Clock,
+  Trash2,
 } from "lucide-react";
 import type {
   Opportunity,
@@ -46,10 +47,21 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 interface OpportunityCardProps {
   opportunity: Opportunity;
   onStatusChange?: (opportunityId: string, newStatus: Opportunity["status"]) => void;
+  onDelete?: (opportunityId: string) => void;
 }
 
 const getStatusBadgeColorClasses = (status: Opportunity["status"]): string => {
@@ -107,13 +119,14 @@ const calculateProgress = (
   return Math.min(98, Math.max(5, progress)); // Cap progress between 5% and 98%
 };
 
-export default function OpportunityCard({ opportunity: initialOpportunity, onStatusChange }: OpportunityCardProps) {
+export default function OpportunityCard({ opportunity: initialOpportunity, onStatusChange, onDelete }: OpportunityCardProps) {
   const { toast } = useToast();
   const [opportunity, setOpportunity] = useState(initialOpportunity);
   const [forecast, setForecast] = useState<AIOpportunityForecast | null>(null);
   const [isLoadingForecast, setIsLoadingForecast] = useState(false);
   const [associatedAccount, setAssociatedAccount] = useState<any>(null);
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleStatusChange = async (newStatus: Opportunity["status"]) => {
     if (opportunity.status === newStatus) return;
@@ -198,10 +211,7 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
       opportunity.status !== "Loss" &&
       opportunity.name &&
       opportunity.created_at &&
-      opportunity.expected_close_date &&
-      opportunity.amount &&
-      opportunity.status &&
-      opportunity.description
+      opportunity.expected_close_date
     ) {
       fetchForecast();
     } else {
@@ -213,9 +223,7 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
     opportunity.name,
     opportunity.created_at,
     opportunity.expected_close_date,
-    opportunity.amount,
     opportunity.status,
-    opportunity.description,
   ]);
 
   const accountName = associatedAccount?.name;
@@ -240,11 +248,6 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
       <AlertTriangle className="h-4 w-4 text-orange-500 shrink-0" />
     );
     opportunityHealthText = "Forecast Error";
-  } else if (isAtRisk) {
-    opportunityHealthIcon = (
-      <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
-    );
-    opportunityHealthText = "Potential Risk";
   }
 
   const timeRemaining = (status: Opportunity["status"]): string => {
@@ -267,6 +270,31 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
     opportunity.created_at,
     opportunity.expected_close_date
   );
+
+  const handleDelete = async () => {
+    setShowDeleteDialog(false);
+    try {
+      const response = await fetch(`/api/opportunities?id=${opportunity.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || "Failed to delete opportunity");
+      }
+      toast({
+        title: "Opportunity Deleted",
+        description: `${opportunity.name} has been successfully deleted.`,
+      });
+      if (onDelete) onDelete(opportunity.id);
+    } catch (error) {
+      console.error('Error deleting opportunity:', error);
+      toast({
+        title: "Delete Failed",
+        description: error instanceof Error ? error.message : "Failed to delete opportunity. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <Card className="flex flex-col h-full bg-white text-black rounded-[8px] border-none">
@@ -393,14 +421,35 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
             </div>
           )}
       </CardContent>
-      <CardFooter className="pt-4 border-t mt-auto px-6 pb-6">
-        {/* Commented out View Details button */}
-        {/* <Button variant="outline" size="sm" asChild className="mr-auto">
-            <Link href={`/opportunities/${opportunity.id}`}>
-              <Eye className="mr-2 h-4 w-4" />
-              View Details
-            </Link>
-          </Button> */}
+      <CardFooter className="pt-4 border-t mt-auto px-6 pb-6 flex justify-end items-center">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setShowDeleteDialog(true)}
+          title="Delete Opportunity"
+          className="ml-auto hover:bg-destructive/10 hover:text-destructive"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Opportunity</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this opportunity? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel asChild>
+                <Button variant="outline">Cancel</Button>
+              </AlertDialogCancel>
+              <AlertDialogAction asChild>
+                <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardFooter>
     </Card>
   );

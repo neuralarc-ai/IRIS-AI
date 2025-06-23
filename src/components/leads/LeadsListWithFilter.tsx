@@ -27,7 +27,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('All Statuses');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [localLeads, setLocalLeads] = useState(leads);
+  const [localLeads, setLocalLeads] = useState<Lead[]>(leads);
 
   React.useEffect(() => {
     setLocalLeads(leads);
@@ -50,6 +50,10 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
       return matchesStatus && matchesSearch;
     });
   }, [localLeads, search, status]);
+
+  const handleDelete = (leadId: string) => {
+    setLocalLeads((prev) => prev.filter((l) => l.id !== leadId));
+  };
 
   return (
     <div className="w-full flex flex-col gap-6">
@@ -93,7 +97,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
           <div className="col-span-full text-center text-muted-foreground mt-12">No leads found.</div>
         ) : (
           filteredLeads.map(lead => (
-            <LeadCard key={lead.id} lead={lead} onLeadConverted={onLeadConverted} onStatusChange={handleStatusChange} />
+            <LeadCard key={lead.id} lead={lead} onLeadConverted={onLeadConverted} onStatusChange={handleStatusChange} onDelete={handleDelete} />
           ))
         )}
       </div>

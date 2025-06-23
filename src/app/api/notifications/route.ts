@@ -30,4 +30,28 @@ export async function GET(request: NextRequest) {
     console.error('Unexpected error in notifications API:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
+
+// PATCH /api/notifications?user_id=...
+export async function PATCH(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const user_id = searchParams.get('user_id');
+    if (!user_id) {
+      return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
+    }
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', user_id)
+      .eq('is_read', false);
+    if (error) {
+      console.error('Error marking notifications as read:', error);
+      return NextResponse.json({ error: 'Failed to mark notifications as read' }, { status: 500 });
+    }
+    return NextResponse.json({ message: 'Notifications marked as read' });
+  } catch (error) {
+    console.error('Unexpected error in notifications PATCH API:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 } 

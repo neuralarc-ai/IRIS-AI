@@ -189,10 +189,10 @@ export async function DELETE(
       )
     }
 
-    // Check if account exists before deleting
+    // Check if account exists and get converted_from_lead_id
     const { data: existingAccount, error: fetchError } = await supabase
       .from('accounts')
-      .select('id')
+      .select('id, converted_from_lead_id')
       .eq('id', id)
       .single()
 
@@ -208,6 +208,22 @@ export async function DELETE(
         { error: 'Failed to check account' },
         { status: 500 }
       )
+    }
+
+    // If account was converted from a lead, update the lead status back
+    if (existingAccount.converted_from_lead_id) {
+      const { error: updateLeadError } = await supabase
+        .from('leads')
+        .update({ status: 'Qualified' })
+        .eq('id', existingAccount.converted_from_lead_id)
+
+      if (updateLeadError) {
+        console.error('Error updating lead status:', updateLeadError)
+        return NextResponse.json(
+          { error: 'Failed to update lead status' },
+          { status: 500 }
+        )
+      }
     }
 
     // Delete account

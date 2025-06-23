@@ -49,6 +49,8 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import UpdateItem from "@/components/updates/UpdateItem";
+import { useAuth } from '@/hooks/use-auth';
+import RecentActivityItem from '@/components/updates/RecentActivityItem';
 
 interface OpportunityWithForecast extends Opportunity {
   forecast?: OpportunityForecast;
@@ -76,6 +78,7 @@ const getStatusBadgeVariant = (
 };
 
 export default function DashboardPage() {
+  const { user, isAdmin, isLoading: authLoading } = useAuth();
   const [forecastedOpportunities, setForecastedOpportunities] = useState<
     OpportunityWithForecast[]
   >([]);
@@ -95,7 +98,12 @@ export default function DashboardPage() {
         const oppJson = await oppRes.json();
         const opportunities: Opportunity[] = oppJson.data || [];
 
-      const updRes = await fetch("/api/updates");
+      const updRes = await fetch("/api/updates", {
+        headers: {
+          "x-user-id": user?.id || "",
+          "x-user-admin": isAdmin() ? "true" : "false",
+        },
+      });
         const updJson = await updRes.json();
         const updates: Update[] = updJson.data || [];
 
@@ -184,16 +192,18 @@ export default function DashboardPage() {
     };
 
   useEffect(() => {
-    fetchDashboardData();
-    // Set up auto-refresh every 1 hour
-    if (refreshTimeout.current) clearInterval(refreshTimeout.current);
-    refreshTimeout.current = setInterval(() => {
+    if (!authLoading && user) {
       fetchDashboardData();
-    }, 3600000);
-    return () => {
+      // Set up auto-refresh every 1 hour
       if (refreshTimeout.current) clearInterval(refreshTimeout.current);
-    };
-  }, []);
+      refreshTimeout.current = setInterval(() => {
+        fetchDashboardData();
+      }, 3600000);
+      return () => {
+        if (refreshTimeout.current) clearInterval(refreshTimeout.current);
+      };
+    }
+  }, [authLoading, user]);
 
   const opportunityStatusData = useMemo(() => {
     const counts: Record<OpportunityStatus, number> = {
@@ -288,7 +298,7 @@ export default function DashboardPage() {
                 ))
                   : recentUpdates.length > 0
                   ? recentUpdates.map((update, index) => (
-                      <UpdateItem key={update.id} update={update} />
+                      <RecentActivityItem key={update.id} update={update} />
                     ))
                   : !isLoading && (
                       <p className="text-muted-foreground text-center py-4 md:col-span-2">

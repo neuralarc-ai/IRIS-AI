@@ -153,7 +153,7 @@ export default function UpdateItem({ update, gradient }: UpdateItemProps) {
   };
 
   return (
-    <Card className="flex flex-col h-full bg-white text-black rounded-[8px]  p-2 border-none">
+    <Card className="flex flex-col h-[320px] min-h-[320px] bg-white text-black rounded-[8px] p-2 border-none">
       <CardHeader className="pb-3 px-6 pt-6 flex justify-between items-start">
         <div className="flex flex-row items-center gap-2 min-h-[32px]">
           <span className="flex items-center h-8">
@@ -171,7 +171,7 @@ export default function UpdateItem({ update, gradient }: UpdateItemProps) {
           {update.type}
         </Badge>
       </CardHeader>
-      <CardContent className="space-y-2 text-sm flex-grow px-6 text-left">
+      <CardContent className="space-y-2 text-sm flex-grow px-6 text-left overflow-y-auto">
         {update.opportunity && (
           <div className="text-sm text-muted-foreground flex items-center mt-1">
             <BarChartBig className="mr-2 h-4 w-4 shrink-0" />
