@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload } from 'lucide-react';
+import { PlusCircle, Upload, ChevronUp } from 'lucide-react';
 import PageTitle from '@/components/common/PageTitle';
 import AddLeadDialog from '@/components/leads/AddLeadDialog';
 import LeadCard from '@/components/leads/LeadCard';
@@ -288,12 +288,21 @@ export default function LeadsPage() {
       })()}
 
       {showImport && (
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto relative mb-4">
           <CSVImport
             type="leads"
             onImport={handleImport}
             templateUrl="/templates/leads-template.csv"
           />
+          <Button
+            variant="ghost"
+            size="lg"
+            className="absolute -top-2 -right-12 text-muted-foreground hover:bg-transparent"
+            onClick={() => setShowImport(false)}
+          >
+            <ChevronUp className="h-6 w-6" />
+            <span className="sr-only">Close import</span>
+          </Button>
         </div>
       )}
 

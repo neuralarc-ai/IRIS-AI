@@ -78,6 +78,10 @@ export async function GET(request: NextRequest) {
     const accountId = searchParams.get('account_id');
     const opportunityId = searchParams.get('opportunity_id');
 
+    // Get user info from headers
+    const userId = request.headers.get('x-user-id');
+    const isAdmin = request.headers.get('x-user-admin') === 'true';
+
     let query = supabase
       .from('updates')
       .select(`
@@ -89,6 +93,13 @@ export async function GET(request: NextRequest) {
       `)
       .order('date', { ascending: false })
       .range(offset, offset + limit - 1);
+
+    if (!isAdmin && userId) {
+      query = query.eq('updated_by_user_id', userId);
+    } else if (!isAdmin) {
+      // If not admin and no user ID, return nothing
+      return NextResponse.json({ data: [], pagination: { limit, offset, hasMore: false } });
+    }
 
     if (leadId) {
       query = query.eq('lead_id', leadId);

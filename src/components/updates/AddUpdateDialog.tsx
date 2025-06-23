@@ -17,6 +17,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import type { Account, Opportunity, Update, UpdateType, Lead, LeadApiResponse } from '@/types';
 import { Loader2, MessageSquarePlus, Briefcase, BarChartBig, User } from 'lucide-react';
+import { useAuth } from "@/hooks/use-auth";
 
 interface AddUpdateDialogProps {
   open: boolean;
@@ -41,6 +42,7 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded }: A
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Fetch data from API
   useEffect(() => {
@@ -127,7 +129,7 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded }: A
           type: updateType,
           content,
           date: new Date().toISOString(),
-          // updated_by_user_id: userId, // if you have user info
+          updated_by_user_id: user?.id,
         }),
       });
       
@@ -229,14 +231,14 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded }: A
 
               {selectedAccountId && (
                 <div>
-                  <Label htmlFor="update-opportunity">Opportunity <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="update-opportunity">Opportunity</Label>
                   <Select 
                     value={selectedOpportunityId} 
                     onValueChange={setSelectedOpportunityId} 
-                    disabled={isLoading || isLoadingData || availableOpportunities.length === 0}
+                    disabled={isLoading || isLoadingData}
                   >
                     <SelectTrigger id="update-opportunity" className="bg-[#E2D4C3]/60">
-                      <SelectValue placeholder={availableOpportunities.length === 0 ? "No opportunities for this account" : "Select an opportunity"} />
+                      <SelectValue placeholder="Select an opportunity (optional)" />
                     </SelectTrigger>
                     <SelectContent>
                       {availableOpportunities.map(opportunity => (
@@ -251,7 +253,7 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded }: A
                   </Select>
                   {availableOpportunities.length === 0 && selectedAccountId && !isLoading && !isLoadingData && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      This account has no active opportunities. Please create an opportunity for this account first.
+                      This account has no active opportunities. You can still log updates for the account.
                     </p>
                   )}
                 </div>
@@ -294,7 +296,7 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded }: A
                 disabled={
                     isLoading || 
                     isLoadingData ||
-                    (entityType === 'accountOpportunity' && (!selectedOpportunityId || (availableOpportunities.length === 0 && !!selectedAccountId))) ||
+                    (entityType === 'accountOpportunity' && !selectedAccountId) ||
                     (entityType === 'lead' && !selectedLeadId) ||
                     !updateType ||
                     !content.trim()

@@ -12,6 +12,7 @@ import {format, parseISO, isValid} from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import AddUpdateDialog from '@/components/updates/AddUpdateDialog';
+import { useAuth } from '@/hooks/use-auth';
 
 // Local type for updates with account and opportunity objects
 interface UpdateWithEntities extends Omit<Update, 'accountId' | 'opportunityId' | 'updatedByUserId'> {
@@ -33,10 +34,16 @@ export default function UpdatesPage() {
   const [isSaving, setIsSaving] = useState<{ [accountId: string]: boolean }>({});
   const [newActivityTypes, setNewActivityTypes] = useState<{ [accountId: string]: string }>({});
   const [aiLoading, setAiLoading] = useState<{ [accountId: string]: boolean }>({});
+  const { user, isAdmin } = useAuth();
 
   // Centralized fetchUpdates function
   const fetchUpdates = async () => {
-    const response = await fetch('/api/updates');
+    const response = await fetch('/api/updates', {
+      headers: {
+        'x-user-id': user?.id || '',
+        'x-user-admin': isAdmin() ? 'true' : 'false',
+      },
+    });
     const result = await response.json();
     setUpdates((result.data || []).map((apiUpdate: any) => ({
       id: apiUpdate.id,
@@ -53,8 +60,10 @@ export default function UpdatesPage() {
   };
 
   useEffect(() => {
-    fetchUpdates();
-  }, []);
+    if (user) {
+      fetchUpdates();
+    }
+  }, [user]);
 
   const handleUpdateAdded = async () => {
     await fetchUpdates();
@@ -74,7 +83,8 @@ export default function UpdatesPage() {
   const filteredUpdates = updates.filter(update => {
     const matchesSearch = update.content.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === 'all' || update.type === typeFilter;
-    const matchesOpportunity = opportunityFilter === 'all' || update.opportunity?.id === opportunityFilter;
+    const matchesOpportunity = opportunityFilter === 'all' || 
+      (opportunityFilter !== 'all' && update.opportunity?.id === opportunityFilter);
     let matchesDate = true;
     if (dateFilter) {
       try {

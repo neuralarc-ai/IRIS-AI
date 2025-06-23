@@ -79,6 +79,9 @@ export async function POST(
     let accountId: string
     let accountData: any
 
+    // Determine who should be the creator of the new account
+    const createdByUserId = existingLead.assigned_user_id || existingLead.created_by_user_id;
+
     if (existingAccount) {
       // Account already exists, update it
       accountId = existingAccount.id
@@ -88,7 +91,8 @@ export async function POST(
           status: 'Active',
           contact_email: existingLead.email || existingAccount.contact_email,
           contact_phone: existingLead.phone || existingAccount.contact_phone,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          created_by_user_id: createdByUserId
         })
         .eq('id', accountId)
         .select()
@@ -115,7 +119,8 @@ export async function POST(
           contact_person_name: existingLead.person_name,
           contact_email: existingLead.email,
           contact_phone: existingLead.phone,
-          converted_from_lead_id: id
+          converted_from_lead_id: id,
+          created_by_user_id: createdByUserId
         })
         .select()
         .single()

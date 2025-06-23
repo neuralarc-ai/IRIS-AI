@@ -67,24 +67,40 @@ export async function GET(req: Request) {
   return NextResponse.json({ data }, { status: 200 });
 }
 
-export async function PATCH(req: Request) {
+export async function PATCH(request: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await request.json();
     const { id, status } = body;
+
     if (!id || !status) {
-      return NextResponse.json({ error: 'id and status are required' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing required fields: id, status' }, { status: 400 });
     }
+
+    const VALID_STATUSES: string[] = ["Scope Of Work", "Proposal", "Negotiation", "Win", "Loss"];
+    if (!VALID_STATUSES.includes(status)) {
+      return NextResponse.json({ error: 'Invalid status provided.' }, { status: 400 });
+    }
+
     const { data, error } = await supabase
       .from('opportunities')
-      .update({ status, updated_at: new Date().toISOString() })
+      .update({ status: status, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single();
+
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      console.error('Error updating opportunity status:', error);
+      // Handle case where opportunity is not found
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: `Opportunity with ID ${id} not found.` }, { status: 404 });
+      }
+      return NextResponse.json({ error: 'Failed to update opportunity status.' }, { status: 500 });
     }
-    return NextResponse.json({ data }, { status: 200 });
+
+    return NextResponse.json({ data });
+
   } catch (error) {
+    console.error('Unexpected error in PATCH handler:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 
