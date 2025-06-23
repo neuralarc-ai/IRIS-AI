@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -54,44 +53,139 @@ const RelationshipHealthInputSchema = z.object({
 const RelationshipHealthOutputSchema = z.object({
   healthScore: z.number().describe('A numerical score representing the relationship health (0.0 to 1.0).'),
   summary: z.string().describe('A concise summary explaining the relationship health score.'),
+  trends: z.array(z.string()).describe('Key trends identified in the relationship.'),
+  recommendations: z.array(z.string()).describe('Specific recommendations for improving or maintaining the relationship.'),
+  riskIndicators: z.array(z.string()).describe('Potential risk factors that need attention.'),
+  strengthAreas: z.array(z.string()).describe('Areas where the relationship shows particular strength.'),
 });
 export type RelationshipHealthOutput = z.infer<typeof RelationshipHealthOutputSchema>;
 
 
 const relationshipHealthTool = ai.defineTool({
   name: 'getRelationshipHealth',
-  description: 'Returns the current relationship health score and summary based on communication history.',
+  description: 'Returns a comprehensive relationship health analysis based on communication history.',
   inputSchema: RelationshipHealthInputSchema,
   outputSchema: RelationshipHealthOutputSchema,
 },
 async (input) => {
-  // Placeholder implementation for relationship health assessment
-  const historyLength = input.communicationHistory.length;
+  // Extract key indicators from communication history
+  const history = input.communicationHistory.toLowerCase();
   let score = 0.5;
-  let summary = "The relationship health is moderate.";
-
-  if (historyLength > 500) {
-    score = 0.8;
-    summary = "The relationship appears strong due to frequent communication.";
-  } else if (historyLength < 100 && historyLength > 0) {
-    score = 0.3;
-    summary = "The relationship might need more engagement due to limited communication.";
-  } else if (historyLength === 0) {
-    score = 0.1;
-    summary = "No communication history provided to assess relationship health.";
+  let factors = [];
+  let trends = [];
+  let recommendations = [];
+  let riskIndicators = [];
+  let strengthAreas = [];
+  
+  // Analyze communication frequency and depth
+  const wordCount = history.split(' ').length;
+  if (wordCount > 200) {
+    score += 0.1;
+    factors.push("detailed communication");
+    strengthAreas.push("Maintains detailed and thorough communication");
+  } else {
+    recommendations.push("Increase communication detail and frequency");
+  }
+  
+  // Analyze positive indicators
+  const positiveTerms = ['success', 'great', 'excellent', 'thank', 'appreciate', 'progress', 'agree', 'excited', 'happy', 'pleased'];
+  const positiveCount = positiveTerms.filter(term => history.includes(term)).length;
+  score += (positiveCount * 0.05);
+  if (positiveCount > 2) {
+    factors.push("strong positive sentiment");
+    strengthAreas.push("Consistently positive interactions");
+    trends.push("Maintaining positive engagement");
+  } else if (positiveCount > 0) {
+    factors.push("positive sentiment");
+  } else {
+    recommendations.push("Work on building more positive interactions");
+    riskIndicators.push("Limited positive sentiment in communications");
   }
 
-  // Simulate some keywords for sentiment
-  if (input.communicationHistory.toLowerCase().includes("great") || input.communicationHistory.toLowerCase().includes("excellent")) {
-    score = Math.min(1.0, score + 0.15);
+  // Analyze engagement indicators
+  const engagementTerms = ['meeting', 'call', 'discuss', 'follow up', 'schedule', 'plan', 'sync', 'review'];
+  const engagementCount = engagementTerms.filter(term => history.includes(term)).length;
+  score += (engagementCount * 0.05);
+  if (engagementCount > 2) {
+    factors.push("high engagement");
+    strengthAreas.push("Regular and proactive engagement");
+    trends.push("Maintaining consistent communication cadence");
+  } else if (engagementCount > 0) {
+    factors.push("moderate engagement");
+    recommendations.push("Increase frequency of check-ins and meetings");
+  } else {
+    riskIndicators.push("Low engagement level");
+    recommendations.push("Schedule regular check-ins to maintain engagement");
   }
-  if (input.communicationHistory.toLowerCase().includes("problem") || input.communicationHistory.toLowerCase().includes("issue")) {
-    score = Math.max(0.0, score - 0.15);
+
+  // Analyze potential concerns
+  const concernTerms = ['issue', 'problem', 'delay', 'concern', 'worried', 'missed', 'late', 'escalate', 'urgent'];
+  const concernCount = concernTerms.filter(term => history.includes(term)).length;
+  score -= (concernCount * 0.05);
+  if (concernCount > 2) {
+    factors.push("multiple concerns noted");
+    riskIndicators.push("Multiple issues or concerns raised");
+    recommendations.push("Address outstanding concerns promptly");
+    trends.push("Increasing number of concerns");
+  } else if (concernCount > 0) {
+    factors.push("some concerns noted");
+    recommendations.push("Proactively follow up on noted concerns");
+  }
+
+  // Analyze collaboration indicators
+  const collaborationTerms = ['team', 'together', 'collaborate', 'partnership', 'solution', 'align', 'joint', 'shared'];
+  const collaborationCount = collaborationTerms.filter(term => history.includes(term)).length;
+  score += (collaborationCount * 0.05);
+  if (collaborationCount > 2) {
+    factors.push("strong collaboration");
+    strengthAreas.push("Strong collaborative partnership");
+    trends.push("Growing partnership strength");
+  } else if (collaborationCount > 0) {
+    factors.push("good collaboration");
+    recommendations.push("Look for more opportunities to collaborate");
+  } else {
+    recommendations.push("Foster more collaborative interactions");
+  }
+
+  // Analyze decision-making indicators
+  const decisionTerms = ['agree', 'decision', 'approve', 'move forward', 'next steps', 'timeline'];
+  const decisionCount = decisionTerms.filter(term => history.includes(term)).length;
+  if (decisionCount > 2) {
+    strengthAreas.push("Clear decision-making process");
+    trends.push("Efficient decision-making");
+  } else {
+    recommendations.push("Work on clarifying decision-making processes");
+  }
+
+  // Normalize score between 0 and 1
+  score = Math.max(0, Math.min(1, score));
+
+  // Generate summary based on factors and score
+  let summary = "";
+  if (score >= 0.8) {
+    summary = `The relationship is very strong. ${factors.join(", ")} indicate excellent engagement and positive momentum. Continue building on current success while monitoring for any emerging needs.`;
+  } else if (score >= 0.6) {
+    summary = `The relationship is healthy. ${factors.join(", ")} show good progress, with opportunities for deeper engagement. Focus on strengthening specific areas while maintaining current positive trends.`;
+  } else if (score >= 0.4) {
+    summary = `The relationship is stable. ${factors.join(", ")} suggest moderate engagement, with clear opportunities for strengthening the partnership. Consider implementing recommended actions to improve engagement.`;
+  } else if (score >= 0.2) {
+    summary = `The relationship needs attention. ${factors.join(", ")} indicate challenges that should be addressed proactively. Focus on addressing risk factors while building on existing strengths.`;
+  } else {
+    summary = `The relationship requires immediate attention. Limited positive indicators found in recent communications. Implement recommended actions promptly to improve relationship health.`;
+  }
+
+  // Ensure we always have some recommendations
+  if (recommendations.length === 0) {
+    recommendations.push("Maintain current engagement levels", "Look for opportunities to deepen the partnership");
   }
 
   return {
     healthScore: parseFloat(score.toFixed(2)),
-    summary: summary,
+    summary,
+    trends: trends.length > 0 ? trends : ["Insufficient history to determine trends"],
+    recommendations,
+    riskIndicators: riskIndicators.length > 0 ? riskIndicators : ["No significant risks identified"],
+    strengthAreas: strengthAreas.length > 0 ? strengthAreas : ["Building initial relationship foundation"],
   };
 });
 
@@ -154,10 +248,20 @@ const relationshipHealthPrompt = ai.definePrompt({
   tools: [relationshipHealthTool],
   input: {schema: CommunicationAnalysisInputSchema},
   output: {schema: RelationshipHealthOutputSchema}, 
-  prompt: `Based on the following communication history, use the getRelationshipHealth tool to get the relationship health score and summary.
-  Then, provide the health score and summary as a JSON object matching the defined output schema.
+  prompt: `You are an expert relationship manager analyzing client communications.
 
-  Communication History: {{{communicationHistory}}}`,
+Based on the following communication history, analyze the relationship health considering:
+1. Communication frequency and quality
+2. Sentiment and tone
+3. Engagement level
+4. Collaboration indicators
+5. Any potential concerns or issues
+
+Use the getRelationshipHealth tool to generate a detailed assessment.
+
+Communication History: {{{communicationHistory}}}
+
+Provide a comprehensive health score and detailed summary that reflects the current state of the relationship.`,
 });
 
 export type IntelligentInsightsInput = {

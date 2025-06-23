@@ -57,8 +57,14 @@ import {
 } from "@/lib/data";
 import Link from "next/link";
 
+interface UpdateWithRelations extends Update {
+  opportunity?: { id: string; name: string };
+  account?: { id: string; name: string };
+  updatedByUser?: { id: string; name: string };
+}
+
 interface UpdateItemProps {
-  update: Update;
+  update: UpdateWithRelations;
   gradient?: GradientType;
 }
 

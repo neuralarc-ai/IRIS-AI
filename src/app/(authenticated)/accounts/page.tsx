@@ -103,6 +103,14 @@ export default function AccountsPage() {
     });
   };
 
+  const handleAccountDeleted = (accountId: string) => {
+    setAccounts(prevAccounts => prevAccounts.filter(acc => acc.id !== accountId));
+    toast({
+      title: "Account Deleted",
+      description: "Account has been successfully deleted.",
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto space-y-6 mt-6">
@@ -189,6 +197,7 @@ export default function AccountsPage() {
               key={account.id}
               account={account}
               isConverted={!!account.convertedFromLeadId}
+              onDelete={handleAccountDeleted}
             />
           ))}
         </div>

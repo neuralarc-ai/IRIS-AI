@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import AddOpportunityDialog from '@/components/opportunities/AddOpportunityDialog';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { useToast } from "@/hooks/use-toast";
 
 export default function OpportunitiesPage() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -21,6 +22,7 @@ export default function OpportunitiesPage() {
   const [isAddOpportunityDialogOpen, setIsAddOpportunityDialogOpen] = useState(false);
   const [accounts, setAccounts] = useState<{id: string, name: string, type: string}[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   const opportunityStatusOptions: OpportunityStatus[] = ["Scope Of Work", "Proposal", "Negotiation", "Win", "Loss"];
 
@@ -56,6 +58,14 @@ export default function OpportunitiesPage() {
 
   const handleOpportunityAdded = async () => {
     await fetchOpportunities();
+  };
+
+  const handleOpportunityDeleted = (opportunityId: string) => {
+    setOpportunities(prevOpportunities => prevOpportunities.filter(opp => opp.id !== opportunityId));
+    toast({
+      title: "Opportunity Deleted",
+      description: "Opportunity has been successfully deleted.",
+    });
   };
 
   if (isLoading) {
@@ -133,7 +143,11 @@ export default function OpportunitiesPage() {
       {filteredOpportunities.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
           {filteredOpportunities.map((opportunity) => (
-            <OpportunityCard key={opportunity.id} opportunity={opportunity} />
+            <OpportunityCard 
+              key={opportunity.id} 
+              opportunity={opportunity} 
+              onDelete={handleOpportunityDeleted}
+            />
           ))}
         </div>
       ) : (

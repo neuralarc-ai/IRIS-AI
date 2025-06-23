@@ -1,4 +1,3 @@
-
 // Implemented AI-powered opportunity forecasting flow to provide timeline predictions, completion date estimates, and bottleneck identification.
 
 'use server';
@@ -37,20 +36,36 @@ export async function aiPoweredOpportunityForecasting(input: AiPoweredOpportunit
 }
 
 const prompt = ai.definePrompt({
-  name: 'aiPoweredOpportunityForecastingPrompt', // Renamed
-  input: {schema: AiPoweredOpportunityForecastingInputSchema}, // Renamed
-  output: {schema: AiPoweredOpportunityForecastingOutputSchema}, // Renamed
-  prompt: `You are an AI assistant that provides opportunity timeline predictions, completion date estimates, revenue forecasts, and potential bottleneck identification based on the provided opportunity information.
+  name: 'aiPoweredOpportunityForecastingPrompt',
+  input: {schema: AiPoweredOpportunityForecastingInputSchema},
+  output: {schema: AiPoweredOpportunityForecastingOutputSchema},
+  prompt: `You are an expert AI sales analyst specializing in opportunity forecasting and timeline analysis.
 
-  Opportunity Name: {{{opportunityName}}}
-  Opportunity Description: {{{opportunityDescription}}}
-  Opportunity Timeline: {{{opportunityTimeline}}}
-  Opportunity Value: {{{opportunityValue}}}
-  Opportunity Status: {{{opportunityStatus}}}
-  Recent Updates: {{{recentUpdates}}}
+Analyze the following opportunity details and provide a detailed forecast:
 
-  Provide your analysis in a structured format.
-  `,
+Opportunity: {{{opportunityName}}}
+Description: {{{opportunityDescription}}}
+Timeline: {{{opportunityTimeline}}}
+Value: {{{opportunityValue}}}
+Current Status: {{{opportunityStatus}}}
+Recent Updates: {{{recentUpdates}}}
+
+Consider the following factors in your analysis:
+1. Current status and its typical duration
+2. Project complexity from the description
+3. Timeline feasibility
+4. Value impact on stakeholder decisions
+5. Industry-standard timelines for similar opportunities
+6. Potential risks and delays
+
+Provide a structured analysis with:
+1. A realistic completion date estimate
+2. Revenue forecast considering potential adjustments
+3. Specific bottlenecks or challenges that could affect the timeline
+4. Confidence level in the prediction
+
+Format your response to match the output schema, focusing on actionable insights and specific dates/values.
+Keep bottleneck identification concise but specific, highlighting the most critical potential issues.`,
 });
 
 const aiPoweredOpportunityForecastingFlow = ai.defineFlow(
@@ -63,35 +78,40 @@ const aiPoweredOpportunityForecastingFlow = ai.defineFlow(
     try {
       const {output} = await prompt(input);
       if (!output) {
-        // This case might happen if the prompt execution completes but yields no structured output.
-        // It's a good practice to handle it, though often an error would be thrown before this.
         console.warn(`AI prompt for ${input.opportunityName} did not return an output.`);
         return {
-          timelinePrediction: "N/A - AI could not generate prediction.",
-          completionDateEstimate: "N/A",
-          revenueForecast: input.opportunityValue, // Default to input value or 0
-          bottleneckIdentification: "AI did not provide bottleneck information for this opportunity.",
+          timelinePrediction: "Timeline prediction unavailable",
+          completionDateEstimate: input.opportunityTimeline.includes("End:") 
+            ? input.opportunityTimeline.split("End:")[1].trim()
+            : "Date estimation requires more context",
+          revenueForecast: input.opportunityValue,
+          bottleneckIdentification: "Analysis requires more detailed opportunity information.",
         };
       }
       return output;
     } catch (error: any) {
       console.error(`Error in aiPoweredOpportunityForecastingFlow for ${input.opportunityName}:`, error.message || error);
-      let bottleneckMessage = "Error generating forecast. Please try again later.";
+      let bottleneckMessage = "Analysis temporarily unavailable. Please try again.";
       
       if (error.message && typeof error.message === 'string') {
         if (error.message.includes("429 Too Many Requests") || (error.cause && typeof error.cause === 'string' && error.cause.includes("429"))) {
-          bottleneckMessage = "Rate limit reached. Please wait and try again or check your API plan.";
+          bottleneckMessage = "System is currently busy. Please try again in a few minutes.";
         } else if (error.message.includes("AI prompt did not return an output")) {
-          bottleneckMessage = "AI could not generate a forecast for this opportunity at this time.";
+          bottleneckMessage = "Unable to analyze this opportunity at the moment.";
         } else if (error.message.includes("blocked") || error.message.includes("Safety rating violated")) {
-            bottleneckMessage = "Forecast generation blocked due to content safety filters."
+          bottleneckMessage = "Content analysis temporarily restricted.";
         }
       }
       
+      // Extract timeline from input if possible
+      const endDate = input.opportunityTimeline.includes("End:") 
+        ? input.opportunityTimeline.split("End:")[1].trim()
+        : "Timeline analysis pending";
+      
       return {
-        timelinePrediction: "N/A",
-        completionDateEstimate: "N/A",
-        revenueForecast: input.opportunityValue, // Defaulting to original value on error
+        timelinePrediction: "Timeline analysis pending",
+        completionDateEstimate: endDate,
+        revenueForecast: input.opportunityValue,
         bottleneckIdentification: bottleneckMessage,
       };
     }

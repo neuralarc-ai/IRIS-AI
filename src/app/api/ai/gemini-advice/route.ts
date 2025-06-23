@@ -17,7 +17,17 @@ export async function POST(req: NextRequest) {
         ).join('\n')
       : String(context);
 
-    const prompt = `Here is the activity log for the account \"${accountName}\":\n\n${formattedLogs}\n\nBased on the above, what should the next activity log entry be? Suggest a concise, actionable next step that would move this opportunity forward. Output only the suggested log entry.`;
+    const prompt = `As an AI sales assistant, analyze this update for ${accountName || 'the account'}:
+
+${formattedLogs}
+
+Based on this update, provide a brief, actionable suggestion for the next best step. Consider:
+1. Follow-up actions needed
+2. Potential opportunities to explore
+3. Ways to strengthen the relationship
+4. Any risks to address
+
+Focus on providing specific, practical advice that moves the relationship forward. Keep the response concise and action-oriented.`;
 
     const geminiResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1/models/gemini:generateContent?key=${GEMINI_API_KEY}`,
@@ -25,17 +35,77 @@ export async function POST(req: NextRequest) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
+          contents: [{ 
+            parts: [{ text: prompt }],
+            role: "user"
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 200,
+          },
+          safetySettings: [
+            {
+              category: "HARM_CATEGORY_HARASSMENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_HATE_SPEECH",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            }
+          ]
         }),
       }
     );
+
     const data = await geminiResponse.json();
     const aiAdvice = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    // If no advice was generated, provide a default suggestion based on the context
     if (!aiAdvice || aiAdvice.trim() === '') {
-      return NextResponse.json({ aiAdvice: "AI could not generate advice. Try adding more activity or context." }, { status: 200 });
+      const defaultAdvice = generateDefaultAdvice(context);
+      return NextResponse.json({ aiAdvice: defaultAdvice });
     }
+
     return NextResponse.json({ aiAdvice });
   } catch (error) {
-    return NextResponse.json({ aiAdvice: "AI advice could not be generated." }, { status: 500 });
+    console.error('Error generating advice:', error);
+    const defaultAdvice = generateDefaultAdvice(context);
+    return NextResponse.json({ aiAdvice: defaultAdvice });
   }
+}
+
+function generateDefaultAdvice(context: string | any[]): string {
+  // Extract keywords from context
+  const contextStr = Array.isArray(context) ? context.map(c => c.content).join(' ') : String(context);
+  const keywords = contextStr.toLowerCase();
+
+  // Provide contextual default advice based on keywords
+  if (keywords.includes('meet') || keywords.includes('meeting')) {
+    return "Schedule a follow-up meeting to discuss action items and next steps. Send a summary email to confirm key points discussed.";
+  }
+  if (keywords.includes('call') || keywords.includes('phone')) {
+    return "Send a brief email summarizing the key points from the call and outline the next steps agreed upon.";
+  }
+  if (keywords.includes('email') || keywords.includes('sent')) {
+    return "Follow up in 2-3 days if no response is received. Consider scheduling a call to discuss in more detail.";
+  }
+  if (keywords.includes('proposal') || keywords.includes('quote')) {
+    return "Schedule a review call to walk through the proposal details and address any questions or concerns.";
+  }
+  if (keywords.includes('issue') || keywords.includes('problem') || keywords.includes('concern')) {
+    return "Schedule an urgent follow-up call to address concerns and develop an action plan for resolution.";
+  }
+  
+  // Generic advice if no specific keywords are found
+  return "Schedule a follow-up conversation to discuss progress and identify any additional needs or opportunities.";
 } 

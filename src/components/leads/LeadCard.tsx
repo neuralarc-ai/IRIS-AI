@@ -340,57 +340,58 @@ export default function LeadCard({
           </div>
         </div>
       </CardContent>
-      <CardFooter className="pt-4 border-t mt-auto px-6 pb-6">
-        <Button size="sm" asChild className="mr-auto bg-[#6FCF97] text-white border-none shadow-none hover:bg-[#8FE6B5] dark:hover:bg-[#4B8B6F] hover:text-white focus:bg-[#6FCF97] focus:text-white">
+      <CardFooter className="pt-4 border-t mt-auto px-6 pb-6 flex items-center justify-between gap-2">
+        <Button size="sm" asChild className="bg-[#6FCF97] text-white border-none shadow-none hover:bg-[#8FE6B5] dark:hover:bg-[#4B8B6F] hover:text-white focus:bg-[#6FCF97] focus:text-white">
           <Link href={`/leads/${lead.id}`}>
             <Eye className="mr-2 h-4 w-4" />
             View Details
           </Link>
         </Button>
-        {lead.status === "Converted to Account" ? (
-          <Button
-            size="sm"
-            disabled
-            variant="beige"
-            className="ml-2 cursor-not-allowed opacity-70"
-          >
-            <CheckSquare className="mr-2 h-4 w-4" />
-            Converted
-          </Button>
-        ) : (
-          lead.status !== "Lost" && (
-            <>
-              <Button
-                size="sm"
-                onClick={handleConvert}
-                disabled={isConverting}
-                variant="beige"
-                className="ml-2"
-              >
-                {isConverting ? (
-                  <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Converting...
-                  </>
-                ) : (
-                  <>
-                    <CheckSquare className="mr-2 h-4 w-4" />
-                    Convert
-                  </>
-                )}
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                className="ml-2"
-                onClick={() => setShowDeleteDialog(true)}
-                title="Delete Lead"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </>
-          )
-        )}
+        <div className="flex items-center gap-2">
+          {lead.status === "Converted to Account" ? (
+            <Button
+              size="sm"
+              disabled
+              variant="beige"
+              className="cursor-not-allowed opacity-70"
+            >
+              <CheckSquare className="mr-2 h-4 w-4" />
+              Converted
+            </Button>
+          ) : (
+            lead.status !== "Lost" && (
+              <>
+                <Button
+                  size="sm"
+                  onClick={handleConvert}
+                  disabled={isConverting}
+                  variant="beige"
+                >
+                  {isConverting ? (
+                    <>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Converting...
+                    </>
+                  ) : (
+                    <>
+                      <CheckSquare className="mr-2 h-4 w-4" />
+                      Convert
+                    </>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowDeleteDialog(true)}
+                  title="Delete Lead"
+                  className="hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )
+          )}
+        </div>
       </CardFooter>
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>

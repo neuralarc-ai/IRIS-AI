@@ -13,7 +13,6 @@ const STATUS_OPTIONS = [
   'Contacted',
   'Qualified',
   'Proposal Sent',
-  'Converted to Account',
   'Lost',
 ];
 
@@ -21,9 +20,10 @@ interface LeadsListWithFilterProps {
   leads: Lead[];
   onLeadConverted: (leadId: string, newAccountId: string) => void;
   onLeadAdded?: (newLead: Lead) => void;
+  onLeadDeleted: (leadId: string) => void;
 }
 
-export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdded }: LeadsListWithFilterProps) {
+export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdded, onLeadDeleted }: LeadsListWithFilterProps) {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('All Statuses');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -39,8 +39,17 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
     ));
   };
 
+  const handleLeadConversion = (leadId: string, newAccountId: string) => {
+    setLocalLeads((prev) => prev.filter((lead) => lead.id !== leadId));
+    onLeadConverted(leadId, newAccountId);
+  };
+
   const filteredLeads = useMemo(() => {
     return localLeads.filter(lead => {
+      // First filter out converted leads
+      if (lead.status === "Converted to Account") return false;
+      
+      // Then apply other filters
       const matchesStatus = status === 'All Statuses' || lead.status === status;
       const matchesSearch =
         lead.companyName.toLowerCase().includes(search.toLowerCase()) ||
@@ -53,6 +62,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
 
   const handleDelete = (leadId: string) => {
     setLocalLeads((prev) => prev.filter((l) => l.id !== leadId));
+    onLeadDeleted(leadId);
   };
 
   return (
@@ -97,7 +107,13 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
           <div className="col-span-full text-center text-muted-foreground mt-12">No leads found.</div>
         ) : (
           filteredLeads.map(lead => (
-            <LeadCard key={lead.id} lead={lead} onLeadConverted={onLeadConverted} onStatusChange={handleStatusChange} onDelete={handleDelete} />
+            <LeadCard 
+              key={lead.id} 
+              lead={lead} 
+              onLeadConverted={handleLeadConversion} 
+              onStatusChange={handleStatusChange} 
+              onDelete={handleDelete} 
+            />
           ))
         )}
       </div>

@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { Account, Opportunity, Update, UpdateType, Lead, LeadApiResponse } from '@/types';
-import { Loader2, MessageSquarePlus, Briefcase, BarChartBig, User } from 'lucide-react';
+import { Loader2, MessageSquarePlus, Briefcase, BarChartBig, User, Sparkles } from 'lucide-react';
 import { useAuth } from "@/hooks/use-auth";
 
 interface AddUpdateDialogProps {
@@ -37,12 +37,57 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded }: A
   const [updateType, setUpdateTypeState] = useState<UpdateType | ''>('');
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [aiAdvice, setAiAdvice] = useState('');
+  const [isLoadingAiAdvice, setIsLoadingAiAdvice] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [leads, setLeads] = useState<LeadApiResponse[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Function to get AI advice
+  const getAiAdvice = async () => {
+    if (!content || content.trim().length < 10) {
+      toast({
+        title: "Content too short",
+        description: "Please provide more context for AI advice.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoadingAiAdvice(true);
+    try {
+      const selectedAccount = accounts.find(acc => acc.id === selectedAccountId);
+      const selectedLead = leads.find(lead => lead.id === selectedLeadId);
+      
+      const response = await fetch('/api/ai/gemini-advice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          context: content,
+          accountName: selectedAccount?.name || selectedLead?.company_name || 'Unknown'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get AI advice');
+      }
+
+      const data = await response.json();
+      setAiAdvice(data.aiAdvice);
+    } catch (error) {
+      console.error('Error getting AI advice:', error);
+      toast({
+        title: "Error",
+        description: "Failed to get AI advice. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingAiAdvice(false);
+    }
+  };
 
   // Fetch data from API
   useEffect(() => {
@@ -277,6 +322,7 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded }: A
 
           <div>
             <Label htmlFor="update-content">Content <span className="text-destructive">*</span></Label>
+            <div className="space-y-2">
             <Textarea
               id="update-content"
               value={content}
@@ -286,6 +332,33 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded }: A
               disabled={isLoading || isLoadingData}
               className="bg-[#E2D4C3]/60"
             />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={getAiAdvice}
+                disabled={isLoadingAiAdvice || !content.trim()}
+                className="w-full"
+              >
+                {isLoadingAiAdvice ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Getting AI Advice...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Get AI Advice
+                  </>
+                )}
+              </Button>
+              {aiAdvice && (
+                <div className="mt-2 p-3 bg-muted rounded-md">
+                  <p className="text-sm font-medium mb-1">AI Suggestion:</p>
+                  <p className="text-sm text-muted-foreground">{aiAdvice}</p>
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading || isLoadingData}>

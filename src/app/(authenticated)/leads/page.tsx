@@ -37,22 +37,26 @@ export default function LeadsPage() {
       }
       const result = await response.json();
       // Transform API response from snake_case to camelCase
-      const transformedLeads: Lead[] = (result.data || []).map((apiLead: any) => ({
-        id: apiLead.id,
-        companyName: apiLead.company_name,
-        personName: apiLead.person_name,
-        email: apiLead.email,
-        phone: apiLead.phone,
-        linkedinProfileUrl: apiLead.linkedin_profile_url,
-        country: apiLead.country,
-        status: apiLead.status,
-        opportunityIds: [],
-        updateIds: [],
-        createdAt: apiLead.created_at,
-        updatedAt: apiLead.updated_at,
-        assigned_user_id: apiLead.assigned_user_id,
-        created_by_user_id: apiLead.created_by_user_id,
-      }));
+      const transformedLeads: Lead[] = (result.data || [])
+        .map((apiLead: any) => ({
+          id: apiLead.id,
+          companyName: apiLead.company_name,
+          personName: apiLead.person_name,
+          email: apiLead.email,
+          phone: apiLead.phone,
+          linkedinProfileUrl: apiLead.linkedin_profile_url,
+          country: apiLead.country,
+          status: apiLead.status,
+          opportunityIds: [],
+          updateIds: [],
+          createdAt: apiLead.created_at,
+          updatedAt: apiLead.updated_at,
+          assigned_user_id: apiLead.assigned_user_id,
+          created_by_user_id: apiLead.created_by_user_id,
+        }))
+        // Filter out converted leads
+        .filter(lead => lead.status !== "Converted to Account");
+      
       setLeads(transformedLeads);
     } catch (error) {
       console.error('Error fetching leads:', error);
@@ -82,17 +86,21 @@ export default function LeadsPage() {
   };
 
   const handleLeadConverted = async (leadId: string, newAccountId: string) => {
-    // Update the lead status in the local state
-    setLeads(prevLeads =>
-      prevLeads.map(lead =>
-        lead.id === leadId 
-          ? { ...lead, status: 'Converted to Account' as const }
-          : lead
-      )
-    );
+    // Remove the converted lead from the list
+    setLeads(prevLeads => prevLeads.filter(lead => lead.id !== leadId));
+    
     toast({
       title: "Lead Converted",
       description: "Lead has been successfully converted to an account.",
+      className: "bg-green-100 dark:bg-green-900 border-green-500",
+    });
+  };
+
+  const handleLeadDeleted = (leadId: string) => {
+    setLeads(prevLeads => prevLeads.filter(lead => lead.id !== leadId));
+    toast({
+      title: "Lead Deleted",
+      description: "Lead has been successfully deleted.",
     });
   };
 
@@ -323,11 +331,14 @@ export default function LeadsPage() {
           </div>
         </div>
       ) : (
-        <LeadsListWithFilter
-          leads={leads.filter(lead => lead.status !== 'Converted to Account')}
-          onLeadConverted={handleLeadConverted}
-          onLeadAdded={handleLeadAdded}
-        />
+        <div className="flex-1 space-y-4">
+          <LeadsListWithFilter 
+            leads={leads} 
+            onLeadConverted={handleLeadConverted} 
+            onLeadAdded={handleLeadAdded}
+            onLeadDeleted={handleLeadDeleted}
+          />
+        </div>
       )}
 
       {user && (
