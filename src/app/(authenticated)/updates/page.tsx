@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import AddUpdateDialog from '@/components/updates/AddUpdateDialog';
 import { useAuth } from '@/hooks/use-auth';
+import { useSearchParams } from 'next/navigation';
 
 // Local type for updates with account and opportunity objects
 interface UpdateWithEntities extends Omit<Update, 'accountId' | 'opportunityId' | 'updatedByUserId'> {
@@ -23,12 +24,16 @@ interface UpdateWithEntities extends Omit<Update, 'accountId' | 'opportunityId' 
 }
 
 export default function UpdatesPage() {
+  const searchParams = useSearchParams();
   const [updates, setUpdates] = useState<UpdateWithEntities[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [searchTerm, setSearchTerm] = useState(''); 
   const [typeFilter, setTypeFilter] = useState<UpdateType | 'all'>('all');
   const [opportunityFilter, setOpportunityFilter] = useState<string | 'all'>('all');
   const [dateFilter, setDateFilter] = useState<string>(''); 
+  const [entityTypeFilter, setEntityTypeFilter] = useState<'all' | 'lead' | 'opportunity' | 'account'>(
+    (searchParams.get('entity_type') as 'all' | 'lead' | 'opportunity' | 'account') || 'all'
+  );
   const [isAddUpdateDialogOpen, setIsAddUpdateDialogOpen] = useState(false);
   const [newActivities, setNewActivities] = useState<{ [accountId: string]: string }>({});
   const [isSaving, setIsSaving] = useState<{ [accountId: string]: boolean }>({});
@@ -37,31 +42,31 @@ export default function UpdatesPage() {
   const { user, isAdmin } = useAuth();
 
   // Centralized fetchUpdates function
-  const fetchUpdates = async () => {
+    const fetchUpdates = async () => {
     const response = await fetch('/api/updates', {
       headers: {
         'x-user-id': user?.id || '',
         'x-user-admin': isAdmin() ? 'true' : 'false',
       },
     });
-    const result = await response.json();
-    setUpdates((result.data || []).map((apiUpdate: any) => ({
-      id: apiUpdate.id,
-      type: apiUpdate.type,
-      content: apiUpdate.content,
-      date: apiUpdate.date,
-      account: apiUpdate.account,
-      opportunity: apiUpdate.opportunity,
-      updatedByUser: apiUpdate.user,
+      const result = await response.json();
+      setUpdates((result.data || []).map((apiUpdate: any) => ({
+        id: apiUpdate.id,
+        type: apiUpdate.type,
+        content: apiUpdate.content,
+        date: apiUpdate.date,
+        account: apiUpdate.account,
+        opportunity: apiUpdate.opportunity,
+        updatedByUser: apiUpdate.user,
       lead: apiUpdate.lead,
       leadId: apiUpdate.lead_id,
       leadName: apiUpdate.lead?.company_name || apiUpdate.lead?.person_name || '',
-    })));
-  };
+      })));
+    };
 
   useEffect(() => {
     if (user) {
-      fetchUpdates();
+    fetchUpdates();
     }
   }, [user]);
 
@@ -80,57 +85,63 @@ export default function UpdatesPage() {
 
   const updateTypeOptions: UpdateType[] = ["General", "Call", "Meeting", "Email"];
 
+  // Filter updates by entity type and ID
   const filteredUpdates = updates.filter(update => {
-    const matchesSearch = update.content.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === 'all' || update.type === typeFilter;
-    const matchesOpportunity = opportunityFilter === 'all' || 
-      (opportunityFilter !== 'all' && update.opportunity?.id === opportunityFilter);
-    let matchesDate = true;
-    if (dateFilter) {
-      try {
-        const filterDateObj = parseISO(dateFilter);
-        const updateDateObj = parseISO(update.date);
-        if (isValid(filterDateObj) && isValid(updateDateObj)) {
-           matchesDate = format(updateDateObj, 'yyyy-MM-dd') === format(filterDateObj, 'yyyy-MM-dd');
-        } else {
-            matchesDate = false; 
-        }
-      } catch (e) {
-        matchesDate = true; 
-      }
-    }
-    return matchesSearch && matchesType && matchesOpportunity && matchesDate;
+    // Get entity IDs from URL parameters
+    const leadId = searchParams.get('lead_id');
+    const opportunityId = searchParams.get('opportunity_id');
+    const accountId = searchParams.get('account_id');
+    
+    // Filter by specific entity ID if provided
+    if (leadId) return update.leadId === leadId;
+    if (opportunityId) return update.opportunity?.id === opportunityId;
+    if (accountId) return update.account?.id === accountId;
+    
+    // If no specific ID provided, filter by entity type
+    if (entityTypeFilter === 'lead') return !!update.leadId;
+    if (entityTypeFilter === 'opportunity') return !!update.opportunity?.id;
+    if (entityTypeFilter === 'account') return !!update.account?.id;
+    return true;
   });
 
-  // Group updates by entity (account or lead)
+  // Group updates by entity (account, opportunity, or lead)
   const grouped = React.useMemo(() => {
     const acc: any = {};
-    // First, collect all lead IDs and their names
+    // First, collect all lead and opportunity IDs and their names
     const leadMap: Record<string, { id: string; name: string }> = {};
+    const opportunityMap: Record<string, { id: string; name: string }> = {};
     filteredUpdates.forEach(update => {
       if (update.leadId && update.leadName) {
         leadMap[update.leadId] = { id: update.leadId, name: update.leadName };
       }
+      if (update.opportunity?.id && update.opportunity?.name) {
+        opportunityMap[update.opportunity.id] = { id: update.opportunity.id, name: update.opportunity.name };
+      }
     });
-    // Group by account or lead
+    // Group by account, opportunity, or lead
     for (const update of filteredUpdates) {
-      // If update is for an account, group by account
       if (update.account?.id) {
         if (!acc[update.account.id]) {
           acc[update.account.id] = {
-            entity: update.account,
+            entity: { id: update.account.id, name: update.account.name, type: 'account' },
             updates: [],
           };
         }
         acc[update.account.id].updates.push(update);
-      }
-      // If update is for a lead (direct or via opportunity), group by lead
-      if (update.leadId && leadMap[update.leadId]) {
-        if (!acc[update.leadId]) {
-          acc[update.leadId] = {
-            entity: { id: update.leadId, name: update.leadName, isLead: true },
+      } else if (update.opportunity?.id) {
+        if (!acc[update.opportunity.id]) {
+          acc[update.opportunity.id] = {
+            entity: { id: update.opportunity.id, name: update.opportunity.name, type: 'opportunity' },
             updates: [],
           };
+        }
+        acc[update.opportunity.id].updates.push(update);
+      } else if (update.leadId && leadMap[update.leadId]) {
+        if (!acc[update.leadId]) {
+          acc[update.leadId] = {
+            entity: { id: update.leadId, name: update.leadName, type: 'lead' },
+          updates: [],
+        };
         }
         acc[update.leadId].updates.push(update);
       }
@@ -263,6 +274,20 @@ export default function UpdatesPage() {
               className="mt-1"
             />
           </div>
+          <div>
+            <Label htmlFor="entity-type-filter">Entity Type</Label>
+            <Select value={entityTypeFilter} onValueChange={value => setEntityTypeFilter(value as 'all' | 'lead' | 'opportunity' | 'account')}>
+              <SelectTrigger id="entity-type-filter" className="w-full mt-1">
+                <SelectValue placeholder="Filter by entity type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="lead">Lead</SelectItem>
+                <SelectItem value="opportunity">Opportunity</SelectItem>
+                <SelectItem value="account">Account</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -272,10 +297,15 @@ export default function UpdatesPage() {
           {Object.values(grouped).map(({ entity, updates }: any) => (
             <div key={entity.id} className="p-6 rounded-xl border border-gray-200 bg-white shadow relative">
               <div className="flex items-center mb-2 gap-2">
-                {entity.isLead ? (
+                {entity.type === 'lead' ? (
                   <>
                     <MessageSquare className="h-5 w-5 text-black" />
                     <span className="text-base font-medium text-gray-700">Lead:</span>
+                  </>
+                ) : entity.type === 'opportunity' ? (
+                  <>
+                    <Briefcase className="h-5 w-5 text-blue-700" />
+                    <span className="text-base font-medium text-blue-700">Opportunity:</span>
                   </>
                 ) : (
                   <>
@@ -326,22 +356,22 @@ export default function UpdatesPage() {
                   ))}
                 </select>
                 <div className="flex items-center gap-4 justify-between mt-2">
-                  <button
+               <button
                     className="bg-[#6FCF97] text-white px-4 py-2 rounded font-semibold"
                     disabled={isSaving[entity.id] || !(newActivities[entity.id]?.trim())}
-                    onClick={() => handleLogActivity(entity.id, entity.isLead ? 'lead' : 'account')}
+                    onClick={() => handleLogActivity(entity.id, entity.type === 'lead' ? 'lead' : entity.type === 'opportunity' ? 'opportunity' : 'account')}
                   >
                     {isSaving[entity.id] ? 'Saving...' : 'Log Activity'}
-                  </button>
-                  <button
+                </button>
+              <button
                     className="flex items-center gap-2 bg-[#E2D4C3] hover:bg-[#C8B89B] text-black px-4 py-2 rounded shadow font-semibold"
                     onClick={() => handleGetAIAdvice(entity.id, updates, entity.name)}
-                    type="button"
+                type="button"
                     disabled={aiLoading[entity.id]}
-                  >
-                    <Wand2 className="h-5 w-5" />
+              >
+                <Wand2 className="h-5 w-5" />
                     {aiLoading[entity.id] ? 'Thinking...' : 'Get AI Advice'}
-                  </button>
+              </button>
                 </div>
                 {newActivities[entity.id] && (
                   <div className={

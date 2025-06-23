@@ -441,6 +441,16 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
         >
           <MessageSquare className="h-4 w-4 text-primary" />
         </Button>
+        <Link href={`/updates?opportunity_id=${opportunity.id}&entity_type=opportunity`} passHref>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-gray-600 hover:text-gray-800"
+          >
+            <Eye className="h-4 w-4 mr-1" />
+            View Log
+          </Button>
+        </Link>
         <Button
           size="sm"
           variant="ghost"
@@ -472,8 +482,8 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
           open={showAddUpdateDialog}
           onOpenChange={setShowAddUpdateDialog}
           onUpdateAdded={() => setShowAddUpdateDialog(false)}
-          initialEntityType="opportunity"
-          initialEntityId={opportunity.id}
+          forceEntityType="opportunity"
+          forceEntityId={opportunity.id}
         />
       </CardFooter>
     </Card>

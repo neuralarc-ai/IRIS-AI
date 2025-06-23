@@ -23,8 +23,8 @@ interface AddUpdateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdateAdded?: () => void;
-  initialEntityType?: EntityType;
-  initialEntityId?: string;
+  forceEntityType?: 'lead' | 'account' | 'opportunity';
+  forceEntityId?: string;
 }
 
 const updateTypeOptions: UpdateType[] = ["General", "Call", "Meeting", "Email"];
@@ -35,11 +35,11 @@ const entityTypeOptions = [
 ] as const;
 type EntityType = "account" | "opportunity" | "lead";
 
-export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded, initialEntityType, initialEntityId }: AddUpdateDialogProps) {
-  const [entityType, setEntityType] = useState<EntityType>(initialEntityType || "account");
-  const [selectedLeadId, setSelectedLeadId] = useState<string>(initialEntityType === 'lead' && initialEntityId ? initialEntityId : '');
-  const [selectedAccountId, setSelectedAccountId] = useState<string>(initialEntityType === 'account' && initialEntityId ? initialEntityId : '');
-  const [selectedOpportunityId, setSelectedOpportunityId] = useState<string>(initialEntityType === 'opportunity' && initialEntityId ? initialEntityId : '');
+export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded, forceEntityType, forceEntityId }: AddUpdateDialogProps) {
+  const [entityType, setEntityType] = useState<EntityType>("account");
+  const [selectedLeadId, setSelectedLeadId] = useState<string>('');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [selectedOpportunityId, setSelectedOpportunityId] = useState<string>('');
   const [updateType, setUpdateTypeState] = useState<UpdateType | ''>('');
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -137,6 +137,19 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded, ini
   const activeAccounts = accounts.filter(acc => acc.status === 'Active');
 
   useEffect(() => {
+    if (forceEntityType && forceEntityId) {
+      setEntityType(forceEntityType);
+      if (forceEntityType === 'lead') {
+        setSelectedLeadId(forceEntityId);
+      } else if (forceEntityType === 'account') {
+        setSelectedAccountId(forceEntityId);
+      } else if (forceEntityType === 'opportunity') {
+        setSelectedOpportunityId(forceEntityId);
+      }
+    }
+  }, [forceEntityType, forceEntityId, open]);
+
+  useEffect(() => {
     if (entityType === "account" && selectedAccountId) {
       const accountOpportunities = opportunities.filter(opp => opp.associated_account_id === selectedAccountId);
       setSelectedOpportunityId(''); 
@@ -152,15 +165,6 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded, ini
     }
 
   }, [selectedAccountId, entityType, opportunities]);
-
-  useEffect(() => {
-    if (open && initialEntityType && initialEntityId) {
-      setEntityType(initialEntityType);
-      if (initialEntityType === 'lead') setSelectedLeadId(initialEntityId);
-      if (initialEntityType === 'account') setSelectedAccountId(initialEntityId);
-      if (initialEntityType === 'opportunity') setSelectedOpportunityId(initialEntityId);
-    }
-  }, [open, initialEntityType, initialEntityId]);
 
   const resetForm = () => {
     setEntityType("account");
@@ -223,10 +227,10 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded, ini
         <form onSubmit={handleSubmit} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-3">
           <div>
             <Label className="mb-2 block">Log Update For:</Label>
-            <RadioGroup value={entityType} onValueChange={(value: EntityType) => setEntityType(value)} className="flex space-x-4" disabled={!!initialEntityType}>
+            <RadioGroup value={entityType} onValueChange={(value: EntityType) => setEntityType(value)} className="flex space-x-4" disabled={!!forceEntityType}>
               {entityTypeOptions.map(opt => (
                 <div key={opt.value} className="flex items-center space-x-2">
-                  <RadioGroupItem value={opt.value} id={`r${opt.label}`} disabled={!!initialEntityType} />
+                  <RadioGroupItem value={opt.value} id={`r${opt.label}`} disabled={!!forceEntityType && opt.value !== forceEntityType} />
                   <Label htmlFor={`r${opt.label}`} className="font-normal">{opt.label}</Label>
                 </div>
               ))}
@@ -243,13 +247,13 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded, ini
           {entityType === 'lead' && (
             <div>
               <Label htmlFor="update-lead">Lead <span className="text-destructive">*</span></Label>
-              <Select value={selectedLeadId} onValueChange={setSelectedLeadId} disabled={isLoading || isLoadingData || !!initialEntityId}>
+              <Select value={selectedLeadId} onValueChange={setSelectedLeadId} disabled={isLoading || isLoadingData || !!forceEntityType}>
                 <SelectTrigger id="update-lead" className="bg-[#E2D4C3]/60">
                   <SelectValue placeholder={isLoadingData ? "Loading leads..." : "Select a lead"} />
                 </SelectTrigger>
                 <SelectContent>
                   {activeLeads.map(lead => (
-                    <SelectItem key={lead.id} value={lead.id}>
+                    <SelectItem key={lead.id} value={lead.id} disabled={!!forceEntityType && lead.id !== forceEntityId}>
                       <div className="flex items-center">
                         <User className="mr-2 h-4 w-4 text-muted-foreground" />
                         {lead.person_name} ({lead.company_name})
@@ -262,45 +266,45 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded, ini
           )}
 
           {entityType === 'account' && (
-            <div>
-              <Label htmlFor="update-account">Account <span className="text-destructive">*</span></Label>
-              <Select value={selectedAccountId} onValueChange={setSelectedAccountId} disabled={isLoading || isLoadingData || !!initialEntityId}>
-                <SelectTrigger id="update-account" className="bg-[#E2D4C3]/60">
-                  <SelectValue placeholder={isLoadingData ? "Loading accounts..." : "Select an account"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeAccounts.map(account => (
-                    <SelectItem key={account.id} value={account.id}>
-                      <div className="flex items-center">
-                        <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
-                        {account.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div>
+                <Label htmlFor="update-account">Account <span className="text-destructive">*</span></Label>
+                <Select value={selectedAccountId} onValueChange={setSelectedAccountId} disabled={isLoading || isLoadingData}>
+                  <SelectTrigger id="update-account" className="bg-[#E2D4C3]/60">
+                    <SelectValue placeholder={isLoadingData ? "Loading accounts..." : "Select an account"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeAccounts.map(account => (
+                      <SelectItem key={account.id} value={account.id}>
+                        <div className="flex items-center">
+                          <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
+                          {account.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
           )}
 
           {entityType === 'opportunity' && (
-            <div>
-              <Label htmlFor="update-opportunity">Opportunity <span className="text-destructive">*</span></Label>
-              <Select value={selectedOpportunityId} onValueChange={setSelectedOpportunityId} disabled={isLoading || isLoadingData || !!initialEntityId}>
-                <SelectTrigger id="update-opportunity" className="bg-[#E2D4C3]/60">
+                <div>
+                  <Label htmlFor="update-opportunity">Opportunity <span className="text-destructive">*</span></Label>
+              <Select value={selectedOpportunityId} onValueChange={setSelectedOpportunityId} disabled={isLoading || isLoadingData}>
+                    <SelectTrigger id="update-opportunity" className="bg-[#E2D4C3]/60">
                   <SelectValue placeholder={isLoadingData ? "Loading opportunities..." : "Select an opportunity"} />
-                </SelectTrigger>
-                <SelectContent>
+                    </SelectTrigger>
+                    <SelectContent>
                   {opportunities.map(opportunity => (
-                    <SelectItem key={opportunity.id} value={opportunity.id}>
-                      <div className="flex items-center">
-                        <BarChartBig className="mr-2 h-4 w-4 text-muted-foreground" />
-                        {opportunity.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                        <SelectItem key={opportunity.id} value={opportunity.id}>
+                           <div className="flex items-center">
+                            <BarChartBig className="mr-2 h-4 w-4 text-muted-foreground" />
+                            {opportunity.name}
+                           </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
           )}
 
           <div>

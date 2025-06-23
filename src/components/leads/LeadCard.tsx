@@ -251,9 +251,19 @@ export default function LeadCard({
               <UserPlus className="ml-2 h-4 w-4 text-green-500" title="Created by you" />
             )}
           </CardTitle>
-          <div className="flex flex-col items-end gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+          <div className="flex items-center gap-2">
+            <Link href={`/updates?lead_id=${lead.id}&entity_type=lead`} passHref>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-gray-600 hover:text-gray-800"
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                View Log
+              </Button>
+            </Link>
+            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+              <AlertDialogTrigger asChild>
                 <button
                   className={`capitalize whitespace-nowrap ml-2 focus:outline-none ${getStatusBadgeColorClasses(
                     lead.status
@@ -270,31 +280,24 @@ export default function LeadCard({
                   ) : null}
                   {lead.status}
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {VALID_STATUSES.map((status) => (
-                  <DropdownMenuItem
-                    key={status}
-                    onSelect={() => handleStatusChange(status)}
-                    disabled={
-                      status === lead.status ||
-                      lead.status === "Converted to Account" ||
-                      lead.status === "Lost"
-                    }
-                    className={`capitalize ${status === lead.status ? "opacity-60 font-bold" : "cursor-pointer"}`}
-                  >
-                    {status}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <button
-              className="mt-2 hover:text-primary focus:outline-none"
-              title="Log Communication Update"
-              onClick={() => setShowAddUpdateDialog(true)}
-            >
-              <MessageSquare className="h-5 w-5 text-primary" />
-            </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Lead</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete this lead? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel asChild>
+                    <Button variant="outline">Cancel</Button>
+                  </AlertDialogCancel>
+                  <AlertDialogAction asChild>
+                    <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
         <CardDescription className="text-sm text-muted-foreground flex items-center">
@@ -359,6 +362,15 @@ export default function LeadCard({
             View Details
           </Link>
         </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setShowAddUpdateDialog(true)}
+          title="Log Communication Update"
+          className="hover:bg-muted"
+        >
+          <MessageSquare className="h-4 w-4 text-primary" />
+        </Button>
         <div className="flex items-center gap-2">
           {lead.status === "Converted to Account" ? (
             <Button
@@ -405,30 +417,12 @@ export default function LeadCard({
           )}
         </div>
       </CardFooter>
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Lead</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this lead? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel asChild>
-              <Button variant="outline">Cancel</Button>
-            </AlertDialogCancel>
-            <AlertDialogAction asChild>
-              <Button variant="destructive" onClick={handleDelete}>Delete</Button>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
       <AddUpdateDialog
         open={showAddUpdateDialog}
         onOpenChange={setShowAddUpdateDialog}
         onUpdateAdded={() => setShowAddUpdateDialog(false)}
-        initialEntityType="lead"
-        initialEntityId={lead.id}
+        forceEntityType="lead"
+        forceEntityId={lead.id}
       />
     </Card>
   );
