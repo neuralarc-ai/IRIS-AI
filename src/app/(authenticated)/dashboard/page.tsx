@@ -193,15 +193,15 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!authLoading && user) {
+    fetchDashboardData();
+    // Set up auto-refresh every 1 hour
+    if (refreshTimeout.current) clearInterval(refreshTimeout.current);
+    refreshTimeout.current = setInterval(() => {
       fetchDashboardData();
-      // Set up auto-refresh every 1 hour
+    }, 3600000);
+    return () => {
       if (refreshTimeout.current) clearInterval(refreshTimeout.current);
-      refreshTimeout.current = setInterval(() => {
-        fetchDashboardData();
-      }, 3600000);
-      return () => {
-        if (refreshTimeout.current) clearInterval(refreshTimeout.current);
-      };
+    };
     }
   }, [authLoading, user]);
 

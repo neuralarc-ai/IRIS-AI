@@ -23,6 +23,7 @@ import {
   Phone,
   Tag,
   Trash2,
+  MessageSquare,
 } from "lucide-react";
 import type {
   Account,
@@ -45,6 +46,7 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import AddUpdateDialog from "@/components/updates/AddUpdateDialog";
 
 interface AccountCardProps {
   account: Account;
@@ -64,6 +66,7 @@ export default function AccountCard({
   const [isAddOpportunityDialogOpen, setIsAddOpportunityDialogOpen] =
     useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showAddUpdateDialog, setShowAddUpdateDialog] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -147,12 +150,12 @@ export default function AccountCard({
             <div className="flex flex-col items-start text-left">
               <div className="flex items-center gap-2 text-left">
                 <Briefcase className="h-5 w-5" style={{ color: '#97A88C' }} />
-                <CardTitle className="text-xl font-headline mb-0 text-left" style={{ color: '#97A88C' }}>
+                <CardTitle className="text-2xl font-headline mb-0 text-left" style={{ color: '#97A88C' }}>
                   {account.name}
                 </CardTitle>
               </div>
               {(account.type || account.industry) && (
-                <div className="flex items-center mt-2 text-muted-foreground text-sm text-left">
+                <div className="flex items-center mt-2 text-muted-foreground text-md text-left">
                   <Tag className="mr-1 h-4 w-4 shrink-0" />
                   <span>
                     {account.type}
@@ -183,32 +186,32 @@ export default function AccountCard({
           {account.contactPersonName && (
             <div className="flex items-center text-muted-foreground">
               <Users className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-              {account.contactPersonName}
+              <span style={{ fontSize: '16px' }}>{account.contactPersonName}</span>
             </div>
           )}
           {account.contactEmail && (
             <div className="flex items-center text-muted-foreground">
               <Mail className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-              {account.contactEmail}
+              <span style={{ fontSize: '16px' }}>{account.contactEmail}</span>
             </div>
           )}
           {account.contactPhone && (
             <div className="flex items-center text-muted-foreground">
               <Phone className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-              {account.contactPhone}
+              <span style={{ fontSize: '16px' }}>{account.contactPhone}</span>
             </div>
           )}
 
           <div className="text-sm flex items-center text-foreground font-medium text-left">
             <ListChecks className="mr-2 h-4 w-4" />
-            <span>
+            <span style={{ fontSize: '16px' }}>
               {opportunities.length} Active Opportunit{opportunities.length !== 1 ? "ies" : "y"}
             </span>
           </div>
 
           {account.status === "Active" && (
             <div className="pt-3 border-t mt-3">
-              <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1.5 flex items-center text-left">
+              <h4 className="mb-1.5 flex items-center text-left font-bold" style={{ fontSize: '14px' }}>
                 <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" /> AI
                 Daily Brief
               </h4>
@@ -221,7 +224,7 @@ export default function AccountCard({
                 </div>
               ) : dailySummary ? (
                 <div className="space-y-1">
-                  <p className="text-xs text-foreground line-clamp-2 text-left">
+                  <p className="text-[14px] text-foreground line-clamp-2 text-left">
                     {dailySummary.summary}
                   </p>
                   <div className="flex items-center text-xs text-left">
@@ -241,7 +244,7 @@ export default function AccountCard({
             </div>
           )}
         </CardContent>
-        <CardFooter className="pt-4 border-t mt-auto px-6 pb-6 flex justify-between items-center">
+        <CardFooter className="pt-4 border-t mt-auto px-6 pb-6 flex justify-between items-center gap-2">
           <Button size="sm" onClick={() => setIsAddOpportunityDialogOpen(true)} variant="beige">
             <PlusCircle className="mr-2 h-4 w-4" />
             New Opportunity
@@ -254,6 +257,15 @@ export default function AccountCard({
             title="Delete Account"
           >
             <Trash2 className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowAddUpdateDialog(true)}
+            title="Log Communication Update"
+            className="hover:bg-muted"
+          >
+            <MessageSquare className="h-4 w-4 text-primary" />
           </Button>
           <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
             <AlertDialogContent>
@@ -281,6 +293,13 @@ export default function AccountCard({
         onOpportunityAdded={handleOpportunityAdded}
         initialAccountId={account.id}
         accounts={[{ id: account.id, name: account.name, type: account.type }]}
+      />
+      <AddUpdateDialog
+        open={showAddUpdateDialog}
+        onOpenChange={setShowAddUpdateDialog}
+        onUpdateAdded={() => setShowAddUpdateDialog(false)}
+        initialEntityType="account"
+        initialEntityId={account.id}
       />
     </>
   );

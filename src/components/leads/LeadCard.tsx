@@ -27,6 +27,7 @@ import {
   UserCheck,
   UserPlus,
   Trash2,
+  MessageSquare,
 } from "lucide-react";
 import type { Lead } from "@/types";
 import { formatDistanceToNow, parseISO } from "date-fns";
@@ -49,6 +50,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
+import AddUpdateDialog from "@/components/updates/AddUpdateDialog";
 
 interface LeadCardProps {
   lead: Lead;
@@ -118,6 +120,7 @@ export default function LeadCard({
   const [isConverting, setIsConverting] = useState(false);
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showAddUpdateDialog, setShowAddUpdateDialog] = useState(false);
 
   const isAssignedToMe = lead.assigned_user_id === user?.id;
   const isCreatedByMe = lead.created_by_user_id === user?.id;
@@ -248,42 +251,51 @@ export default function LeadCard({
               <UserPlus className="ml-2 h-4 w-4 text-green-500" title="Created by you" />
             )}
           </CardTitle>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className={`capitalize whitespace-nowrap ml-2 focus:outline-none ${getStatusBadgeColorClasses(
-                  lead.status
-                )} inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors`}
-                disabled={
-                  isStatusUpdating ||
-                  lead.status === "Converted to Account" ||
-                  lead.status === "Lost"
-                }
-                aria-label="Change status"
-              >
-                {isStatusUpdating ? (
-                  <span className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : null}
-                {lead.status}
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {VALID_STATUSES.map((status) => (
-                <DropdownMenuItem
-                  key={status}
-                  onSelect={() => handleStatusChange(status)}
+          <div className="flex flex-col items-end gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={`capitalize whitespace-nowrap ml-2 focus:outline-none ${getStatusBadgeColorClasses(
+                    lead.status
+                  )} inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors`}
                   disabled={
-                    status === lead.status ||
+                    isStatusUpdating ||
                     lead.status === "Converted to Account" ||
                     lead.status === "Lost"
                   }
-                  className={`capitalize ${status === lead.status ? "opacity-60 font-bold" : "cursor-pointer"}`}
+                  aria-label="Change status"
                 >
-                  {status}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  {isStatusUpdating ? (
+                    <span className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : null}
+                  {lead.status}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {VALID_STATUSES.map((status) => (
+                  <DropdownMenuItem
+                    key={status}
+                    onSelect={() => handleStatusChange(status)}
+                    disabled={
+                      status === lead.status ||
+                      lead.status === "Converted to Account" ||
+                      lead.status === "Lost"
+                    }
+                    className={`capitalize ${status === lead.status ? "opacity-60 font-bold" : "cursor-pointer"}`}
+                  >
+                    {status}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <button
+              className="mt-2 hover:text-primary focus:outline-none"
+              title="Log Communication Update"
+              onClick={() => setShowAddUpdateDialog(true)}
+            >
+              <MessageSquare className="h-5 w-5 text-primary" />
+            </button>
+          </div>
         </div>
         <CardDescription className="text-sm text-muted-foreground flex items-center">
           <Users className="mr-2 h-4 w-4 shrink-0 text-gray-700" />{" "}
@@ -411,6 +423,13 @@ export default function LeadCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <AddUpdateDialog
+        open={showAddUpdateDialog}
+        onOpenChange={setShowAddUpdateDialog}
+        onUpdateAdded={() => setShowAddUpdateDialog(false)}
+        initialEntityType="lead"
+        initialEntityId={lead.id}
+      />
     </Card>
   );
 }

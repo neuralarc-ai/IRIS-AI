@@ -69,8 +69,20 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !selectedAccountId || value === '' || Number(value) <= 0 || !expectedCloseDate || !status) {
-      toast({ title: "Error", description: "Opportunity Name, associated Account/Lead, a valid positive Quoted Amount, Status, and Expected Close Date are required.", variant: "destructive" });
+    // Validate expected close date
+    if (!expectedCloseDate) {
+      toast({ title: "Error", description: "Expected Close Date is required.", variant: "destructive" });
+      return;
+    }
+    const selectedDate = new Date(expectedCloseDate);
+    const today = new Date();
+    today.setHours(0,0,0,0); // Ignore time for comparison
+    if (isNaN(selectedDate.getTime()) || selectedDate <= today) {
+      toast({ title: "Error", description: "Expected Close Date must be a future date.", variant: "destructive" });
+      return;
+    }
+    if (!name.trim() || !selectedAccountId || value === '' || Number(value) <= 0 || !status || !description.trim()) {
+      toast({ title: "Error", description: "Opportunity Name, associated Account/Lead, a valid positive Quoted Amount, Status, Expected Close Date, and Description are required.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
@@ -207,7 +219,7 @@ export default function AddOpportunityDialog({ open, onOpenChange, onOpportunity
           </div>
 
           <div>
-            <Label htmlFor="opportunity-description">Description</Label>
+            <Label htmlFor="opportunity-description">Description <span className="text-destructive">*</span></Label>
             <Textarea
               id="opportunity-description"
               value={description}

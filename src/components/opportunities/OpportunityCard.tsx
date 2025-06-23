@@ -25,6 +25,7 @@ import {
   Users,
   Clock,
   Trash2,
+  MessageSquare,
 } from "lucide-react";
 import type {
   Opportunity,
@@ -57,6 +58,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import AddUpdateDialog from "@/components/updates/AddUpdateDialog";
 
 interface OpportunityCardProps {
   opportunity: Opportunity;
@@ -127,6 +129,7 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
   const [associatedAccount, setAssociatedAccount] = useState<any>(null);
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showAddUpdateDialog, setShowAddUpdateDialog] = useState(false);
 
   const handleStatusChange = async (newStatus: Opportunity["status"]) => {
     if (opportunity.status === newStatus) return;
@@ -303,7 +306,7 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
           <div className="flex flex-col items-start">
             <div className="flex flex-row items-center">
               <BarChartBig className="mr-2 h-5 w-5 shrink-0" style={{ color: '#97A88C' }} />
-              <CardTitle className="text-xl font-headline mb-0 ml-2" style={{ color: '#97A88C' }}>
+              <CardTitle className="font-headline mb-0 ml-2" style={{ color: '#97A88C', fontSize: '1.5rem', fontWeight: 700 }}>
                 {initialOpportunity.name}
               </CardTitle>
             </div>
@@ -340,17 +343,24 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
         {associatedAccount?.name && (
           <div className="flex items-center mb-1">
             <Briefcase className="mr-2 h-4 w-4 shrink-0" />
-            <span className="font-semibold mr-1">For:</span> {associatedAccount.name}
+            <span className="font-semibold text-muted-foreground mr-1" style={{ fontSize: '1.05rem' }}>
+              For:
+            </span>{' '}
+            <span className="font-bold text-foreground" style={{ fontSize: '1.15rem' }}>
+              {associatedAccount.name}
+            </span>
           </div>
         )}
         {typeof opportunity.amount !== "undefined" &&
           opportunity.amount !== null && (
-            <div className="flex items-center text-muted-foreground mb-1">
-              <DollarSign className="mr-2 h-4 w-4 shrink-0" />
-              <span className="font-semibold text-foreground mr-1">
+            <div className="flex items-center mb-1">
+        
+              <span className="font-semibold text-muted-foreground mr-1" style={{ fontSize: '0.95rem' }}>
                 Quoted Value:
               </span>{" "}
-              ${Number(opportunity.amount).toLocaleString()}
+              <span className="text-black font-bold" style={{ fontSize: '1.35rem' }}>
+                ${Number(opportunity.amount).toLocaleString()}
+              </span>
             </div>
           )}
         {opportunity.description && (
@@ -378,7 +388,7 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
         <div className="mb-2">
           <Progress value={progress} className="h-2 bg-[#E5E7E0] [&>div]:bg-[#97A88C]" />
         </div>
-        <div className="flex justify-between text-xs text-muted-foreground mb-1">
+        <div className="flex justify-between text-[14px] text-muted-foreground mb-1">
           <span className="flex items-center">
             <Clock className="mr-1 h-3 w-3 shrink-0" />
             {timeRemaining(opportunity.status)}
@@ -391,19 +401,19 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
           opportunity.status !== "Win" &&
           opportunity.status !== "Loss" && (
             <div className="pt-3 border-t mt-3">
-              <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1.5 flex items-center">
+              <h4 className="text-sm font-semibold uppercase text-muted-foreground mb-1.5 flex items-center">
                 <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" /> AI
                 Forecast
               </h4>
               {isLoadingForecast ? (
                 <div className="flex items-center space-x-2 h-12">
                   <LoadingSpinner size={16} />
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-sm text-muted-foreground">
                     Generating forecast...
                   </span>
                 </div>
               ) : forecast ? (
-                <div className="space-y-1 text-xs">
+                <div className="space-y-1 text-[14px]">
                   <p className="text-foreground line-clamp-1">
                     <span className="font-medium">Est. Completion:</span>{" "}
                     {forecast.completionDateEstimate}
@@ -421,7 +431,16 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
             </div>
           )}
       </CardContent>
-      <CardFooter className="pt-4 border-t mt-auto px-6 pb-6 flex justify-end items-center">
+      <CardFooter className="pt-4 border-t mt-auto px-6 pb-6 flex justify-end items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setShowAddUpdateDialog(true)}
+          title="Log Communication Update"
+          className="hover:bg-muted"
+        >
+          <MessageSquare className="h-4 w-4 text-primary" />
+        </Button>
         <Button
           size="sm"
           variant="ghost"
@@ -431,7 +450,6 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
         >
           <Trash2 className="h-4 w-4" />
         </Button>
-
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -450,6 +468,13 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        <AddUpdateDialog
+          open={showAddUpdateDialog}
+          onOpenChange={setShowAddUpdateDialog}
+          onUpdateAdded={() => setShowAddUpdateDialog(false)}
+          initialEntityType="opportunity"
+          initialEntityId={opportunity.id}
+        />
       </CardFooter>
     </Card>
   );

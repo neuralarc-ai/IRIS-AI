@@ -93,8 +93,8 @@ export default function AddLeadDialog({ open, onOpenChange, onLeadAdded, user }:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!companyName.trim() || !personName.trim() || !email.trim()) {
-      toast({ title: "Error", description: "Company Name, Person's Name, and Email are required.", variant: "destructive" });
+    if (!companyName.trim() || !personName.trim() || !email.trim() || !country.trim()) {
+      toast({ title: "Error", description: "Company Name, Person's Name, Email, and Country are required.", variant: "destructive" });
       return;
     }
     if (!/\S+@\S+\.\S+/.test(email)) {
@@ -249,7 +249,7 @@ export default function AddLeadDialog({ open, onOpenChange, onLeadAdded, user }:
               <Input id="lead-linkedin" type="url" value={linkedinProfileUrl} onChange={(e) => setLinkedinProfileUrl(e.target.value)} placeholder="e.g., https://linkedin.com/in/johndoe" disabled={isLoading || isOcrLoading} className="bg-[#E2D4C3]/60" />
             </div>
             <div>
-              <Label htmlFor="lead-country">Country</Label>
+              <Label htmlFor="lead-country">Country <span className="text-destructive">*</span></Label>
               <Select value={country} onValueChange={setCountry} disabled={isLoading || isOcrLoading}>
                 <SelectTrigger id="lead-country" className="bg-[#E2D4C3]/60">
                   <SelectValue placeholder="Select country" />

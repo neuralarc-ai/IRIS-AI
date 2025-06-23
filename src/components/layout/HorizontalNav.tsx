@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Logo from '@/components/common/Logo';
 import { Button } from '@/components/ui/button';
-import { Briefcase, ListChecks, MessageSquare, LayoutDashboard, Users2, PlusCircle, Search, Users, BarChartBig, Bell } from 'lucide-react';
+import { Briefcase, ListChecks, MessageSquare, LayoutDashboard, Users2, PlusCircle, Search, Users, BarChartBig, Bell, Menu } from 'lucide-react';
 import UserProfile from './UserProfile';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,7 @@ export default function HorizontalNav() {
   const [isAddAccountDialogOpen, setIsAddAccountDialogOpen] = useState(false);
   const { isAdmin, user } = useAuth();
   const [assignedLeadsCount, setAssignedLeadsCount] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Fetch assigned leads count for notification badge
   useEffect(() => {
@@ -94,10 +95,11 @@ export default function HorizontalNav() {
       >
         <div
           className="mx-auto flex h-full items-center justify-between py-2 whitespace-nowrap overflow-hidden mt-4 px-0"
-          style={{ width: '1376px', paddingLeft: 0, paddingRight: 0 }}
+          style={{ width: '100%', maxWidth: '1376px', paddingLeft: 0, paddingRight: 0 }}
         >
           <span className="font-extrabold text-[28px] flex items-center mr-12 select-none tracking-wide" style={{ letterSpacing: '0.04em' }}>IRIS AI</span>
 
+          {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-6 px-2 flex-shrink-0">
             {filteredNavItems.map((item) => (
               <Button
@@ -152,12 +154,76 @@ export default function HorizontalNav() {
             </Button>
           </nav>
 
-          <div className="flex items-center">
+          {/* Mobile Menu Button */}
+          <button
+            className="md:hidden flex items-center justify-center p-2 rounded focus:outline-none border border-gray-300 bg-white"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+            aria-label="Open menu"
+          >
+            <Menu className="h-7 w-7" />
+          </button>
+
+          <div className="hidden md:flex items-center">
             <UserProfile />
           </div>
         </div>
       </header>
-      
+      {/* Mobile Nav Drawer */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex md:hidden">
+          <div className="bg-white w-64 h-full shadow-lg flex flex-col p-4">
+            <div className="flex items-center justify-between mb-6">
+              <span className="font-extrabold text-[24px] tracking-wide">IRIS AI</span>
+              <button onClick={() => setMobileMenuOpen(false)} className="p-2 rounded focus:outline-none">
+                <span className="text-xl">×</span>
+              </button>
+            </div>
+            {filteredNavItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 py-3 px-2 rounded text-[16px] font-medium hover:bg-gray-100 transition-all",
+                  pathname === item.href && "bg-gray-100 font-bold"
+                )}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <item.icon className="h-6 w-6" />
+                {item.label}
+              </Link>
+            ))}
+            {user && !isAdmin() && (
+              <Link
+                href="/notifications"
+                className="flex items-center gap-3 py-3 px-2 rounded text-[16px] font-medium hover:bg-gray-100 transition-all"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Bell className="h-6 w-6" />
+                Notifications
+                {assignedLeadsCount > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold shadow-md border-2 border-white">
+                    {assignedLeadsCount}
+                  </span>
+                )}
+              </Link>
+            )}
+            <Button
+              variant="outline"
+              className="mt-6 w-full flex items-center justify-center gap-2"
+              onClick={() => {
+                setIsAddAccountDialogOpen(true);
+                setMobileMenuOpen(false);
+              }}
+            >
+              <PlusCircle className="h-6 w-6" /> Quick Create
+            </Button>
+            <div className="mt-auto pt-8">
+              <UserProfile />
+            </div>
+          </div>
+          <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
+        </div>
+      )}
       {/* Mobile Nav - Normal positioning */}
       <div 
         className={cn(
@@ -165,29 +231,31 @@ export default function HorizontalNav() {
         )}
         style={{ height: '60px' }} 
       >
-        {filteredNavItems.map((item) => (
-          <Button
-            key={item.href}
-            variant="ghost"
-            size="sm"
-            asChild
-            className={cn(
-              "flex flex-col items-center gap-1 flex-1 justify-center text-[15px] px-2 py-2 min-w-[60px] shadow-none border-none bg-transparent text-black hover:underline hover:bg-transparent transition-all duration-150", 
-              (pathname === item.href || 
-                (pathname.startsWith(item.href) && 
-                  (item.href === '/dashboard' ? pathname === '/dashboard' : true))) &&
-              "font-semibold underline" 
-            )}
-            style={{ boxShadow: 'none', background: 'none' }}
-          >
-            <Link href={item.href} className="flex flex-col items-center gap-1">
-              <item.icon className="h-7 w-7" />
-              <span className="truncate text-[15px] leading-tight text-center">{item.label}</span>
-            </Link>
-          </Button>
-        ))}
+        {/* Hide mobile nav bar if menu is open */}
+        {!mobileMenuOpen && (
+          filteredNavItems.map((item) => (
+            <Button
+              key={item.href}
+              variant="ghost"
+              size="sm"
+              asChild
+              className={cn(
+                "flex flex-col items-center gap-1 flex-1 justify-center text-[15px] px-2 py-2 min-w-[60px] shadow-none border-none bg-transparent text-black hover:underline hover:bg-transparent transition-all duration-150", 
+                (pathname === item.href || 
+                  (pathname.startsWith(item.href) && 
+                    (item.href === '/dashboard' ? pathname === '/dashboard' : true))) &&
+                "font-semibold underline" 
+              )}
+              style={{ boxShadow: 'none', background: 'none' }}
+            >
+              <Link href={item.href} className="flex flex-col items-center gap-1">
+                <item.icon className="h-7 w-7" />
+                <span className="truncate text-[15px] leading-tight text-center">{item.label}</span>
+              </Link>
+            </Button>
+          ))
+        )}
       </div>
-      
       <AddAccountDialog open={isAddAccountDialogOpen} onOpenChange={setIsAddAccountDialogOpen} />
     </>
   );
