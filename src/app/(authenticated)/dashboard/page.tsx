@@ -528,6 +528,7 @@ export default function DashboardPage() {
               ) : leads.length > 0 ? (
                   (leads as any[])
                     .filter((lead) => lead.status !== "Converted to Account")
+                    .slice(0, 4)
                     .map((lead) => (
                       <div
                         key={lead.id}

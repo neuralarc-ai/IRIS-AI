@@ -9,15 +9,20 @@ import Papa, { ParseResult } from 'papaparse';
 
 interface CSVImportProps {
   type: 'leads' | 'accounts' | 'opportunities';
-  onImport: (data: any[]) => void;
+  onImport: (data: any[], rejectedData: any[]) => void;
   templateUrl?: string;
+  disabled?: boolean;
 }
 
 interface CSVRow {
   [key: string]: string;
 }
 
-export default function CSVImport({ type, onImport, templateUrl }: CSVImportProps) {
+interface RejectedRow extends CSVRow {
+  _errors?: string[];
+}
+
+export default function CSVImport({ type, onImport, templateUrl, disabled = false }: CSVImportProps) {
   console.log('🔄 CSVImport component rendered with props:', { type, templateUrl });
   
   const [isDragging, setIsDragging] = useState(false);
@@ -105,79 +110,75 @@ export default function CSVImport({ type, onImport, templateUrl }: CSVImportProp
             console.log('📋 Available fields in first row:', results.data[0]);
           }
           
-          const totalRows = results.data.length;
-          console.log('🔍 Starting email validation...');
-          
-          const validData = results.data.filter((row, index) => {
-            console.log(`🔍 Row ${index} full data:`, row);
+          const validData: CSVRow[] = [];
+          const rejectedData: RejectedRow[] = [];
+
+          results.data.forEach((row, index) => {
+            const errors: string[] = [];
             
-            // Check for email field with various possible names (case-insensitive)
-            const possibleEmailFields = ['email', 'Email', 'EMAIL', 'e-mail', 'e_mail', 'email_address', 'emailAddress', 'contact_email', 'contactEmail'];
-            let emailValue = null;
-            let emailFieldName = null;
-            
-            // Find the email field (case-insensitive)
-            for (const fieldName of possibleEmailFields) {
-              if (row.hasOwnProperty(fieldName)) {
-                emailValue = row[fieldName];
-                emailFieldName = fieldName;
-                console.log(`🔍 Row ${index} email found with field name: ${fieldName}`);
-                break;
-              }
+            // Clean up and validate company name
+            const companyName = (row.company_name || row.companyName || row['Company Name'] || '').trim();
+            if (!companyName) {
+              errors.push('Company Name is missing');
+            }
+
+            // Clean up and validate person name
+            const personName = (row.person_name || row.personName || row['Person Name'] || row['Contact Person'] || row['Contact Name'] || '').trim();
+            if (!personName) {
+              errors.push('Person Name is missing');
             }
             
-            // Also check all fields for any that contain 'email' (case-insensitive)
+            // Clean up and validate email
+            let emailValue = (row.email || row.Email || row['Email Address'] || '').trim();
+            if (emailValue.includes('mailto:')) {
+              emailValue = emailValue.replace('mailto:', '').split(':')[0];
+            }
             if (!emailValue) {
-              for (const [key, value] of Object.entries(row)) {
-                if (key.toLowerCase().includes('email')) {
-                  emailValue = value;
-                  emailFieldName = key;
-                  console.log(`🔍 Row ${index} email found with partial match: ${key}`);
-                  break;
-                }
-              }
+              errors.push('Email is missing');
+            } else if (!emailValue.includes('@')) {
+              errors.push('Email is invalid (must contain @)');
             }
-            
-            console.log(`🔍 Row ${index} email field found:`, emailFieldName);
-            console.log(`🔍 Row ${index} email value:`, emailValue);
-            console.log(`🔍 Row ${index} email type:`, typeof emailValue);
-            console.log(`🔍 Row ${index} email length:`, emailValue ? emailValue.length : 'null/undefined');
-            
-            // More flexible email validation - accept any non-empty value
-            const hasEmail = emailValue && emailValue.toString().trim() !== '';
-            console.log(`Row ${index}: email="${emailValue}" - Valid: ${hasEmail}`);
-            return hasEmail;
+
+            // Clean up optional fields
+            const phone = (row.phone || row.Phone || row['Phone Number'] || '').trim();
+            const linkedinUrl = (row.linkedin_profile_url || row.linkedinProfileUrl || row['LinkedIn Profile'] || row['LinkedIn URL'] || '').trim();
+            const country = (row.country || row.Country || row['Country/Region'] || '').trim();
+
+            const processedRow = {
+              company_name: companyName,
+              person_name: personName,
+              email: emailValue,
+              phone,
+              linkedin_profile_url: linkedinUrl,
+              country,
+              status: 'New' as const,
+              _originalRow: { ...row },
+              _rowIndex: index,
+              _errors: errors
+            };
+
+            if (errors.length > 0) {
+              rejectedData.push(processedRow);
+            } else {
+              validData.push(processedRow);
+            }
           });
 
-          const rejectedCount = totalRows - validData.length;
           console.log('📊 Validation results:', {
-            totalRows,
-            validDataCount: validData.length,
-            rejectedCount,
-            validData
+            totalRows: results.data.length,
+            validCount: validData.length,
+            rejectedCount: rejectedData.length,
+            rejectedData
           });
 
-          if (validData.length > 0) {
-            console.log('✅ Valid data found, calling onImport...');
-            onImport(validData);
-            let description = `Successfully imported ${validData.length} ${type}.`;
-            if (rejectedCount > 0) {
-              description += ` ${rejectedCount} row(s) rejected due to missing or empty email.`;
-            }
-            console.log('📢 Showing success toast:', description);
-            toast({
-              title: "Import Complete",
-              description: description,
-              variant: "default"
-            });
-          } else {
-            console.log('❌ No valid data found after validation');
-            toast({
-              title: "No valid data to import",
-              description: `All ${totalRows} row(s) rejected due to missing or empty email.`, 
-              variant: "destructive"
-            });
-          }
+          onImport(validData, rejectedData);
+          
+          const description = `Processed ${results.data.length} records. ${validData.length} valid, ${rejectedData.length} rejected.`;
+          toast({
+            title: "Import Complete",
+            description: description,
+            variant: "default"
+          });
         },
         error: (error: Error) => {
           console.error('❌ CSV parsing error:', error);
@@ -219,21 +220,22 @@ export default function CSVImport({ type, onImport, templateUrl }: CSVImportProp
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center ${
             isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
-          }`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
+          } ${disabled ? 'opacity-60 pointer-events-none' : ''}`}
+          onDragOver={disabled ? undefined : handleDragOver}
+          onDragLeave={disabled ? undefined : handleDragLeave}
+          onDrop={disabled ? undefined : handleDrop}
         >
           <input
             type="file"
             accept=".csv"
-            onChange={handleFileSelect}
+            onChange={disabled ? undefined : handleFileSelect}
             className="hidden"
             id="csv-upload"
+            disabled={disabled}
           />
           <label
             htmlFor="csv-upload"
-            className="cursor-pointer flex flex-col items-center"
+            className={`cursor-pointer flex flex-col items-center ${disabled ? 'pointer-events-none' : ''}`}
           >
             <Upload className="h-8 w-8 text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">
@@ -243,6 +245,11 @@ export default function CSVImport({ type, onImport, templateUrl }: CSVImportProp
               Only CSV files are supported
             </p>
           </label>
+          {disabled && (
+            <div className="absolute inset-0 bg-white/60 z-20 rounded-lg flex items-center justify-center">
+              <span className="text-muted-foreground font-medium">Importing...</span>
+            </div>
+          )}
         </div>
 
         {isLoading && (

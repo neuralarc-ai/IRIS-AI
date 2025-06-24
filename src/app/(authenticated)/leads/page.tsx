@@ -12,14 +12,47 @@ import { useToast } from "@/hooks/use-toast";
 import type { Lead } from '@/types';
 import LeadsListWithFilter from '@/components/leads/LeadsListWithFilter';
 import { useAuth } from "@/hooks/use-auth";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface RejectedLead {
+  company_name: string;
+  person_name: string;
+  email: string;
+  phone?: string;
+  linkedin_profile_url?: string;
+  country?: string;
+  _errors?: string[];
+  _rowIndex: number;
+}
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddLeadDialogOpen, setIsAddLeadDialogOpen] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const { toast } = useToast();
   const { user, isAdmin, isLoading: authLoading } = useAuth();
+  const [rejectedLeads, setRejectedLeads] = useState<RejectedLead[]>([]);
+  const [showRejectedDialog, setShowRejectedDialog] = useState(false);
+  const [editingLeads, setEditingLeads] = useState<RejectedLead[]>([]);
 
   // Fetch leads from Supabase
   const fetchLeads = async () => {
@@ -104,7 +137,8 @@ export default function LeadsPage() {
     });
   };
 
-  const handleImport = async (importedData: any[]) => {
+  const handleImport = async (validData: any[], rejectedData: RejectedLead[]) => {
+    setIsImporting(true);
     try {
       if (!user) {
         console.error('❌ No user found for import');
@@ -116,87 +150,30 @@ export default function LeadsPage() {
         return;
       }
       
-      console.log('🔄 Starting CSV import process...');
-      console.log('📊 Imported data:', importedData);
-      console.log('👤 Current user:', user);
-      
-      if (!importedData || importedData.length === 0) {
-        console.error('❌ No data to import');
-        toast({
-          title: "Import Failed",
-          description: "No valid data found in the CSV file.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Process imported data and add to leads
-      const processedLeads = importedData.map((item, index) => {
-        const processed = {
-          companyName: item.company_name || item.companyName || item['Company Name'] || '',
-          personName: item.person_name || item.personName || item['Person Name'] || item['Contact Name'] || '',
-          email: item.email || item.Email || item['Email Address'] || '',
-          phone: item.phone || item.Phone || item['Phone Number'] || '',
-          linkedinProfileUrl: item.linkedin_profile_url || item.linkedinProfileUrl || item['LinkedIn Profile'] || item['LinkedIn URL'] || '',
-          country: item.country || item.Country || '',
-          status: 'New' as const,
-        };
-        
-        console.log(`🔄 Processed lead ${index}:`, processed);
-        return processed;
-      });
-
-      console.log('🔄 All processed leads:', processedLeads);
-
-      // Validate that we have required fields
-      const invalidLeads = processedLeads.filter(lead => !lead.companyName || !lead.personName || !lead.email);
-      if (invalidLeads.length > 0) {
-        console.error('❌ Invalid leads found:', invalidLeads);
-        toast({
-          title: "Import Failed",
-          description: `${invalidLeads.length} leads are missing required fields (company name, person name, or email).`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Add each imported lead via API
+      // Process valid data first
       const newLeads: Lead[] = [];
+      let successCount = 0;
+      let errorCount = 0;
       
-      for (let i = 0; i < processedLeads.length; i++) {
-        const leadData = processedLeads[i];
-        console.log(`🔄 Creating lead ${i + 1}/${processedLeads.length}:`, leadData);
-        
-        const requestBody = {
-          company_name: leadData.companyName,
-          person_name: leadData.personName,
-          email: leadData.email,
-          phone: leadData.phone,
-          linkedin_profile_url: leadData.linkedinProfileUrl,
-          country: leadData.country,
-          status: leadData.status,
-          created_by_user_id: user.id,
-        };
-        
-        console.log('📤 API request body:', requestBody);
-        
+      for (const leadData of validData) {
         try {
           const response = await fetch('/api/leads', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody)
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              company_name: leadData.company_name,
+              person_name: leadData.person_name,
+              email: leadData.email,
+              phone: leadData.phone,
+              linkedin_profile_url: leadData.linkedin_profile_url,
+              country: leadData.country,
+              created_by_user_id: user.id,
+            })
           });
-
-          console.log('📥 API response status:', response.status);
 
           if (response.ok) {
             const result = await response.json();
-            console.log('✅ Lead created successfully:', result);
-            
-            // Transform the API response to match the Lead interface
-            const newLead: Lead = {
+            newLeads.push({
               id: result.data.id,
               companyName: result.data.company_name,
               personName: result.data.person_name,
@@ -211,45 +188,113 @@ export default function LeadsPage() {
               updatedAt: result.data.updated_at,
               assigned_user_id: result.data.assigned_user_id,
               created_by_user_id: result.data.created_by_user_id,
-            };
-            
-            console.log('🔄 Transformed lead:', newLead);
-            newLeads.push(newLead);
+            });
+            successCount++;
           } else {
-            const errorData = await response.json();
-            console.error('❌ Failed to create lead:', errorData);
-            throw new Error(`Failed to create lead: ${errorData.error || 'Unknown error'}`);
+            errorCount++;
           }
         } catch (error) {
-          console.error(`❌ Error creating lead ${i + 1}:`, error);
-          throw error;
+          console.error('Error creating lead:', error);
+          errorCount++;
         }
       }
 
-      console.log('🔄 All leads created, updating state...');
-      console.log('📊 New leads to add:', newLeads);
-      console.log('📊 Current leads count:', leads.length);
+      // Update state with valid leads
+      setLeads(prevLeads => [...newLeads, ...prevLeads]);
 
-      // Update local state with all new leads
-      setLeads(prevLeads => {
-        const updatedLeads = [...newLeads, ...prevLeads];
-        console.log('🔄 Updated leads state:', updatedLeads);
-        return updatedLeads;
-      });
-
-      console.log('✅ State updated successfully');
+      // Handle rejected data
+      if (rejectedData.length > 0) {
+        setRejectedLeads(rejectedData);
+        setEditingLeads(rejectedData);
+        setShowRejectedDialog(true);
+      }
 
       toast({
-        title: "Import Successful",
-        description: `${newLeads.length} leads have been imported successfully.`,
+        title: "Import Summary",
+        description: `Total: ${validData.length + rejectedData.length} records
+          ✓ ${successCount} imported successfully
+          ${rejectedData.length > 0 ? `\n⚠ ${rejectedData.length} need review` : ''}
+          ${errorCount > 0 ? `\n⚠ ${errorCount} failed to import` : ''}`,
+        variant: "default"
       });
-      
-      setShowImport(false);
     } catch (error) {
-      console.error('❌ Error importing leads:', error);
+      console.error('Error importing leads:', error);
       toast({
         title: "Import Failed",
-        description: error instanceof Error ? error.message : "Failed to import leads. Please check your file format.",
+        description: error instanceof Error ? error.message : "Failed to import leads.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+      setShowImport(false);
+    }
+  };
+
+  const handleSaveRejectedLeads = async () => {
+    if (!editingLeads.length || !user) return;
+
+    const results = { success: 0, failed: 0 };
+    const newLeads: Lead[] = [];
+
+    for (const lead of editingLeads) {
+      try {
+        const response = await fetch('/api/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            company_name: lead.company_name,
+            person_name: lead.person_name,
+            email: lead.email,
+            phone: lead.phone,
+            linkedin_profile_url: lead.linkedin_profile_url,
+            country: lead.country,
+            created_by_user_id: user.id,
+          })
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          newLeads.push({
+            id: result.data.id,
+            companyName: result.data.company_name,
+            personName: result.data.person_name,
+            email: result.data.email,
+            phone: result.data.phone,
+            linkedinProfileUrl: result.data.linkedin_profile_url,
+            country: result.data.country,
+            status: result.data.status,
+            opportunityIds: [],
+            updateIds: [],
+            createdAt: result.data.created_at,
+            updatedAt: result.data.updated_at,
+            assigned_user_id: result.data.assigned_user_id,
+            created_by_user_id: result.data.created_by_user_id,
+          });
+          results.success++;
+        } else {
+          results.failed++;
+        }
+      } catch (error) {
+        console.error('Error saving lead:', error);
+        results.failed++;
+      }
+    }
+
+    if (results.success > 0) {
+      setLeads(prevLeads => [...newLeads, ...prevLeads]);
+      setShowRejectedDialog(false);
+      setRejectedLeads([]);
+      setEditingLeads([]);
+
+      toast({
+        title: "Leads Saved",
+        description: `${results.success} leads saved successfully.${results.failed > 0 ? ` ${results.failed} failed.` : ''}`,
+        variant: results.failed > 0 ? "destructive" : "default"
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to save leads. Please try again.",
         variant: "destructive",
       });
     }
@@ -301,16 +346,24 @@ export default function LeadsPage() {
             type="leads"
             onImport={handleImport}
             templateUrl="/templates/leads-template.csv"
+            disabled={isImporting}
           />
           <Button
             variant="ghost"
             size="lg"
             className="absolute -top-2 -right-12 text-muted-foreground hover:bg-transparent"
             onClick={() => setShowImport(false)}
+            disabled={isImporting}
           >
             <ChevronUp className="h-6 w-6" />
             <span className="sr-only">Close import</span>
           </Button>
+          {isImporting && (
+            <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10 rounded-lg">
+              <LoadingSpinner size={32} />
+              <span className="ml-3 text-muted-foreground">Importing leads...</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -349,6 +402,88 @@ export default function LeadsPage() {
           user={user}
         />
       )}
+
+      <Dialog open={showRejectedDialog} onOpenChange={setShowRejectedDialog}>
+        <DialogContent className="max-w-4xl bg-background border-border">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Review Rejected Leads ({rejectedLeads.length})</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              These records were rejected due to missing or invalid data. Please review and fix the issues below.
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[600px] overflow-auto rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="w-[100px]">Row</TableHead>
+                  <TableHead>Company Name</TableHead>
+                  <TableHead>Person Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Issues</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {editingLeads.map((lead, index) => (
+                  <TableRow key={index} className={lead._errors?.length ? 'bg-destructive/5 hover:bg-destructive/10' : 'hover:bg-muted/50'}>
+                    <TableCell className="font-medium">{lead._rowIndex + 1}</TableCell>
+                    <TableCell>
+                      <Input
+                        value={lead.company_name}
+                        onChange={e => {
+                          const newLeads = [...editingLeads];
+                          newLeads[index] = { ...lead, company_name: e.target.value };
+                          setEditingLeads(newLeads);
+                        }}
+                        className={!lead.company_name ? 'border-destructive focus-visible:ring-destructive' : 'bg-background'}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        value={lead.person_name}
+                        onChange={e => {
+                          const newLeads = [...editingLeads];
+                          newLeads[index] = { ...lead, person_name: e.target.value };
+                          setEditingLeads(newLeads);
+                        }}
+                        className={!lead.person_name ? 'border-destructive focus-visible:ring-destructive' : 'bg-background'}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="email"
+                        value={lead.email}
+                        onChange={e => {
+                          const newLeads = [...editingLeads];
+                          newLeads[index] = { ...lead, email: e.target.value };
+                          setEditingLeads(newLeads);
+                        }}
+                        className={!lead.email ? 'border-destructive focus-visible:ring-destructive' : 'bg-background'}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-destructive space-y-1">
+                        {lead._errors?.map((error, i) => (
+                          <div key={i}>• {error}</div>
+                        ))}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+
+          <div className="flex justify-end gap-2 mt-6">
+            <Button variant="outline" onClick={() => setShowRejectedDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveRejectedLeads}>
+              Save All Fixed Leads
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

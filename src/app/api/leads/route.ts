@@ -74,21 +74,33 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
+    console.log('📥 Received lead creation request:', body);
+    
     // Validate required fields
     const { company_name, person_name, email } = body
     
     if (!company_name || !person_name || !email) {
+      console.error('❌ Missing required fields:', { company_name, person_name, email });
       return NextResponse.json(
         { error: 'Missing required fields: company_name, person_name, email' },
         { status: 400 }
       )
     }
 
+    // Clean up email - remove any mailto: prefixes and extra formatting
+    let cleanEmail = email.trim();
+    if (cleanEmail.includes('mailto:')) {
+      cleanEmail = cleanEmail.replace('mailto:', '').split(':')[0];
+    }
+    
+    console.log('🧹 Cleaned email:', { original: email, cleaned: cleanEmail });
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(cleanEmail)) {
+      console.error('❌ Invalid email format:', cleanEmail);
       return NextResponse.json(
-        { error: 'Invalid email format' },
+        { error: `Invalid email format: ${cleanEmail}` },
         { status: 400 }
       )
     }
@@ -97,15 +109,27 @@ export async function POST(request: NextRequest) {
     const { data: existingLead } = await supabase
       .from('leads')
       .select('id')
-      .eq('email', email)
+      .eq('email', cleanEmail)
       .single()
 
     if (existingLead) {
+      console.error('❌ Lead with email already exists:', cleanEmail);
       return NextResponse.json(
         { error: 'Lead with this email already exists' },
         { status: 409 }
       )
     }
+
+    console.log('✅ Validation passed, creating lead with data:', {
+      company_name,
+      person_name,
+      email: cleanEmail,
+      phone: body.phone || null,
+      linkedin_profile_url: body.linkedin_profile_url || null,
+      country: body.country || null,
+      status: body.status || 'New',
+      created_by_user_id: body.created_by_user_id || null
+    });
 
     // Create new lead
     const { data, error } = await supabase
@@ -113,7 +137,7 @@ export async function POST(request: NextRequest) {
       .insert({
         company_name,
         person_name,
-        email,
+        email: cleanEmail,
         phone: body.phone || null,
         linkedin_profile_url: body.linkedin_profile_url || null,
         country: body.country || null,
@@ -124,12 +148,14 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Error creating lead:', error)
+      console.error('❌ Error creating lead:', error)
       return NextResponse.json(
-        { error: 'Failed to create lead' },
+        { error: `Failed to create lead: ${error.message}` },
         { status: 500 }
       )
     }
+
+    console.log('✅ Lead created successfully:', data);
 
     return NextResponse.json(
       { 
@@ -140,7 +166,7 @@ export async function POST(request: NextRequest) {
     )
 
   } catch (error) {
-    console.error('Unexpected error:', error)
+    console.error('❌ Unexpected error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

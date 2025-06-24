@@ -27,7 +27,6 @@ import {
   UserCheck,
   UserPlus,
   Trash2,
-  MessageSquare,
 } from "lucide-react";
 import type { Lead } from "@/types";
 import { formatDistanceToNow, parseISO } from "date-fns";
@@ -50,7 +49,16 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
-import AddUpdateDialog from "@/components/updates/AddUpdateDialog";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 interface LeadCardProps {
   lead: Lead;
@@ -120,7 +128,12 @@ export default function LeadCard({
   const [isConverting, setIsConverting] = useState(false);
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showAddUpdateDialog, setShowAddUpdateDialog] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logContent, setLogContent] = useState("");
+  const [logDate, setLogDate] = useState("");
+  const [logSubmitting, setLogSubmitting] = useState(false);
 
   const isAssignedToMe = lead.assigned_user_id === user?.id;
   const isCreatedByMe = lead.created_by_user_id === user?.id;
@@ -237,193 +250,309 @@ export default function LeadCard({
     }
   };
 
+  // Fetch logs for this lead
+  const fetchLogs = async () => {
+    setLogsLoading(true);
+    try {
+      const res = await fetch(`/api/updates?lead_id=${lead.id}`);
+      const result = await res.json();
+      setLogs(result.data || []);
+    } catch (e) {
+      setLogs([]);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // Log new activity
+  const handleLogActivity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!logContent.trim()) return;
+    if (logDate && logDate < todayStr) {
+      toast({ title: "Invalid Date", description: "Please select today or a future date.", variant: "destructive" });
+      return;
+    }
+    setLogSubmitting(true);
+    const newLog = {
+      id: `temp-${Date.now()}`,
+      content: logContent,
+      date: logDate ? new Date(logDate).toISOString() : new Date().toISOString(),
+    };
+    setLogs(prev => [newLog, ...prev]); // Optimistically add log
+    try {
+      const res = await fetch("/api/updates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead_id: lead.id,
+          type: "General",
+          content: logContent,
+          date: logDate ? new Date(logDate).toISOString() : new Date().toISOString(),
+          updated_by_user_id: user?.id,
+        }),
+      });
+      if (res.ok) {
+        setLogContent("");
+        setLogDate("");
+        const result = await res.json();
+        if (result.data) {
+          setLogs(prev => [result.data, ...prev.filter(l => l.id !== newLog.id)]);
+        } else {
+          fetchLogs(); // fallback if no data returned
+        }
+        toast({ title: "Activity Logged", description: "Activity has been added to records." });
+      } else {
+        setLogs(prev => prev.filter(l => l.id !== newLog.id)); // Remove optimistic log on error
+        toast({ title: "Failed to log activity", variant: "destructive" });
+      }
+    } catch (e) {
+      setLogs(prev => prev.filter(l => l.id !== newLog.id)); // Remove optimistic log on error
+      toast({ title: "Failed to log activity", variant: "destructive" });
+    } finally {
+      setLogSubmitting(false);
+    }
+  };
+
   return (
-    <Card className="flex flex-col h-full bg-white text-black rounded-[8px] p-2 border-none">
-      <CardHeader className="pb-3 px-6 pt-6">
-        <div className="flex justify-between items-start mb-1">
-          <CardTitle className="text-xl font-headline flex items-center" style={{ color: '#97A88C' }}>
-            <Briefcase className="mr-2 h-5 w-5 shrink-0" style={{ color: '#97A88C' }} />
-            {lead.companyName}
-            {isAssignedToMe && !isCreatedByMe && (
-              <UserCheck className="ml-2 h-4 w-4 text-blue-500" title="Assigned to you" />
-            )}
-            {isCreatedByMe && (
-              <UserPlus className="ml-2 h-4 w-4 text-green-500" title="Created by you" />
-            )}
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <Link href={`/updates?lead_id=${lead.id}&entity_type=lead`} passHref>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-gray-600 hover:text-gray-800"
-              >
-                <Eye className="h-4 w-4 mr-1" />
-                View Log
-              </Button>
-            </Link>
-            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-              <AlertDialogTrigger asChild>
-                <button
-                  className={`capitalize whitespace-nowrap ml-2 focus:outline-none ${getStatusBadgeColorClasses(
-                    lead.status
-                  )} inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors`}
-                  disabled={
-                    isStatusUpdating ||
-                    lead.status === "Converted to Account" ||
-                    lead.status === "Lost"
-                  }
-                  aria-label="Change status"
-                >
-                  {isStatusUpdating ? (
-                    <span className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  ) : null}
-                  {lead.status}
-                </button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Lead</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete this lead? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel asChild>
-                    <Button variant="outline">Cancel</Button>
-                  </AlertDialogCancel>
-                  <AlertDialogAction asChild>
-                    <Button variant="destructive" onClick={handleDelete}>Delete</Button>
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </div>
-        <CardDescription className="text-sm text-muted-foreground flex items-center">
-          <Users className="mr-2 h-4 w-4 shrink-0 text-gray-700" />{" "}
-          {lead.personName}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex-grow space-y-2.5 text-sm px-6">
-        {lead.email && (
-          <div className="flex items-center text-muted-foreground">
-            <Mail className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-            <a
-              href={`mailto:${lead.email}`}
-              className="hover:text-primary hover:underline"
-            >
-              {lead.email}
-            </a>
-          </div>
-        )}
-        {lead.phone && (
-          <div className="flex items-center text-muted-foreground">
-            <Phone className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-            <span>{lead.phone}</span>
-          </div>
-        )}
-        {lead.linkedinProfileUrl && (
-          <div className="flex items-center text-muted-foreground">
-            <Linkedin className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-            <a
-              href={lead.linkedinProfileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-primary hover:underline truncate"
-            >
-              {lead.linkedinProfileUrl
-                .replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, "")
-                .replace(/\/$/, "")}
-            </a>
-          </div>
-        )}
-        {lead.country && (
-          <div className="flex items-center text-muted-foreground">
-            <MapPin className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-            <span>{lead.country}</span>
-          </div>
-        )}
-        <div className="pt-2 space-y-1">
-          <div className="text-xs text-muted-foreground flex items-center">
-            <CalendarPlus className="mr-1.5 h-3.5 w-3.5 shrink-0 text-gray-700" />
-            Created: {formatDate(lead.createdAt)}
-          </div>
-          <div className="text-xs text-muted-foreground flex items-center">
-            <History className="mr-1.5 h-3.5 w-3.5 shrink-0 text-gray-700" />
-            Last Updated: {formatDate(lead.updatedAt)}
-          </div>
-        </div>
-      </CardContent>
-      <CardFooter className="pt-4 border-t mt-auto px-6 pb-6 flex items-center justify-between gap-2">
-        <Button size="sm" asChild className="bg-[#6FCF97] text-white border-none shadow-none hover:bg-[#8FE6B5] dark:hover:bg-[#4B8B6F] hover:text-white focus:bg-[#6FCF97] focus:text-white">
-          <Link href={`/leads/${lead.id}`}>
-            <Eye className="mr-2 h-4 w-4" />
-            View Details
-          </Link>
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setShowAddUpdateDialog(true)}
-          title="Log Communication Update"
-          className="hover:bg-muted"
+    <>
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <div
+          className="flex flex-col h-full bg-white text-black rounded-[8px] p-2 border-none cursor-pointer"
+          onClick={e => {
+            // Prevent modal open on action button clicks
+            if ((e.target as HTMLElement).closest("button, a")) return;
+            setShowModal(true);
+            fetchLogs();
+          }}
         >
-          <MessageSquare className="h-4 w-4 text-primary" />
-        </Button>
-        <div className="flex items-center gap-2">
-          {lead.status === "Converted to Account" ? (
-            <Button
-              size="sm"
-              disabled
-              variant="beige"
-              className="cursor-not-allowed opacity-70"
-            >
-              <CheckSquare className="mr-2 h-4 w-4" />
-              Converted
+          <CardHeader className="pb-3 px-6 pt-6">
+            <div className="flex justify-between items-start mb-1">
+              <CardTitle className="text-xl font-headline flex items-center" style={{ color: '#97A88C' }}>
+                <Briefcase className="mr-2 h-5 w-5 shrink-0" style={{ color: '#97A88C' }} />
+                {lead.companyName}
+                {isAssignedToMe && !isCreatedByMe && (
+                  <UserCheck className="ml-2 h-4 w-4 text-blue-500" />
+                )}
+                {isCreatedByMe && (
+                  <UserPlus className="ml-2 h-4 w-4 text-green-500" />
+                )}
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mr-1"
+                  onClick={e => {
+                    e.stopPropagation();
+                    setShowModal(true);
+                    fetchLogs();
+                  }}
+                >
+                  View Records
+                </Button>
+                <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      className={`capitalize whitespace-nowrap ml-2 focus:outline-none ${getStatusBadgeColorClasses(
+                        lead.status
+                      )} inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors`}
+                      disabled={
+                        isStatusUpdating ||
+                        lead.status === "Converted to Account" ||
+                        lead.status === "Lost"
+                      }
+                      aria-label="Change status"
+                    >
+                      {isStatusUpdating ? (
+                        <span className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : null}
+                      {lead.status}
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Lead</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete this lead? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel asChild>
+                        <Button variant="outline">Cancel</Button>
+                      </AlertDialogCancel>
+                      <AlertDialogAction asChild>
+                        <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+            <CardDescription className="text-sm text-muted-foreground flex items-center">
+              <Users className="mr-2 h-4 w-4 shrink-0 text-gray-700" />{" "}
+              {lead.personName}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex-grow space-y-2.5 text-sm px-6">
+            {lead.email && (
+              <div className="flex items-center text-muted-foreground">
+                <Mail className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
+                <a
+                  href={`mailto:${lead.email}`}
+                  className="hover:text-primary hover:underline"
+                >
+                  {lead.email}
+                </a>
+              </div>
+            )}
+            {lead.phone && (
+              <div className="flex items-center text-muted-foreground">
+                <Phone className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
+                <span>{lead.phone}</span>
+              </div>
+            )}
+            {lead.linkedinProfileUrl && (
+              <div className="flex items-center text-muted-foreground">
+                <Linkedin className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
+                <a
+                  href={lead.linkedinProfileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-primary hover:underline truncate"
+                >
+                  {lead.linkedinProfileUrl
+                    .replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, "")
+                    .replace(/\/$/, "")}
+                </a>
+              </div>
+            )}
+            {lead.country && (
+              <div className="flex items-center text-muted-foreground">
+                <MapPin className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
+                <span>{lead.country}</span>
+              </div>
+            )}
+            <div className="pt-2 space-y-1">
+              <div className="text-xs text-muted-foreground flex items-center">
+                <CalendarPlus className="mr-1.5 h-3.5 w-3.5 shrink-0 text-gray-700" />
+                Created: {formatDate(lead.createdAt)}
+              </div>
+              <div className="text-xs text-muted-foreground flex items-center">
+                <History className="mr-1.5 h-3.5 w-3.5 shrink-0 text-gray-700" />
+                Last Updated: {formatDate(lead.updatedAt)}
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter className="pt-4 border-t mt-auto px-6 pb-6 flex items-center justify-between gap-2">
+            <Button size="sm" asChild className="bg-[#6FCF97] text-white border-none shadow-none hover:bg-[#8FE6B5] dark:hover:bg-[#4B8B6F] hover:text-white focus:bg-[#6FCF97] focus:text-white">
+              <Link href={`/leads/${lead.id}`}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </Link>
             </Button>
-          ) : (
-            lead.status !== "Lost" && (
-              <>
+            <div className="flex items-center gap-2">
+              {lead.status === "Converted to Account" ? (
                 <Button
                   size="sm"
-                  onClick={handleConvert}
-                  disabled={isConverting}
+                  disabled
                   variant="beige"
+                  className="cursor-not-allowed opacity-70"
                 >
-                  {isConverting ? (
-                    <>
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      Converting...
-                    </>
-                  ) : (
-                    <>
-                      <CheckSquare className="mr-2 h-4 w-4" />
-                      Convert
-                    </>
-                  )}
+                  <CheckSquare className="mr-2 h-4 w-4" />
+                  Converted
                 </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setShowDeleteDialog(true)}
-                  title="Delete Lead"
-                  className="hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </>
-            )
-          )}
+              ) : (
+                lead.status !== "Lost" && (
+                  <>
+                    <Button
+                      size="sm"
+                      onClick={handleConvert}
+                      disabled={isConverting}
+                      variant="beige"
+                    >
+                      {isConverting ? (
+                        <>
+                          <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          Converting...
+                        </>
+                      ) : (
+                        <>
+                          <CheckSquare className="mr-2 h-4 w-4" />
+                          Convert
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setShowDeleteDialog(true)}
+                      title="Delete Lead"
+                      className="hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )
+              )}
+            </div>
+          </CardFooter>
         </div>
-      </CardFooter>
-      <AddUpdateDialog
-        open={showAddUpdateDialog}
-        onOpenChange={setShowAddUpdateDialog}
-        onUpdateAdded={() => setShowAddUpdateDialog(false)}
-        forceEntityType="lead"
-        forceEntityId={lead.id}
-      />
-    </Card>
+        <DialogContent className="max-w-xl w-full">
+          <DialogHeader>
+            <DialogTitle>{lead.companyName}</DialogTitle>
+            <DialogDescription>
+              <div className="mt-2 space-y-1">
+                <div><b>Name:</b> {lead.personName}</div>
+                <div><b>Email:</b> {lead.email}</div>
+                {lead.phone && <div><b>Number:</b> {lead.phone}</div>}
+                {lead.country && <div><b>Location:</b> {lead.country}</div>}
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <h3 className="font-semibold mb-2">Records</h3>
+            {logsLoading ? (
+              <div>Loading...</div>
+            ) : logs.length === 0 ? (
+              <div className="text-muted-foreground">No log found</div>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {logs.map((log) => (
+                  <div key={log.id} className="bg-gray-100 rounded p-2">
+                    <div className="text-sm">{log.content}</div>
+                    <div className="text-xs text-muted-foreground mt-1">Logged on: {log.date ? new Date(log.date).toLocaleDateString() : "-"}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <form className="mt-6" onSubmit={handleLogActivity}>
+            <h4 className="font-semibold mb-2">Log New Activity</h4>
+            <textarea
+              className="w-full border rounded p-2 mb-2"
+              rows={3}
+              placeholder="e.g., Follow-up call, sent proposal..."
+              value={logContent}
+              onChange={e => setLogContent(e.target.value)}
+              required
+            />
+            <input
+              type="date"
+              className="w-full border rounded p-2 mb-2"
+              value={logDate}
+              onChange={e => setLogDate(e.target.value)}
+              min={todayStr}
+            />
+            <DialogFooter>
+              <Button type="submit" className="bg-green-600 text-white" disabled={logSubmitting}>
+                {logSubmitting ? "Logging..." : "Log Activity"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

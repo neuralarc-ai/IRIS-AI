@@ -28,8 +28,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={`${sourceCodePro.variable} ${spaceGrotesk.variable}`}>
-      <body className={`font-sans antialiased bg-background text-foreground ${spaceGrotesk.className}`}>
+      <body className={`font-sans antialiased bg-background text-foreground ${spaceGrotesk.className} min-h-screen flex flex-col`}>
         {children}
+        <footer className="w-full py-4 flex justify-center items-center text-sm text-muted-foreground mt-auto sticky bottom-0 bg-background z-50">
+          IRIS- credit <span className="mx-1">©</span> 2025 NeuralArc
+        </footer>
         <Toaster />
       </body>
     </html>
