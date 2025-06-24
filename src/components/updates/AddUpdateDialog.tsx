@@ -226,7 +226,7 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded, for
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-3">
           <div>
-            <Label className="mb-2 block">Log Update For:</Label>
+            <Label className="mb-2 block">Update Record For:</Label>
             <RadioGroup value={entityType} onValueChange={(value: EntityType) => setEntityType(value)} className="flex space-x-4" disabled={!!forceEntityType}>
               {entityTypeOptions.map(opt => (
                 <div key={opt.value} className="flex items-center space-x-2">
