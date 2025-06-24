@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import PageTitle from "@/components/common/PageTitle";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +51,23 @@ import { format, parseISO } from "date-fns";
 import UpdateItem from "@/components/updates/UpdateItem";
 import { useAuth } from '@/hooks/use-auth';
 import RecentActivityItem from '@/components/updates/RecentActivityItem';
+import dynamic from 'next/dynamic';
+
+// Dynamically import heavy components
+const OpportunitiesPipeline = dynamic(() => import('@/components/dashboard/OpportunitiesPipeline'), {
+  loading: () => <Card className="h-full"><LoadingSpinner /></Card>,
+  ssr: false
+});
+
+const KeyOpportunityInsights = dynamic(() => import('@/components/dashboard/KeyOpportunityInsights'), {
+  loading: () => <Card className="h-full"><LoadingSpinner /></Card>,
+  ssr: false
+});
+
+const LeadEngagement = dynamic(() => import('@/components/dashboard/LeadEngagement'), {
+  loading: () => <Card className="h-full"><LoadingSpinner /></Card>,
+  ssr: false
+});
 
 interface OpportunityWithForecast extends Opportunity {
   forecast?: OpportunityForecast;
@@ -79,35 +96,53 @@ const getStatusBadgeVariant = (
 
 export default function DashboardPage() {
   const { user, isAdmin, isLoading: authLoading } = useAuth();
-  const [forecastedOpportunities, setForecastedOpportunities] = useState<
-    OpportunityWithForecast[]
-  >([]);
-  const [overallSalesForecast, setOverallSalesForecast] = useState<
-    string | null
-  >(null);
+  const [forecastedOpportunities, setForecastedOpportunities] = useState<OpportunityWithForecast[]>([]);
+  const [overallSalesForecast, setOverallSalesForecast] = useState<string | null>(null);
   const [recentUpdates, setRecentUpdates] = useState<Update[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const refreshTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [dataLoadingState, setDataLoadingState] = useState({
+    opportunities: true,
+    updates: true,
+    leads: true,
+    forecasts: true
+  });
 
-    const fetchDashboardData = async () => {
-      setIsLoading(true);
-      try {
-      const oppRes = await fetch("/api/opportunities");
+  const fetchOpportunities = async () => {
+    try {
+      const oppRes = await fetch("/api/opportunities?limit=10");
         const oppJson = await oppRes.json();
-        const opportunities: Opportunity[] = oppJson.data || [];
+      return oppJson.data || [];
+    } catch (error) {
+      console.error("Failed to fetch opportunities:", error);
+      return [];
+    } finally {
+      setDataLoadingState(prev => ({ ...prev, opportunities: false }));
+    }
+  };
 
-      const updRes = await fetch("/api/updates", {
+  const fetchUpdates = async () => {
+    try {
+      const updRes = await fetch("/api/updates?limit=5", {
         headers: {
           "x-user-id": user?.id || "",
           "x-user-admin": isAdmin() ? "true" : "false",
         },
       });
         const updJson = await updRes.json();
-        const updates: Update[] = updJson.data || [];
+      setRecentUpdates(updJson.data || []);
+    } catch (error) {
+      console.error("Failed to fetch updates:", error);
+    } finally {
+      setDataLoadingState(prev => ({ ...prev, updates: false }));
+    }
+  };
 
-      const leadsRes = await fetch("/api/leads");
+  const fetchLeads = async () => {
+    try {
+      const leadsRes = await fetch("/api/leads?limit=4");
         const leadsJson = await leadsRes.json();
       const leadsData: Lead[] = (leadsJson.data || []).map((apiLead: any) => ({
         id: apiLead.id ?? "",
@@ -124,11 +159,17 @@ export default function DashboardPage() {
         updated_at: apiLead.updated_at ?? "",
       }));
         setLeads(leadsData);
+    } catch (error) {
+      console.error("Failed to fetch leads:", error);
+    } finally {
+      setDataLoadingState(prev => ({ ...prev, leads: false }));
+    }
+  };
 
+  const fetchForecasts = async (opportunities: Opportunity[]) => {
+    try {
       const activeOpportunities = opportunities
-        .filter(
-          (opp) => opp.status !== "Completed" && opp.status !== "Cancelled"
-        )
+        .filter((opp) => opp.status !== "Completed" && opp.status !== "Cancelled")
         .slice(0, 2);
 
         const forecastPromises = activeOpportunities.map(async (opp) => {
@@ -156,11 +197,11 @@ export default function DashboardPage() {
             return { ...opp, forecast: undefined };
           }
         });
+
         const results = await Promise.all(forecastPromises);
         setForecastedOpportunities(results);
 
         if (results.length > 0) {
-          // Calculate total forecasted revenue and soonest completion date
           const totalRevenue = results.reduce((sum, opp) => {
             return sum + (opp.forecast?.revenueForecast || 0);
           }, 0);
@@ -181,11 +222,35 @@ export default function DashboardPage() {
             "No active opportunities to forecast. Add new opportunities to see <strong>AI-powered sales predictions</strong>."
           );
         }
-        setRecentUpdates(updates.slice(0, 2));
+    } catch (error) {
+      console.error("Failed to fetch forecasts:", error);
+      setOverallSalesForecast("Error fetching sales forecast data.");
+    } finally {
+      setDataLoadingState(prev => ({ ...prev, forecasts: false }));
+    }
+  };
+
+  const fetchDashboardData = async () => {
+    setIsLoading(true);
+    setDataLoadingState({
+      opportunities: true,
+      updates: true,
+      leads: true,
+      forecasts: true
+    });
+
+    try {
+      // Fetch data in parallel
+      const opportunities = await fetchOpportunities();
+      await Promise.all([
+        fetchUpdates(),
+        fetchLeads(),
+        fetchForecasts(opportunities)
+      ]);
+
         setLastRefreshed(new Date());
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
-        setOverallSalesForecast("Error fetching sales forecast data.");
       } finally {
         setIsLoading(false);
       }
@@ -259,10 +324,13 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading && !overallSalesForecast ? (
+          {dataLoadingState.forecasts ? (
               <div className="h-10 bg-muted/50 rounded animate-pulse w-3/4"></div>
             ) : (
-            <p className="text-foreground text-base leading-relaxed" dangerouslySetInnerHTML={{ __html: overallSalesForecast || "No forecast available." }} />
+            <p 
+              className="text-foreground text-base leading-relaxed" 
+              dangerouslySetInnerHTML={{ __html: overallSalesForecast || "No forecast available." }} 
+            />
             )}
           </CardContent>
         </Card>
@@ -271,7 +339,8 @@ export default function DashboardPage() {
       <div className="flex flex-col lg:flex-row gap-6 mb-6 mt-4">
         <div className="flex-1 min-w-0 flex flex-col gap-6">
         {/* Recent Activity Stream */}
-          <div className="flex-1  ">
+          <Suspense fallback={<LoadingSpinner />}>
+            <div className="flex-1">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold flex items-center text-foreground">
               <History className="mr-3 h-6 w-6 text-blue-500" />
@@ -280,12 +349,11 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {isLoading && recentUpdates.length === 0
-                  ? Array.from({ length: 2 }).map((_, i) => (
+                  {dataLoadingState.updates ? (
+                    Array.from({ length: 2 }).map((_, i) => (
                       <Card
                         key={`update-skeleton-${i}`}
-                        className="h-full bg-white text-black rounded-[8px]  p-2 border-none"
-                        isInner={true}
+                        className="h-full bg-white text-black rounded-[8px] p-2 border-none"
                       >
                         <CardHeader>
                           <div className="h-5 bg-muted/50 rounded w-1/2"></div>
@@ -296,11 +364,11 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
                 ))
-                  : recentUpdates.length > 0
-                  ? recentUpdates.map((update, index) => (
+                  ) : recentUpdates.length > 0 ? (
+                    recentUpdates.map((update) => (
                       <RecentActivityItem key={update.id} update={update} />
                     ))
-                  : !isLoading && (
+                  ) : (
                       <p className="text-muted-foreground text-center py-4 md:col-span-2">
                         No recent updates found.
                       </p>
@@ -308,262 +376,40 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </div>
+          </Suspense>
         </div>
-        {/* Opportunities Pipeline on the right */}
+
+        {/* Opportunities Pipeline */}
         <div className="w-full lg:w-[400px] flex-shrink-0 mt-2">
-          <Card className="h-full bg-white text-black rounded-[8px] p-2 border-none">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center text-black">
-                <BarChartHorizontalBig className="mr-3 h-5 w-5 text-black" />
-                Opportunities Pipeline
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px]">
-                {isLoading ? (
-                  <div className="h-full bg-muted/50 rounded animate-pulse"></div>
-                ) : opportunityStatusData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={opportunityStatusData}
-                      layout="vertical"
-                      margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-                    >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="hsl(var(--border))"
-                      />
-                      <XAxis
-                        type="number"
-                        stroke="hsl(var(--muted-foreground))"
-                        fontSize={12}
-                      />
-                      <YAxis
-                        dataKey="name"
-                        type="category"
-                        stroke="hsl(var(--muted-foreground))"
-                        fontSize={12}
-                        width={100}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          borderColor: "hsl(var(--border))",
-                          borderRadius: "var(--radius)",
-                        }}
-                      />
-                      <Bar
-                        dataKey="count"
-                        fill="#222"
-                        radius={[0, 4, 4, 0]}
-                        barSize={20}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p className="text-muted-foreground text-center py-4">
-                    No opportunity data available.
-                  </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+          <Suspense fallback={<LoadingSpinner />}>
+            <OpportunitiesPipeline 
+              isLoading={dataLoadingState.opportunities}
+              opportunityStatusData={opportunityStatusData}
+            />
+          </Suspense>
         </div>
       </div>
 
       {/* Bottom Row: Key Opportunity Insights & Lead Engagement */}
       <div className="flex flex-col lg:flex-row gap-6 mt-4">
         {/* Key Opportunity Insights */}
-        <div className="flex-1 min-w-0 flex flex-col gap-6">
-          <div>
-          <CardHeader>
-            <CardTitle className="text-2xl font-semibold flex items-center text-foreground">
-              <Lightbulb className="mr-3 h-6 w-6 text-yellow-500" />
-              Key Opportunity Insights
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {isLoading && forecastedOpportunities.length === 0
-                  ? Array.from({ length: 2 }).map((_, i) => (
-                  <Card key={i} className="h-full" isInner={true}>
-                    <CardHeader>
-                      <div className="h-6 bg-muted/50 rounded w-3/4 mb-2"></div>
-                      <div className="h-4 bg-muted/50 rounded w-1/2"></div>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="h-4 bg-muted/50 rounded w-full"></div>
-                      <div className="h-4 bg-muted/50 rounded w-5/6"></div>
-                    </CardContent>
-                  </Card>
-                ))
-                  : forecastedOpportunities.length > 0
-                  ? forecastedOpportunities.map((opp) => (
-                      <Card
-                        key={opp.id}
-                        className="flex flex-col h-full bg-white text-black rounded-[8px]  p-2 border-none"
-                      >
-                        <CardHeader className="pb-3 px-6 pt-6">
-                          <div className="flex flex-row items-center justify-between w-full">
-                            <div className="flex flex-row items-center">
-                              <BarChartBig className="mr-2 h-5 w-5 text-primary shrink-0" />
-                              <CardTitle className="text-xl font-headline mb-0 ml-2">
-                                {opp.name}
-                              </CardTitle>
-                            </div>
-                            <Badge
-                              variant="secondary"
-                              className={`capitalize whitespace-nowrap ml-2 ${getStatusBadgeVariant(
-                                opp.status as OpportunityStatus
-                              )}`}
-                            >
-                              {opp.status}
-                        </Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="flex-grow space-y-3 text-sm px-6 text-left">
-                          <div className="flex items-center text-muted-foreground mb-1">
-                            <DollarSign className="mr-2 h-4 w-4 shrink-0" />
-                            <span className="font-semibold text-foreground mr-1">
-                              Quoted Value:
-                            </span>{" "}
-                            ${opp.amount.toLocaleString()}
-                          </div>
-                          {opp.description && (
-                            <div className="mb-1">
-                              <p className="text-muted-foreground">
-                                {opp.description}
-                              </p>
-                            </div>
-                          )}
-                          {opp.created_at && opp.expected_close_date && (
-                            <div className="flex items-center text-muted-foreground mb-1">
-                              <CalendarClock className="mr-2 h-4 w-4 shrink-0" />
-                              <span>
-                                {format(
-                                  parseISO(opp.created_at),
-                                  "MMM dd, yyyy"
-                                )}{" "}
-                                -{" "}
-                                {format(
-                                  parseISO(opp.expected_close_date),
-                                  "MMM dd, yyyy"
-                                )}
-                              </span>
-                            </div>
-                          )}
-                          {opp.forecast && (
-                            <div className="pt-3 border-t mt-3">
-                              <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1.5 flex items-center">
-                                <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" />{" "}
-                                AI Forecast
-                              </h4>
-                              <div className="space-y-1 text-xs">
-                                <p className="text-foreground line-clamp-1">
-                                  <span className="font-medium">
-                                    Est. Completion:
-                                  </span>{" "}
-                                  {opp.forecast.completionDateEstimate}
-                                </p>
-                                <p className="text-foreground line-clamp-2 leading-snug">
-                                  <span className="font-medium">
-                                    Revenue Forecast:
-                                  </span>{" "}
-                                  $
-                                  {opp.forecast.revenueForecast.toLocaleString()}
-                                </p>
-                              </div>
-                            </div>
-                      )}
-                    </CardContent>
-                        <CardFooter className="pt-4 border-t mt-auto px-6 pb-6">
-                          <Button
-                            size="sm"
-                            asChild
-                            className="ml-auto bg-[#6FCF97] text-white border-none shadow-none hover:bg-[#8FE6B5] dark:hover:bg-[#4B8B6F] hover:text-white focus:bg-[#6FCF97] focus:text-white"
-                          >
-                            <Link href={`/opportunities/${opp.id}`}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </Link>
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))
-                  : !isLoading && (
-                      <p className="text-muted-foreground text-center py-4">
-                        No active opportunities with forecasts.
-                      </p>
-              )}
-            </div>
-          </CardContent>
-          </div>
+        <div className="flex-1 min-w-0">
+          <Suspense fallback={<LoadingSpinner />}>
+            <KeyOpportunityInsights
+              isLoading={dataLoadingState.forecasts}
+              opportunities={forecastedOpportunities}
+            />
+          </Suspense>
             </div>
 
         {/* Lead Engagement */}
-        <div className="w-full lg:w-[400px] flex-shrink-0 mt-2">
-          <Card className="h-full bg-white text-black rounded-[8px]  p-2 border-none">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center text-black">
-              <Users className="mr-3 h-5 w-5 text-black" />
-              Lead Engagement
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-              <div className="space-y-3">
-              {isLoading ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                    <div
-                      key={`lead-skeleton-${i}`}
-                      className="w-full bg-gray-50/50 rounded-sm p-3 border-l-4 border-gray-200"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-2">
-                          <div className="h-4 bg-muted/50 rounded w-24"></div>
-                          <div className="h-3 bg-muted/50 rounded w-32"></div>
-                        </div>
-                      </div>
-                    </div>
-                ))
-              ) : leads.length > 0 ? (
-                  (leads as any[])
-                    .filter((lead) => lead.status !== "Converted to Account")
-                    .slice(0, 4)
-                    .map((lead) => (
-                      <div
-                        key={lead.id}
-                        className="w-full bg-gray-50/50 rounded-sm p-3 border-l-4 border-blue-400 hover:bg-gray-100/50 transition-colors"
-                      >
-                        <div className="flex flex-col gap-1">
-                          <p className="font-medium text-gray-900">{lead.person_name}</p>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500">({lead.company_name})</span>
-                            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
-                              {lead.status}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                ))
-              ) : (
-                  <p className="text-muted-foreground text-center py-4">
-                    No leads available.
-                  </p>
-              )}
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              asChild 
-              className="ml-auto"
-              disabled={isLoading}
-            >
-              <Link href="/leads">View All Leads</Link>
-            </Button>
-          </CardFooter>
-        </Card>
+        <div className="w-full lg:w-[400px] flex-shrink-0">
+          <Suspense fallback={<LoadingSpinner />}>
+            <LeadEngagement
+              isLoading={dataLoadingState.leads}
+              leads={leads}
+            />
+          </Suspense>
         </div>
       </div>
     </div>

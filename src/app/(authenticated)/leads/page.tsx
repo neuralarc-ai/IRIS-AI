@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Upload, ChevronUp } from 'lucide-react';
 import PageTitle from '@/components/common/PageTitle';
@@ -53,62 +53,71 @@ export default function LeadsPage() {
   const [rejectedLeads, setRejectedLeads] = useState<RejectedLead[]>([]);
   const [showRejectedDialog, setShowRejectedDialog] = useState(false);
   const [editingLeads, setEditingLeads] = useState<RejectedLead[]>([]);
-
-  // Fetch leads from Supabase
-  const fetchLeads = async () => {
-    if (!user) return;
-    try {
-      setIsLoading(true);
-      const response = await fetch('/api/leads', {
-        headers: {
-          'x-user-id': user.id,
-          'x-user-admin': isAdmin() ? 'true' : 'false',
-        },
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch leads');
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const lastLeadElementRef = useCallback((node: HTMLDivElement | null) => {
+    if (isLoading || isFetchingMore) return;
+    
+    if (observerRef.current) observerRef.current.disconnect();
+    
+    observerRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        setPage(prevPage => prevPage + 1);
       }
-      const result = await response.json();
-      // Transform API response from snake_case to camelCase
-      const transformedLeads: Lead[] = (result.data || [])
-        .map((apiLead: any) => ({
-          id: apiLead.id,
-          companyName: apiLead.company_name,
-          personName: apiLead.person_name,
-          email: apiLead.email,
-          phone: apiLead.phone,
-          linkedinProfileUrl: apiLead.linkedin_profile_url,
-          country: apiLead.country,
-          status: apiLead.status,
-          opportunityIds: [],
-          updateIds: [],
-          createdAt: apiLead.created_at,
-          updatedAt: apiLead.updated_at,
-          assigned_user_id: apiLead.assigned_user_id,
-          created_by_user_id: apiLead.created_by_user_id,
-        }))
-        // Filter out converted leads
-        .filter(lead => lead.status !== "Converted to Account");
+    });
+    
+    if (node) observerRef.current.observe(node);
+  }, [isLoading, isFetchingMore, hasMore]);
+
+  const fetchLeads = async (pageNum: number, isInitial: boolean = false) => {
+    try {
+      if (!isInitial) setIsFetchingMore(true);
+      const response = await fetch(`/api/leads?page=${pageNum}&limit=10`);
+      const data = await response.json();
       
-      setLeads(transformedLeads);
+      if (data.data) {
+        const newLeads = data.data.map((lead: any) => ({
+          id: lead.id,
+          companyName: lead.company_name,
+          personName: lead.person_name,
+          email: lead.email,
+          phone: lead.phone,
+          linkedinProfileUrl: lead.linkedin_profile_url,
+          country: lead.country,
+          status: lead.status,
+          opportunityIds: lead.opportunity_ids || [],
+          updateIds: lead.update_ids || [],
+          createdAt: lead.created_at,
+          updatedAt: lead.updated_at,
+          assigned_user_id: lead.assigned_user_id,
+          created_by_user_id: lead.created_by_user_id,
+        }));
+
+        setLeads(prevLeads => isInitial ? newLeads : [...prevLeads, ...newLeads]);
+        setHasMore(newLeads.length === 10); // Assuming 10 is the page size
+      }
     } catch (error) {
       console.error('Error fetching leads:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load leads. Please try again.",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
+      setIsFetchingMore(false);
     }
   };
 
   useEffect(() => {
     if (!authLoading && user) {
-      fetchLeads();
+      fetchLeads(1, true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
+
+  useEffect(() => {
+    if (page > 1) {
+      fetchLeads(page);
+    }
+  }, [page]);
 
   const handleLeadAdded = (newLead: Lead) => {
     setLeads(prevLeads => [newLead, ...prevLeads]);

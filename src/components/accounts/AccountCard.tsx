@@ -25,6 +25,15 @@ import {
   Trash2,
   MessageSquare,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import type {
   Account,
   DailyAccountSummary as AIDailySummary,
@@ -67,7 +76,74 @@ export default function AccountCard({
     useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showAddUpdateDialog, setShowAddUpdateDialog] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logContent, setLogContent] = useState("");
+  const [logDate, setLogDate] = useState("");
+  const [logSubmitting, setLogSubmitting] = useState(false);
   const { toast } = useToast();
+
+  const fetchLogs = async () => {
+    setLogsLoading(true);
+    try {
+      const res = await fetch(`/api/updates?account_id=${account.id}`);
+      const result = await res.json();
+      setLogs(result.data || []);
+    } catch (e) {
+      setLogs([]);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const handleLogActivity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!logContent.trim()) return;
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (logDate && logDate < todayStr) {
+      toast({ title: "Invalid Date", description: "Please select today or a future date.", variant: "destructive" });
+      return;
+    }
+    setLogSubmitting(true);
+    const newLog = {
+      id: `temp-${Date.now()}`,
+      content: logContent,
+      date: logDate ? new Date(logDate).toISOString() : new Date().toISOString(),
+    };
+    setLogs(prev => [newLog, ...prev]);
+    try {
+      const res = await fetch("/api/updates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          account_id: account.id,
+          type: "General",
+          content: logContent,
+          date: logDate ? new Date(logDate).toISOString() : new Date().toISOString(),
+        }),
+      });
+      if (res.ok) {
+        setLogContent("");
+        setLogDate("");
+        const result = await res.json();
+        if (result.data) {
+          setLogs(prev => [result.data, ...prev.filter(l => l.id !== newLog.id)]);
+        } else {
+          fetchLogs();
+        }
+        toast({ title: "Activity Logged", description: "Activity has been added to records." });
+      } else {
+        setLogs(prev => prev.filter(l => l.id !== newLog.id));
+        toast({ title: "Failed to log activity", variant: "destructive" });
+      }
+    } catch (e) {
+      setLogs(prev => prev.filter(l => l.id !== newLog.id));
+      toast({ title: "Failed to log activity", variant: "destructive" });
+    } finally {
+      setLogSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     async function fetchOpportunities() {
@@ -75,7 +151,6 @@ export default function AccountCard({
       const result = await res.json();
       const opps = result.data || [];
       setOpportunities(opps);
-      // Sum the amount/amount field for all opportunities
       const total = opps.reduce((sum: number, opp: any) => sum + (Number(opp.amount) || 0), 0);
       setTotalOpportunityAmount(total);
     }
@@ -95,7 +170,6 @@ export default function AccountCard({
       setDailySummary(summary);
     } catch (error) {
       console.error(`Failed to fetch summary for ${account.name}:`, error);
-      // Set a default error state for summary to inform user
       setDailySummary({
         summary: "Could not load AI summary.",
         relationshipHealth: "Unknown",
@@ -109,7 +183,6 @@ export default function AccountCard({
     if (account.status === "Active") {
       fetchDailySummary();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account.id, account.name, account.status]);
 
   const handleOpportunityAdded = (newOpportunity: Opportunity) => {
@@ -132,7 +205,7 @@ export default function AccountCard({
         description: `${account.name} has been successfully deleted.`,
       });
       if (onDelete) onDelete(account.id);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting account:', error);
       toast({
         title: "Delete Failed",
@@ -144,161 +217,245 @@ export default function AccountCard({
 
   return (
     <>
-      <Card className="flex flex-col h-full bg-white text-black rounded-[8px] p-2 border-none text-left">
-        <CardHeader className="pb-3 px-6 pt-6 text-left">
-          <div className="flex flex-row items-center justify-between w-full mb-1 text-left">
-            <div className="flex flex-col items-start text-left">
-              <div className="flex items-center gap-2 text-left">
-                <Briefcase className="h-5 w-5" style={{ color: '#97A88C' }} />
-                <CardTitle className="text-xl font-headline mb-0 text-left" style={{ color: '#97A88C' }}>
-                  {account.name}
-                </CardTitle>
-              </div>
-              {(account.type || account.industry) && (
-                <div className="flex items-center mt-2 text-muted-foreground text-sm text-left">
-                  <Tag className="mr-1 h-4 w-4 shrink-0" />
-                  <span>
-                    {account.type}
-                    {account.type && account.industry ? " | " : ""}
-                    {account.industry}
-                  </span>
-                </div>
-              )}
-            </div>
-
-                          <div className="flex items-center gap-2">
-            <Badge
-              variant={account.status === "Active" ? "default" : "secondary"}
-              className={`capitalize whitespace-nowrap ml-2 ${
-                account.status === "Active"
-                  ? "bg-green-500/20 text-green-700 border-green-500/30"
-                  : "bg-amber-500/20 text-amber-700 border-amber-500/30"
-              } !hover:bg-inherit !hover:text-inherit !hover:border-inherit`}
-            >
-              {account.status}
-            </Badge>
-              </div>
-          </div>
-        </CardHeader>
-        <CardContent className="flex-grow space-y-3 text-sm px-6 text-left">
-          <p className="text-muted-foreground line-clamp-2 text-left">
-            {account.description}
-          </p>
-
-          {account.contactPersonName && (
-            <div className="flex items-center text-muted-foreground">
-              <Users className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-              {account.contactPersonName}
-            </div>
-          )}
-          {account.contactEmail && (
-            <div className="flex items-center text-muted-foreground">
-              <Mail className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-              {account.contactEmail}
-            </div>
-          )}
-          {account.contactPhone && (
-            <div className="flex items-center text-muted-foreground">
-              <Phone className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-              {account.contactPhone}
-            </div>
-          )}
-
-          <div className="text-sm flex items-center text-foreground font-medium text-left">
-            <ListChecks className="mr-2 h-4 w-4" />
-            <span>
-              {opportunities.length} Active Opportunit{opportunities.length !== 1 ? "ies" : "y"}
-            </span>
-          </div>
-
-          {account.status === "Active" && (
-            <div className="pt-3 border-t mt-3">
-              <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1.5 flex items-center text-left">
-                <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" /> AI
-                Daily Brief
-              </h4>
-              {isLoadingSummary ? (
-                <div className="flex items-center space-x-2 h-10">
-                  <LoadingSpinner size={16} />
-                  <span className="text-xs text-muted-foreground">
-                    Generating brief...
-                  </span>
-                </div>
-              ) : dailySummary ? (
-                <div className="space-y-1">
-                  <p className="text-xs text-foreground line-clamp-2 text-left">
-                    {dailySummary.summary}
-                  </p>
-                  <div className="flex items-center text-xs text-left">
-                    <MessageSquareHeart className="mr-1.5 h-3.5 w-3.5 text-pink-500" />
-                    <span className="font-medium text-foreground">Health:</span>
-                    &nbsp;
-                    <span className="text-muted-foreground">
-                      {dailySummary.relationshipHealth}
-                    </span>
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <div
+          className="flex flex-col h-full bg-white text-black rounded-[8px] border-none cursor-pointer"
+          onClick={e => {
+            if ((e.target as HTMLElement).closest("button, a")) return;
+            setShowModal(true);
+            fetchLogs();
+          }}
+        >
+          <Card className="flex flex-col h-full bg-white text-black rounded-[8px] p-2 border-none text-left">
+            <CardHeader className="pb-3 px-6 pt-6 text-left">
+              <div className="flex flex-row items-center justify-between w-full mb-1 text-left">
+                <div className="flex flex-col items-start text-left">
+                  <div className="flex items-center gap-2 text-left">
+                    <Briefcase className="h-5 w-5" style={{ color: '#97A88C' }} />
+                    <CardTitle className="text-xl font-headline mb-0 text-left" style={{ color: '#97A88C' }}>
+                      {account.name}
+                    </CardTitle>
                   </div>
+                  {(account.type || account.industry) && (
+                    <div className="flex items-center mt-2 text-muted-foreground text-sm text-left">
+                      <Tag className="mr-1 h-4 w-4 shrink-0" />
+                      <span>
+                        {account.type}
+                        {account.type && account.industry ? " | " : ""}
+                        {account.industry}
+                      </span>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <p className="text-xs text-muted-foreground h-10 flex items-center text-left">
-                  No AI brief available for this account.
-                </p>
+
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={account.status === "Active" ? "default" : "secondary"}
+                    className={`capitalize whitespace-nowrap ml-2 ${
+                      account.status === "Active"
+                        ? "bg-green-500/20 text-green-700 border-green-500/30"
+                        : "bg-amber-500/20 text-amber-700 border-amber-500/30"
+                    } !hover:bg-inherit !hover:text-inherit !hover:border-inherit`}
+                  >
+                    {account.status}
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-grow space-y-3 text-sm px-6 text-left">
+              <p className="text-muted-foreground line-clamp-2 text-left">
+                {account.description}
+              </p>
+
+              {account.contactPersonName && (
+                <div className="flex items-center text-muted-foreground">
+                  <Users className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
+                  {account.contactPersonName}
+                </div>
               )}
-            </div>
-          )}
-        </CardContent>
-        <CardFooter className="pt-4 border-t mt-auto px-6 pb-6 flex justify-between items-center gap-2">
-          <Button size="sm" onClick={() => setIsAddOpportunityDialogOpen(true)} variant="beige">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            New Opportunity
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setShowAddUpdateDialog(true)}
-            title="Log Communication Update"
-            className="hover:bg-muted"
-          >
-            <MessageSquare className="h-4 w-4 text-primary" />
-          </Button>
-          <Link href={`/updates?account_id=${account.id}&entity_type=account`} passHref>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-gray-600 hover:text-gray-800"
-            >
-              <Eye className="h-4 w-4 mr-1" />
-              View Log
-            </Button>
-          </Link>
-          <Button
-            size="sm"
-            variant="destructive"
-            className="ml-auto"
-            onClick={() => setShowDeleteDialog(true)}
-            title="Delete Account"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-          <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Account</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete this account? This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel asChild>
-                  <Button variant="outline">Cancel</Button>
-                </AlertDialogCancel>
-                <AlertDialogAction asChild>
-                  <Button variant="destructive" onClick={handleDelete}>Delete</Button>
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </CardFooter>
-      </Card>
+              {account.contactEmail && (
+                <div className="flex items-center text-muted-foreground">
+                  <Mail className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
+                  {account.contactEmail}
+                </div>
+              )}
+              {account.contactPhone && (
+                <div className="flex items-center text-muted-foreground">
+                  <Phone className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
+                  {account.contactPhone}
+                </div>
+              )}
+
+              <div className="text-sm flex items-center text-foreground font-medium text-left">
+                <ListChecks className="mr-2 h-4 w-4" />
+                <span>
+                  {opportunities.length} Active Opportunit{opportunities.length !== 1 ? "ies" : "y"}
+                </span>
+              </div>
+
+              {account.status === "Active" && (
+                <div className="pt-3 border-t mt-3">
+                  <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1.5 flex items-center text-left">
+                    <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" /> AI
+                    Daily Brief
+                  </h4>
+                  {isLoadingSummary ? (
+                    <div className="flex items-center space-x-2 h-10">
+                      <LoadingSpinner size={16} />
+                      <span className="text-xs text-muted-foreground">
+                        Generating brief...
+                      </span>
+                    </div>
+                  ) : dailySummary ? (
+                    <div className="space-y-1">
+                      <p className="text-xs text-foreground line-clamp-2 text-left">
+                        {dailySummary.summary}
+                      </p>
+                      <div className="flex items-center text-xs text-left">
+                        <MessageSquareHeart className="mr-1.5 h-3.5 w-3.5 text-pink-500" />
+                        <span className="font-medium text-foreground">Health:</span>
+                        &nbsp;
+                        <span className="text-muted-foreground">
+                          {dailySummary.relationshipHealth}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground h-10 flex items-center text-left">
+                      No AI brief available for this account.
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+            <CardFooter className="pt-4 border-t mt-auto px-6 pb-6 flex justify-between items-center gap-2">
+              <Button
+                onClick={() => setIsAddOpportunityDialogOpen(true)}
+                title="New Opportunity"
+                className="flex flex-row items-center justify-center"
+                style={{
+                  width: 'auto',
+                  height: '56px',
+                  minWidth: '128px',
+                  borderRadius: '4px',
+                  padding: '16px 27px',
+                  gap: '8px',
+                  background: '#2B2521',
+                  color: 'white',
+                  fontWeight: 500,
+                  fontSize: '16px',
+                  lineHeight: '24px',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+                <span>New Opportunity</span>
+              </Button>
+              <div className="flex-grow" />
+              <Button
+                size="sm"
+                variant="ghost"
+                className="p-0 bg-transparent border-none shadow-none focus:outline-none hover:bg-transparent ml-auto"
+                onClick={() => setShowDeleteDialog(true)}
+                title="Delete Account"
+                style={{ width: 40, height: 40 }}
+              >
+                <span className="flex items-center justify-center w-10 h-10 rounded-full" style={{ background: 'none', position: 'relative' }}>
+                  <img src="/glob.svg" alt="bg" className="absolute w-10 h-10 left-0 top-0" style={{ pointerEvents: 'none' }} />
+                  <span className="flex items-center justify-center w-10 h-10 rounded-full relative z-10">
+                    <Trash2 className="h-4 w-4 text-white" />
+                  </span>
+                </span>
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+
+        <DialogContent className="max-w-xl w-full bg-white text-black">
+          <DialogHeader>
+            <DialogTitle className="text-black">{account.name}</DialogTitle>
+            <DialogDescription className="text-gray-600">
+              <div className="mt-2 grid grid-cols-2 gap-4">
+                <div className="p-2 bg-gray-50 rounded">
+                  <span className="text-black font-semibold">Contact: </span>
+                  {account.contactPersonName || 'N/A'}
+                </div>
+                <div className="p-2 bg-gray-50 rounded">
+                  <span className="text-black font-semibold">Email: </span>
+                  {account.contactEmail || 'N/A'}
+                </div>
+                <div className="p-2 bg-gray-50 rounded">
+                  <span className="text-black font-semibold">Phone: </span>
+                  {account.contactPhone || 'N/A'}
+                </div>
+                <div className="p-2 bg-gray-50 rounded">
+                  <span className="text-black font-semibold">Status: </span>
+                  {account.status}
+                </div>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <h3 className="font-semibold mb-2 text-black">Records</h3>
+            {logsLoading ? (
+              <div className="text-black">Loading...</div>
+            ) : logs.length === 0 ? (
+              <div className="text-gray-600">No log found</div>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {logs.map((log) => (
+                  <div key={log.id} className="bg-gray-100 rounded p-2">
+                    <div className="text-sm text-black">{log.content}</div>
+                    <div className="text-xs text-gray-600 mt-1">Logged on: {log.date ? new Date(log.date).toLocaleDateString() : "-"}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <form className="mt-6" onSubmit={handleLogActivity}>
+            <h4 className="font-semibold mb-2 text-black">Log New Activity</h4>
+            <textarea
+              className="w-full border border-black rounded p-2 mb-2 text-black bg-white"
+              rows={3}
+              placeholder="e.g., Follow-up call, sent proposal..."
+              value={logContent}
+              onChange={e => setLogContent(e.target.value)}
+              required
+            />
+            <input
+              type="date"
+              className="w-full border border-black rounded p-2 mb-2 text-black bg-white"
+              value={logDate}
+              onChange={e => setLogDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+            />
+            <DialogFooter>
+              <Button type="submit" className="bg-green-600 text-white" disabled={logSubmitting}>
+                {logSubmitting ? "Logging..." : "Log Activity"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this account? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button variant="outline">Cancel</Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AddOpportunityDialog
         open={isAddOpportunityDialogOpen}
         onOpenChange={setIsAddOpportunityDialogOpen}

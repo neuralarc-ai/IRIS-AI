@@ -17,20 +17,21 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const offset = (page - 1) * limit
     const status = searchParams.get('status')
     const type = searchParams.get('type')
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50
-    const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0
-    const id = searchParams.get('id');
+    const id = searchParams.get('id')
 
     // Get user info from headers
-    const userId = request.headers.get('x-user-id');
-    const isAdmin = request.headers.get('x-user-admin') === 'true';
+    const userId = request.headers.get('x-user-id')
+    const isAdmin = request.headers.get('x-user-admin') === 'true'
 
     let query = supabase
       .from('accounts')
-      .select('*')
-      .order('updated_at', { ascending: false })
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
     // Filter by status if provided
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
 
     // Filter by id if provided
     if (id) {
-      query = query.eq('id', id);
+      query = query.eq('id', id)
     }
 
     // Filter by created_by_user_id if not admin
@@ -54,23 +55,23 @@ export async function GET(request: NextRequest) {
       const { data: userLeads, error: leadsError } = await supabase
         .from('leads')
         .select('id')
-        .eq('created_by_user_id', userId);
+        .eq('created_by_user_id', userId)
 
       if (leadsError) {
-        console.error('Error fetching user leads:', leadsError);
+        console.error('Error fetching user leads:', leadsError)
         return NextResponse.json(
           { error: 'Failed to fetch user leads for filtering accounts' },
           { status: 500 }
-        );
+        )
       }
 
-      const userLeadIds = (userLeads || []).map((lead: any) => lead.id);
+      const userLeadIds = (userLeads || []).map((lead: any) => lead.id)
 
       // Filter accounts where created_by_user_id = userId OR converted_from_lead_id in userLeadIds
       if (userLeadIds.length > 0) {
-        query = query.or(`created_by_user_id.eq.${userId},converted_from_lead_id.in.(${userLeadIds.join(',')})`);
+        query = query.or(`created_by_user_id.eq.${userId},converted_from_lead_id.in.(${userLeadIds.join(',')})`)
       } else {
-        query = query.eq('created_by_user_id', userId);
+        query = query.eq('created_by_user_id', userId)
       }
     }
 
@@ -79,23 +80,21 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching accounts:', error)
       return NextResponse.json(
-        { error: 'Failed to fetch accounts' },
+        { error: error.message },
         { status: 500 }
       )
     }
 
     return NextResponse.json({
       data,
-      count,
-      pagination: {
-        limit,
-        offset,
-        hasMore: data.length === limit
-      }
+      total: count,
+      page,
+      limit,
+      hasMore: count ? offset + limit < count : false
     })
 
   } catch (error) {
-    console.error('Unexpected error:', error)
+    console.error('Error in accounts API:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

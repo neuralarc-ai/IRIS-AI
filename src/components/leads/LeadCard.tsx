@@ -340,18 +340,6 @@ export default function LeadCard({
                 )}
               </CardTitle>
               <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mr-1"
-                  onClick={e => {
-                    e.stopPropagation();
-                    setShowModal(true);
-                    fetchLogs();
-                  }}
-                >
-                  View Records
-                </Button>
                 <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
                   <AlertDialogTrigger asChild>
                     <button
@@ -446,13 +434,30 @@ export default function LeadCard({
             </div>
           </CardContent>
           <CardFooter className="pt-4 border-t mt-auto px-6 pb-6 flex items-center justify-between gap-2">
-            <Button size="sm" asChild className="bg-[#6FCF97] text-white border-none shadow-none hover:bg-[#8FE6B5] dark:hover:bg-[#4B8B6F] hover:text-white focus:bg-[#6FCF97] focus:text-white">
-              <Link href={`/leads/${lead.id}`}>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
+            <Button
+              asChild
+              className="flex flex-row items-center justify-center"
+              style={{
+                width: '152px',
+                height: '56px',
+                minWidth: '128px',
+                borderRadius: '4px',
+                padding: '16px 27px',
+                gap: '8px',
+                background: '#2B2521',
+                color: 'white',
+                fontWeight: 500,
+                fontSize: '16px',
+                lineHeight: '24px',
+                boxSizing: 'border-box',
+              }}
+            >
+              <Link href={`/leads/${lead.id}`} className="flex items-center gap-2 w-full h-full" style={{ color: 'white', textDecoration: 'none' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 17h6" /><path d="M9 13h6" /></svg>
+                <span>View Details</span>
               </Link>
             </Button>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-6">
               {lead.status === "Converted to Account" ? (
                 <Button
                   size="sm"
@@ -470,28 +475,35 @@ export default function LeadCard({
                       size="sm"
                       onClick={handleConvert}
                       disabled={isConverting}
-                      variant="beige"
+                      variant="ghost"
+                      className="p-0 bg-transparent border-none shadow-none focus:outline-none hover:bg-transparent"
+                      style={{ width: 40, height: 40 }}
                     >
-                      {isConverting ? (
-                        <>
-                          <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                          Converting...
-                        </>
-                      ) : (
-                        <>
-                          <CheckSquare className="mr-2 h-4 w-4" />
-                          Convert
-                        </>
-                      )}
+                      <span className="flex items-center justify-center w-10 h-10 rounded-full" style={{ background: 'none', position: 'relative' }}>
+                        <img src="/glob.svg" alt="bg" className="absolute w-10 h-10 left-0 top-0" style={{ pointerEvents: 'none' }} />
+                        <span className="flex items-center justify-center w-10 h-10 rounded-full relative z-10">
+                          {isConverting ? (
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 5v6a3 3 0 0 0 3 3h7" /><path d="M10 10l4 4l-4 4m5 -8l4 4l-4 4" /></svg>
+                          )}
+                        </span>
+                      </span>
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() => setShowDeleteDialog(true)}
                       title="Delete Lead"
-                      className="hover:bg-destructive/10 hover:text-destructive"
+                      className="p-0 bg-transparent border-none shadow-none focus:outline-none hover:bg-transparent"
+                      style={{ width: 40, height: 40 }}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <span className="flex items-center justify-center w-10 h-10 rounded-full" style={{ background: 'none', position: 'relative' }}>
+                        <img src="/glob.svg" alt="bg" className="absolute w-10 h-10 left-0 top-0" style={{ pointerEvents: 'none' }} />
+                        <span className="flex items-center justify-center w-10 h-10 rounded-full relative z-10">
+                          <Trash2 className="h-4 w-4 text-white" />
+                        </span>
+                      </span>
                     </Button>
                   </>
                 )
@@ -499,39 +511,59 @@ export default function LeadCard({
             </div>
           </CardFooter>
         </div>
-        <DialogContent className="max-w-xl w-full">
+        <DialogContent className="max-w-xl w-full bg-white text-black">
           <DialogHeader>
-            <DialogTitle>{lead.companyName}</DialogTitle>
-            <DialogDescription>
-              <div className="mt-2 space-y-1">
-                <div><b>Name:</b> {lead.personName}</div>
-                <div><b>Email:</b> {lead.email}</div>
-                {lead.phone && <div><b>Number:</b> {lead.phone}</div>}
-                {lead.country && <div><b>Location:</b> {lead.country}</div>}
+            <DialogTitle className="text-black">{lead.companyName}</DialogTitle>
+            <DialogDescription className="text-gray-600">
+              <div className="mt-2 grid grid-cols-2 gap-4">
+                <div className="p-2 bg-gray-50 rounded">
+                  <span className="text-black font-semibold">Name: </span>
+                  {lead.personName}
+                </div>
+                <div className="p-2 bg-gray-50 rounded">
+                  <span className="text-black font-semibold">Email: </span>
+                  {lead.email}
+                </div>
+                <div className="p-2 bg-gray-50 rounded">
+                  {lead.phone && (
+                    <>
+                      <span className="text-black font-semibold">Number: </span>
+                      {lead.phone}
+                    </>
+                  )}
+                </div>
+                <div className="p-2 bg-gray-50 rounded">
+                  {lead.country && (
+                    <>
+                      <span className="text-black font-semibold">Location: </span>
+                      {lead.country}
+                    </>
+                  )}
+                </div>
               </div>
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4">
-            <h3 className="font-semibold mb-2">Records</h3>
+            <h3 className="font-semibold mb-2 text-black">Records</h3>
             {logsLoading ? (
-              <div>Loading...</div>
+              <div className="text-black">Loading...</div>
             ) : logs.length === 0 ? (
-              <div className="text-muted-foreground">No log found</div>
+              <div className="text-gray-600">No log found</div>
             ) : (
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {logs.map((log) => (
                   <div key={log.id} className="bg-gray-100 rounded p-2">
-                    <div className="text-sm">{log.content}</div>
-                    <div className="text-xs text-muted-foreground mt-1">Logged on: {log.date ? new Date(log.date).toLocaleDateString() : "-"}</div>
+                    <div className="text-sm text-black">{log.content}</div>
+                    <div className="text-xs  text-gray-600 mt-1">Logged on: {log.date ? new Date(log.date).toLocaleDateString() : "-"}</div>
                   </div>
                 ))}
               </div>
             )}
           </div>
           <form className="mt-6" onSubmit={handleLogActivity}>
-            <h4 className="font-semibold mb-2">Log New Activity</h4>
+            <h4 className="font-semibold mb-2 text-black">Log New Activity</h4>
             <textarea
-              className="w-full border rounded p-2 mb-2"
+              className="w-full border border-black rounded p-2 mb-2 text-black bg-white"
               rows={3}
               placeholder="e.g., Follow-up call, sent proposal..."
               value={logContent}
@@ -540,7 +572,7 @@ export default function LeadCard({
             />
             <input
               type="date"
-              className="w-full border rounded p-2 mb-2"
+              className="w-full border border-black rounded p-2 mb-2 text-black bg-white"
               value={logDate}
               onChange={e => setLogDate(e.target.value)}
               min={todayStr}

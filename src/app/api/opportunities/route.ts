@@ -47,44 +47,67 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const accountId = searchParams.get('account_id') || searchParams.get('associated_account_id');
-  const userId = req.headers.get('x-user-id');
-  const isAdmin = req.headers.get('x-user-admin') === 'true';
+  try {
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const offset = (page - 1) * limit;
+    const accountId = searchParams.get('account_id') || searchParams.get('associated_account_id');
+    const status = searchParams.get('status');
+    const userId = req.headers.get('x-user-id');
+    const isAdmin = req.headers.get('x-user-admin') === 'true';
 
-  let query = supabase
-    .from('opportunities')
-    .select('*')
-    .order('created_at', { ascending: false });
+    let query = supabase
+      .from('opportunities')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
-  if (accountId) {
-    query = query.eq('associated_account_id', accountId);
+    if (accountId) {
+      query = query.eq('associated_account_id', accountId);
+    }
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    // User-specific filtering for non-admins
+    if (!isAdmin && userId) {
+      // Get all accounts and leads assigned to or created by the user
+      const [accountsRes, leadsRes] = await Promise.all([
+        supabase.from('accounts').select('id').or(`created_by_user_id.eq.${userId},assigned_user_id.eq.${userId}`),
+        supabase.from('leads').select('id').or(`created_by_user_id.eq.${userId},assigned_user_id.eq.${userId}`),
+      ]);
+      const userAccountIds = (accountsRes.data || []).map((a: any) => a.id);
+      const userLeadIds = (leadsRes.data || []).map((l: any) => l.id);
+      // Only show opportunities linked to user's accounts or leads
+      query = query.or(
+        [
+          userAccountIds.length > 0 ? `associated_account_id.in.(${userAccountIds.join(',')})` : '',
+          userLeadIds.length > 0 ? `associated_lead_id.in.(${userLeadIds.join(',')})` : ''
+        ].filter(Boolean).join(',')
+      );
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error('Error fetching opportunities:', error);
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({
+      data,
+      total: count,
+      page,
+      limit,
+      hasMore: count ? offset + limit < count : false
+    }, { status: 200 });
+
+  } catch (error) {
+    console.error('Error in opportunities API:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  // User-specific filtering for non-admins
-  if (!isAdmin && userId) {
-    // Get all accounts and leads assigned to or created by the user
-    const [accountsRes, leadsRes] = await Promise.all([
-      supabase.from('accounts').select('id').or(`created_by_user_id.eq.${userId},assigned_user_id.eq.${userId}`),
-      supabase.from('leads').select('id').or(`created_by_user_id.eq.${userId},assigned_user_id.eq.${userId}`),
-    ]);
-    const userAccountIds = (accountsRes.data || []).map((a: any) => a.id);
-    const userLeadIds = (leadsRes.data || []).map((l: any) => l.id);
-    // Only show opportunities linked to user's accounts or leads
-    query = query.or(
-      [
-        userAccountIds.length > 0 ? `associated_account_id.in.(${userAccountIds.join(',')})` : '',
-        userLeadIds.length > 0 ? `associated_lead_id.in.(${userLeadIds.join(',')})` : ''
-      ].filter(Boolean).join(',')
-    );
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
-  return NextResponse.json({ data }, { status: 200 });
 }
 
 export async function PATCH(request: NextRequest) {

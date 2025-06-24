@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import AccountCard from '@/components/accounts/AccountCard';
 import type { Account, AccountType, AccountStatus } from '@/types';
@@ -18,18 +18,40 @@ import { useAuth } from '@/hooks/use-auth';
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<AccountStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<AccountType | 'all'>('all');
   const [isAddAccountDialogOpen, setIsAddAccountDialogOpen] = useState(false);
   const { toast } = useToast();
   const { user, isAdmin, isLoading: authLoading } = useAuth();
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const lastAccountElementRef = useCallback((node: HTMLDivElement | null) => {
+    if (isLoading || isFetchingMore) return;
+    
+    if (observerRef.current) observerRef.current.disconnect();
+    
+    observerRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        setPage(prevPage => prevPage + 1);
+      }
+    });
+    
+    if (node) observerRef.current.observe(node);
+  }, [isLoading, isFetchingMore, hasMore]);
 
   // Fetch accounts from Supabase
-  const fetchAccounts = async () => {
+  const fetchAccounts = async (pageNum: number, isInitial: boolean = false) => {
     try {
-      setIsLoading(true);
-      const response = await fetch('/api/accounts', {
+      if (!isInitial) {
+        setIsFetchingMore(true);
+      } else {
+        setIsLoading(true);
+      }
+
+      const response = await fetch(`/api/accounts?page=${pageNum}&limit=10${statusFilter !== 'all' ? `&status=${statusFilter}` : ''}${typeFilter !== 'all' ? `&type=${typeFilter}` : ''}`, {
         headers: {
           'x-user-id': user?.id || '',
           'x-user-admin': isAdmin() ? 'true' : 'false',
@@ -59,7 +81,8 @@ export default function AccountsPage() {
         updatedAt: apiAccount.updated_at,
       }));
       
-      setAccounts(transformedAccounts);
+      setAccounts(prev => isInitial ? transformedAccounts : [...prev, ...transformedAccounts]);
+      setHasMore(result.hasMore);
     } catch (error) {
       console.error('Error fetching accounts:', error);
       toast({
@@ -69,14 +92,22 @@ export default function AccountsPage() {
       });
     } finally {
       setIsLoading(false);
+      setIsFetchingMore(false);
     }
   };
 
   useEffect(() => {
     if (!authLoading && user) {
-      fetchAccounts();
+      setPage(1);
+      fetchAccounts(1, true);
     }
-  }, [authLoading, user]);
+  }, [authLoading, user, statusFilter, typeFilter]);
+
+  useEffect(() => {
+    if (page > 1) {
+      fetchAccounts(page);
+    }
+  }, [page]);
 
   const filteredAccounts = accounts.filter(account => {
     const matchesSearch = account.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -111,7 +142,7 @@ export default function AccountsPage() {
     });
   };
 
-  if (isLoading) {
+  if (isLoading && accounts.length === 0) {
     return (
       <div className="container mx-auto space-y-6 mt-6">
         <PageTitle title="Accounts Management" subtitle="Oversee all client and partner accounts." />
@@ -192,14 +223,35 @@ export default function AccountsPage() {
         </div>
       ) : filteredAccounts.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
-          {filteredAccounts.map((account) => (
-            <AccountCard
+          {filteredAccounts.map((account, index) => (
+            <div
               key={account.id}
-              account={account}
-              isConverted={!!account.convertedFromLeadId}
-              onDelete={handleAccountDeleted}
-            />
+              ref={index === filteredAccounts.length - 1 ? lastAccountElementRef : null}
+            >
+              <AccountCard
+                account={account}
+                isConverted={!!account.convertedFromLeadId}
+                onDelete={handleAccountDeleted}
+              />
+            </div>
           ))}
+          
+          {(isLoading || isFetchingMore) && (
+            <div className="col-span-full flex justify-center py-8">
+              <div className="space-y-4">
+                <LoadingSpinner />
+                <p className="text-sm text-muted-foreground animate-pulse">
+                  {isLoading ? 'Loading accounts...' : 'Loading more accounts...'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {!hasMore && accounts.length > 0 && (
+            <div className="col-span-full text-center py-8">
+              <p className="text-sm text-muted-foreground">You've reached the end of the list.</p>
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center py-16">
@@ -215,7 +267,8 @@ export default function AccountsPage() {
         onAccountAdded={handleAccountAddedOrUpdated}
         onLeadConverted={async (leadId, newAccountId) => {
           // Refresh accounts after lead conversion
-          await fetchAccounts();
+          setPage(1);
+          await fetchAccounts(1, true);
           toast({
             title: "Lead Converted",
             description: "Lead has been successfully converted to an account.",

@@ -17,9 +17,9 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const status = searchParams.get('status')
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50
-    const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const offset = (page - 1) * limit
 
     // Get user info from headers
     const userId = request.headers.get('x-user-id');
@@ -27,11 +27,12 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('leads')
-      .select('*')
-      .order('updated_at', { ascending: false })
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
     // Filter by status if provided
+    const status = searchParams.get('status')
     if (status) {
       query = query.eq('status', status)
     }
@@ -45,23 +46,21 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching leads:', error)
       return NextResponse.json(
-        { error: 'Failed to fetch leads' },
+        { error: error.message },
         { status: 500 }
       )
     }
 
     return NextResponse.json({
       data,
-      count,
-      pagination: {
-        limit,
-        offset,
-        hasMore: data.length === limit
-      }
+      total: count,
+      page,
+      limit,
+      hasMore: count ? offset + limit < count : false
     })
 
   } catch (error) {
-    console.error('Unexpected error:', error)
+    console.error('Error in leads API:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -106,13 +106,19 @@ export default function HorizontalNav() {
                 size="sm"
                 asChild
                 className={cn(
-                  "flex flex-col items-center gap-1 px-4 py-2 shadow-none border-none bg-transparent text-black hover:underline hover:bg-transparent transition-all duration-150 text-[15px] min-w-[70px]",
+                  "flex flex-col items-center gap-1 px-4 py-2 shadow-none border-none bg-transparent text-black transition-all duration-150 text-[15px] min-w-[70px]",
                   (pathname === item.href || 
                     (pathname.startsWith(item.href) && 
                       (item.href === '/dashboard' ? pathname === '/dashboard' : true))) &&
-                  "font-semibold underline"
+                  "font-bold active-nav-item"
                 )}
                 style={{ boxShadow: 'none', background: 'none' }}
+                onMouseEnter={e => {
+                  e.currentTarget.classList.add('hovered-nav');
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.classList.remove('hovered-nav');
+                }}
               >
                 <Link href={item.href} className="flex flex-col items-center gap-1">
                   <item.icon className="h-7 w-7" />
@@ -189,6 +195,21 @@ export default function HorizontalNav() {
       </div>
       
       <AddAccountDialog open={isAddAccountDialogOpen} onOpenChange={setIsAddAccountDialogOpen} />
+      <style jsx global>{`
+        .hovered-nav:not(.active-nav-item) {
+          background: #F3EEE9 !important;
+          border-radius: 0.5rem;
+          transition: background 0.18s;
+          text-decoration: none;
+        }
+        .active-nav-item .text-center {
+          font-weight: 700;
+          color: #B89B6A !important;
+        }
+        .active-nav-item .h-7, .active-nav-item .w-7 {
+          color: #B89B6A !important;
+        }
+      `}</style>
     </>
   );
 }

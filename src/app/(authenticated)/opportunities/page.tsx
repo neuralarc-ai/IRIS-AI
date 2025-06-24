@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import OpportunityCard from '@/components/opportunities/OpportunityCard';
 import type { Opportunity, OpportunityStatus } from '@/types';
@@ -16,21 +16,62 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function OpportunitiesPage() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<OpportunityStatus | 'all'>('all');
   const [accountFilter, setAccountFilter] = useState<string | 'all'>('all'); 
   const [isAddOpportunityDialogOpen, setIsAddOpportunityDialogOpen] = useState(false);
   const [accounts, setAccounts] = useState<{id: string, name: string, type: string}[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const lastOpportunityElementRef = useCallback((node: HTMLDivElement | null) => {
+    if (isLoading || isFetchingMore) return;
+    
+    if (observerRef.current) observerRef.current.disconnect();
+    
+    observerRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        setPage(prevPage => prevPage + 1);
+      }
+    });
+    
+    if (node) observerRef.current.observe(node);
+  }, [isLoading, isFetchingMore, hasMore]);
 
   const opportunityStatusOptions: OpportunityStatus[] = ["Scope Of Work", "Proposal", "Negotiation", "Win", "Loss"];
 
   // Fetch opportunities from API
-  const fetchOpportunities = async () => {
-    const response = await fetch('/api/opportunities');
-    const result = await response.json();
-    setOpportunities(result.data || []);
+  const fetchOpportunities = async (pageNum: number, isInitial: boolean = false) => {
+    try {
+      if (!isInitial) {
+        setIsFetchingMore(true);
+      } else {
+        setIsLoading(true);
+      }
+
+      const response = await fetch(
+        `/api/opportunities?page=${pageNum}&limit=10${statusFilter !== 'all' ? `&status=${statusFilter}` : ''}${accountFilter !== 'all' ? `&account_id=${accountFilter}` : ''}`
+      );
+      const result = await response.json();
+      
+      if (result.data) {
+        setOpportunities(prev => isInitial ? result.data : [...prev, ...result.data]);
+        setHasMore(result.hasMore);
+      }
+    } catch (error) {
+      console.error('Error fetching opportunities:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load opportunities. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      setIsFetchingMore(false);
+    }
   };
 
   // Fetch accounts for the filter dropdown
@@ -41,13 +82,19 @@ export default function OpportunitiesPage() {
   };
 
   useEffect(() => {
-    setIsLoading(true);
-    Promise.all([fetchOpportunities(), fetchAccounts()]).finally(() => setIsLoading(false));
+    Promise.all([fetchOpportunities(1, true), fetchAccounts()]);
   }, []);
 
   useEffect(() => {
-    console.log("Accounts fetched for dropdown:", accounts);
-  }, [accounts]);
+    if (page > 1) {
+      fetchOpportunities(page);
+    }
+  }, [page]);
+
+  useEffect(() => {
+    setPage(1);
+    fetchOpportunities(1, true);
+  }, [statusFilter, accountFilter]);
 
   const filteredOpportunities = opportunities.filter(opportunity => {
     const matchesSearch = opportunity.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -57,7 +104,8 @@ export default function OpportunitiesPage() {
   }).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
   const handleOpportunityAdded = async () => {
-    await fetchOpportunities();
+    setPage(1);
+    await fetchOpportunities(1, true);
   };
 
   const handleOpportunityDeleted = (opportunityId: string) => {
@@ -68,7 +116,7 @@ export default function OpportunitiesPage() {
     });
   };
 
-  if (isLoading) {
+  if (isLoading && opportunities.length === 0) {
     return (
       <div className="container mx-auto space-y-6 mt-6">
         <PageTitle title="Opportunity Management" subtitle="Track and manage all ongoing and potential sales opportunities." />
@@ -142,13 +190,34 @@ export default function OpportunitiesPage() {
 
       {filteredOpportunities.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
-          {filteredOpportunities.map((opportunity) => (
-            <OpportunityCard 
-              key={opportunity.id} 
-              opportunity={opportunity} 
-              onDelete={handleOpportunityDeleted}
-            />
+          {filteredOpportunities.map((opportunity, index) => (
+            <div
+              key={opportunity.id}
+              ref={index === filteredOpportunities.length - 1 ? lastOpportunityElementRef : null}
+            >
+              <OpportunityCard 
+                opportunity={opportunity} 
+                onDelete={handleOpportunityDeleted}
+              />
+            </div>
           ))}
+
+          {(isLoading || isFetchingMore) && (
+            <div className="col-span-full flex justify-center py-8">
+              <div className="space-y-4">
+                <LoadingSpinner />
+                <p className="text-sm text-muted-foreground animate-pulse">
+                  {isLoading ? 'Loading opportunities...' : 'Loading more opportunities...'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {!hasMore && opportunities.length > 0 && (
+            <div className="col-span-full text-center py-8">
+              <p className="text-sm text-muted-foreground">You've reached the end of the list.</p>
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center py-16">
@@ -157,6 +226,7 @@ export default function OpportunitiesPage() {
           <p className="text-muted-foreground">Try adjusting your search or filter criteria, or add a new opportunity.</p>
         </div>
       )}
+
       <AddOpportunityDialog 
         open={isAddOpportunityDialogOpen} 
         onOpenChange={setIsAddOpportunityDialogOpen}
