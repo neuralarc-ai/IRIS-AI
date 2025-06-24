@@ -94,61 +94,115 @@ export default function DashboardPage() {
     const fetchDashboardData = async () => {
       setIsLoading(true);
       try {
-      const oppRes = await fetch("/api/opportunities");
+        // Fetch all opportunities
+        const oppRes = await fetch("/api/opportunities");
         const oppJson = await oppRes.json();
         const opportunities: Opportunity[] = oppJson.data || [];
 
-      const updRes = await fetch("/api/updates", {
-        headers: {
-          "x-user-id": user?.id || "",
-          "x-user-admin": isAdmin() ? "true" : "false",
-        },
-      });
+        // Fetch all accounts
+        const accRes = await fetch("/api/accounts");
+        const accJson = await accRes.json();
+        const accounts = accJson.data || [];
+
+        // Fetch all leads
+        const leadsRes = await fetch("/api/leads");
+        const leadsJson = await leadsRes.json();
+        const leadsData: Lead[] = (leadsJson.data || []).map((apiLead: any) => ({
+          id: apiLead.id ?? "",
+          companyName: apiLead.company_name ?? "",
+          personName: apiLead.person_name ?? "",
+          email: apiLead.email ?? "",
+          phone: apiLead.phone ?? "",
+          linkedinProfileUrl: apiLead.linkedin_profile_url ?? "",
+          country: apiLead.country ?? "",
+          status: apiLead.status ?? "",
+          opportunityIds: [],
+          updateIds: [],
+          createdAt: apiLead.created_at ?? "",
+          updatedAt: apiLead.updated_at ?? "",
+          assigned_user_id: apiLead.assigned_user_id,
+          created_by_user_id: apiLead.created_by_user_id,
+        }));
+        setLeads(leadsData);
+
+        // Fetch all updates
+        const updRes = await fetch("/api/updates", {
+          headers: {
+            "x-user-id": user?.id || "",
+            "x-user-admin": isAdmin() ? "true" : "false",
+          },
+        });
         const updJson = await updRes.json();
         const updates: Update[] = updJson.data || [];
 
-      const leadsRes = await fetch("/api/leads");
-        const leadsJson = await leadsRes.json();
-      const leadsData: Lead[] = (leadsJson.data || []).map((apiLead: any) => ({
-        id: apiLead.id ?? "",
-        company_name: apiLead.company_name ?? "",
-        person_name: apiLead.person_name ?? "",
-        email: apiLead.email ?? "",
-        phone: apiLead.phone ?? "",
-        linkedin_profile_url: apiLead.linkedin_profile_url ?? "",
-        country: apiLead.country ?? "",
-        status: apiLead.status ?? "",
-        opportunityIds: [],
-        updateIds: [],
-        created_at: apiLead.created_at ?? "",
-        updated_at: apiLead.updated_at ?? "",
-      }));
-        setLeads(leadsData);
-
-      const activeOpportunities = opportunities
-        .filter(
+        // Filter active opportunities
+        const activeOpportunities = opportunities.filter(
           (opp) => opp.status !== "Completed" && opp.status !== "Cancelled"
-        )
-        .slice(0, 2);
+        ).slice(0, 2);
 
+        // Helper: get related data for each opportunity
+        const getOpportunityContext = (opp: Opportunity) => {
+          const account = accounts.find((a: any) => a.id === opp.associated_account_id);
+          const lead = leadsData.find((l) => l.id === (opp as any).associated_lead_id);
+          // Find all updates related to this opportunity, its account, or its lead
+          const relatedUpdates = updates.filter(
+            (u) =>
+              u.opportunityId === opp.id ||
+              (account && u.accountId === account.id) ||
+              (lead && u.leadId === lead.id)
+          );
+          return { account, lead, relatedUpdates };
+        };
+
+        // Summarize historical performance (all opportunities)
+        const won = opportunities.filter(o => o.status === 'Win');
+        const lost = opportunities.filter(o => o.status === 'Loss');
+        const winCount = won.length;
+        const lossCount = lost.length;
+        const winRate = winCount + lossCount > 0 ? winCount / (winCount + lossCount) : 0;
+        // Average sales cycle (in days)
+        const avgSalesCycle = won.length > 0 ?
+          Math.round(won.reduce((sum, o) => {
+            if (o.created_at && o.updated_at) {
+              const start = new Date(o.created_at).getTime();
+              const end = new Date(o.updated_at).getTime();
+              return sum + (end - start) / (1000 * 60 * 60 * 24);
+            }
+            return sum;
+          }, 0) / won.length) : 0;
+        const notableWins = won.slice(0, 3).map(o => o.name).join(', ');
+        const historicalContext = `Win/Loss Ratio: ${winCount}/${lossCount} (Win Rate: ${(winRate*100).toFixed(1)}%)\nAverage Sales Cycle: ${avgSalesCycle} days\nNotable wins: ${notableWins}`;
+        const referenceFrameworks = `We use the Challenger Sale approach: teach, tailor, take control. Focus on insight-driven selling and proactive client engagement.`;
+
+        // Build detailed prompt for each opportunity
         const forecastPromises = activeOpportunities.map(async (opp) => {
+          const { account, lead, relatedUpdates } = getOpportunityContext(opp);
+          // Build recent updates summary
+          const updatesSummary = relatedUpdates
+            .slice(0, 5)
+            .map((u) => `- ${u.date ? format(parseISO(u.date), "MMM dd, yyyy") : ""}: ${u.content}`)
+            .join("\n");
+          // Build detailed prompt fields
+          const opportunityTimeline = `Start: ${opp.created_at ? format(parseISO(opp.created_at), "MMM dd, yyyy") : "N/A"}, End: ${opp.expected_close_date ? format(parseISO(opp.expected_close_date), "MMM dd, yyyy") : "N/A"}`;
+          const opportunityDescription = [
+            opp.description,
+            account ? `\nAccount: ${account.name} (${account.type}, ${account.status})` : "",
+            account ? `Contact: ${account.contactPersonName || "N/A"}, ${account.contactEmail || "N/A"}, ${account.contactPhone || "N/A"}` : "",
+            lead ? `Lead: ${lead.personName} (${lead.companyName}, ${lead.country}, ${lead.status})` : "",
+          ]
+            .filter(Boolean)
+            .join("\n");
+          const recentUpdates = updatesSummary || "No recent updates.";
           try {
             const forecast = await aiPoweredOpportunityForecasting({
               opportunityName: opp.name,
-              opportunityDescription: opp.description,
-            opportunityTimeline: `Start: ${
-              opp.created_at
-                ? format(parseISO(opp.created_at), "MMM dd, yyyy")
-                : "N/A"
-            }, End: ${
-              opp.expected_close_date
-                ? format(parseISO(opp.expected_close_date), "MMM dd, yyyy")
-                : "N/A"
-            }`,
+              opportunityDescription,
+              opportunityTimeline,
               opportunityValue: opp.amount,
               opportunityStatus: opp.status,
-            recentUpdates:
-              "Recent updates indicate steady progress and positive client feedback.",
+              recentUpdates,
+              historicalContext,
+              referenceFrameworks,
             });
             return { ...opp, forecast };
           } catch (e) {
@@ -160,21 +214,21 @@ export default function DashboardPage() {
         setForecastedOpportunities(results);
 
         if (results.length > 0) {
-          // Calculate total forecasted revenue and soonest completion date
-          const totalRevenue = results.reduce((sum, opp) => {
-            return sum + (opp.forecast?.revenueForecast || 0);
-          }, 0);
-          const soonestCompletion = results
-            .map((opp) => opp.forecast?.completionDateEstimate)
-            .filter(Boolean)
-            .sort()[0];
-          const keyDeals = results.map((opp) => opp.name).join(", ");
+          // Compose a full AI-driven summary for the overview
+          const aiSummaries = results.map((opp) => {
+            if (!opp.forecast) return '';
+            return `
+              <div style="margin-bottom:1em;">
+                <strong>${opp.name}</strong><br/>
+                <span>${opp.forecast.timelinePrediction}</span><br/>
+                <strong>Estimated completion:</strong> ${opp.forecast.completionDateEstimate}<br/>
+                <strong>Revenue forecast:</strong> $${opp.forecast.revenueForecast.toLocaleString()}<br/>
+                <strong>Potential bottlenecks:</strong> ${opp.forecast.bottleneckIdentification}
+              </div>
+            `;
+          }).join('');
           setOverallSalesForecast(
-            `<strong>AI Sales Forecast:</strong> The system predicts a <strong>total potential revenue</strong> of <strong>$${totalRevenue.toLocaleString()}</strong> from <strong>${results.length}</strong> key deal${results.length > 1 ? "s" : ""} (${keyDeals}). <br />` +
-            (soonestCompletion
-              ? `The <strong>earliest estimated completion</strong> is <strong>${soonestCompletion}</strong>. <br />`
-              : "") +
-            `Opportunities are showing <strong>positive momentum</strong> with strong client engagement. Stay focused on high-value deals to maximize your sales outcomes.`
+            `<strong>AI Sales Forecast Overview</strong><br/>${aiSummaries}`
           );
         } else {
           setOverallSalesForecast(
@@ -534,9 +588,9 @@ export default function DashboardPage() {
                         className="w-full bg-gray-50/50 rounded-sm p-3 border-l-4 border-blue-400 hover:bg-gray-100/50 transition-colors"
                       >
                         <div className="flex flex-col gap-1">
-                          <p className="font-medium text-gray-900">{lead.person_name}</p>
+                          <p className="font-medium text-gray-900">{lead.personName}</p>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500">({lead.company_name})</span>
+                            <span className="text-sm text-gray-500">({lead.companyName})</span>
                             <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
                               {lead.status}
                             </span>

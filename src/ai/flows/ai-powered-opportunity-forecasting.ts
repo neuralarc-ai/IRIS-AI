@@ -13,26 +13,28 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const AiPoweredOpportunityForecastingInputSchema = z.object({ // Renamed
-  opportunityName: z.string().describe('The name of the opportunity.'), // Renamed
-  opportunityDescription: z.string().describe('A detailed description of the opportunity.'), // Renamed
-  opportunityTimeline: z.string().describe('The current timeline of the opportunity, including start and end dates.'), // Renamed
-  opportunityValue: z.number().describe('The monetary value of the opportunity.'), // Renamed
-  opportunityStatus: z.string().describe('The current status of the opportunity (e.g., Need Analysis, Negotiation).'), // Renamed
+const AiPoweredOpportunityForecastingInputSchema = z.object({
+  opportunityName: z.string().describe('The name of the opportunity.'),
+  opportunityDescription: z.string().describe('A detailed description of the opportunity.'),
+  opportunityTimeline: z.string().describe('The current timeline of the opportunity, including start and end dates.'),
+  opportunityValue: z.number().describe('The monetary value of the opportunity.'),
+  opportunityStatus: z.string().describe('The current status of the opportunity (e.g., Need Analysis, Negotiation).'),
   recentUpdates: z.string().describe('A summary of recent updates and communications related to the opportunity.'),
+  historicalContext: z.string().optional().describe('Summary of historical performance, win/loss ratio, sales cycle, and notable deals.'),
+  referenceFrameworks: z.string().optional().describe('Relevant sales methodologies, frameworks, or best practices.'),
 });
-export type AiPoweredOpportunityForecastingInput = z.infer<typeof AiPoweredOpportunityForecastingInputSchema>; // Renamed
+export type AiPoweredOpportunityForecastingInput = z.infer<typeof AiPoweredOpportunityForecastingInputSchema>;
 
-const AiPoweredOpportunityForecastingOutputSchema = z.object({ // Renamed
+const AiPoweredOpportunityForecastingOutputSchema = z.object({
   timelinePrediction: z.string().describe('Predicted timeline for the opportunity, including potential delays.'),
   completionDateEstimate: z.string().describe('Estimated completion date of the opportunity.'),
   revenueForecast: z.number().describe('Forecasted revenue based on the opportunity value.'),
   bottleneckIdentification: z.string().describe('Identified potential bottlenecks in the opportunity timeline.'),
 });
-export type AiPoweredOpportunityForecastingOutput = z.infer<typeof AiPoweredOpportunityForecastingOutputSchema>; // Renamed
+export type AiPoweredOpportunityForecastingOutput = z.infer<typeof AiPoweredOpportunityForecastingOutputSchema>;
 
-export async function aiPoweredOpportunityForecasting(input: AiPoweredOpportunityForecastingInput): Promise<AiPoweredOpportunityForecastingOutput> { // Renamed
-  return aiPoweredOpportunityForecastingFlow(input); // Renamed
+export async function aiPoweredOpportunityForecasting(input: AiPoweredOpportunityForecastingInput): Promise<AiPoweredOpportunityForecastingOutput> {
+  return aiPoweredOpportunityForecastingFlow(input);
 }
 
 const prompt = ai.definePrompt({
@@ -50,6 +52,9 @@ Value: {{{opportunityValue}}}
 Current Status: {{{opportunityStatus}}}
 Recent Updates: {{{recentUpdates}}}
 
+Historical Context: {{{historicalContext}}}
+Reference Frameworks: {{{referenceFrameworks}}}
+
 Consider the following factors in your analysis:
 1. Current status and its typical duration
 2. Project complexity from the description
@@ -57,6 +62,8 @@ Consider the following factors in your analysis:
 4. Value impact on stakeholder decisions
 5. Industry-standard timelines for similar opportunities
 6. Potential risks and delays
+7. Historical performance and lessons learned
+8. Relevant sales methodologies or frameworks
 
 Provide a structured analysis with:
 1. A realistic completion date estimate
