@@ -88,7 +88,6 @@ export default function AccountCard({
   const [logContent, setLogContent] = useState("");
   const [logDate, setLogDate] = useState("");
   const [logSubmitting, setLogSubmitting] = useState(false);
-  const [isReverting, setIsReverting] = useState(false);
   const { toast } = useToast();
 
   const fetchLogs = async () => {
@@ -222,40 +221,6 @@ export default function AccountCard({
     }
   };
 
-  const handleRevertToLead = async () => {
-    setIsReverting(true);
-    try {
-      const res = await fetch(`/api/accounts/${account.id}/revert-to-lead`, {
-        method: 'POST',
-      });
-      const result = await res.json();
-      if (res.ok) {
-        toast({
-          title: 'Reverted to Lead',
-          description: 'This account has been marked inactive and the lead restored.',
-          className: 'bg-green-100 dark:bg-green-900 border-green-500',
-        });
-        // Optionally, you can trigger a refresh or callback here
-        // For now, just reload the page or remove the card from UI
-        window.location.reload();
-      } else {
-        toast({
-          title: 'Revert Failed',
-          description: result.error || 'Could not revert account to lead.',
-          variant: 'destructive',
-        });
-      }
-    } catch (e) {
-      toast({
-        title: 'Revert Failed',
-        description: 'Could not revert account to lead.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsReverting(false);
-    }
-  };
-
   return (
     <>
       <Dialog open={showModal} onOpenChange={setShowModal}>
@@ -288,29 +253,18 @@ export default function AccountCard({
                 </div>
               )}
             </div>
-                          <div className="flex items-center gap-2">
-            <Badge
-              variant={account.status === "Active" ? "default" : "secondary"}
-              className={`capitalize whitespace-nowrap ml-2 ${
-                account.status === "Active"
-                  ? "bg-green-500/20 text-green-700 border-green-500/30"
-                  : "bg-amber-500/20 text-amber-700 border-amber-500/30"
-              } !hover:bg-inherit !hover:text-inherit !hover:border-inherit`}
-            >
-              {account.status}
-            </Badge>
-                  {(account.convertedFromLeadId && account.status !== 'Inactive') && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleRevertToLead}
-                      disabled={isReverting}
-                      className="ml-2 border border-yellow-700 text-yellow-900 bg-yellow-100 hover:bg-yellow-200"
-                    >
-                      {isReverting ? 'Reverting...' : 'Revert to Lead'}
-                    </Button>
-                  )}
-                </div>
+            <div className="flex items-center gap-2">
+              <Badge
+                variant={account.status === "Active" ? "default" : "secondary"}
+                className={`capitalize whitespace-nowrap ml-2 ${
+                  account.status === "Active"
+                    ? "bg-green-500/20 text-green-700 border-green-500/30"
+                    : "bg-amber-500/20 text-amber-700 border-amber-500/30"
+                } !hover:bg-inherit !hover:text-inherit !hover:border-inherit`}
+              >
+                {account.status}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="flex-grow space-y-3 text-sm px-6 text-left">

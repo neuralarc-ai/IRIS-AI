@@ -141,6 +141,7 @@ export default function LeadCard({
   const [logDate, setLogDate] = useState("");
   const [logSubmitting, setLogSubmitting] = useState(false);
   const [updateType, setUpdateType] = useState('');
+  const [showConvertDialog, setShowConvertDialog] = useState(false);
 
   const isAssignedToMe = lead.assigned_user_id === user?.id;
   const isCreatedByMe = lead.created_by_user_id === user?.id;
@@ -187,6 +188,7 @@ export default function LeadCard({
   };
 
   const handleConvert = async () => {
+    setShowConvertDialog(false);
     setIsConverting(true);
     try {
       const response = await fetch(`/api/leads/${lead.id}/convert`, {
@@ -485,7 +487,7 @@ export default function LeadCard({
                         <TooltipTrigger asChild>
                           <Button
                             size="sm"
-                            onClick={handleConvert}
+                            onClick={() => setShowConvertDialog(true)}
                             disabled={isConverting}
                             variant="ghost"
                             className="p-0 bg-transparent border-none shadow-none focus:outline-none hover:bg-transparent group"
@@ -653,6 +655,42 @@ export default function LeadCard({
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Convert to Account Confirmation Dialog */}
+      <AlertDialog open={showConvertDialog} onOpenChange={setShowConvertDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Convert Lead to Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to convert "{lead.companyName}" from a lead to an account? 
+              This action will create a new account and remove this lead from the leads list.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button variant="outline" className="border-red-500 text-red-600 hover:bg-red-50">
+                Cancel
+              </Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button 
+                onClick={handleConvert} 
+                disabled={isConverting}
+                style={{
+                  background: '#2B2521',
+                  color: 'white',
+                  fontWeight: 500,
+                  fontSize: '16px',
+                  lineHeight: '24px',
+                }}
+                className="hover:bg-gray-800"
+              >
+                {isConverting ? "Converting..." : "Yes, Convert"}
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
