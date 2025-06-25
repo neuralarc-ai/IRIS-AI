@@ -182,29 +182,26 @@ export default function UpdatesPage() {
   };
 
   const handleGetAIAdvice = async (accountId: string, updates: any[], accountName: string) => {
-    console.log(`[AI Advice] Button clicked for accountId:`, accountId, 'accountName:', accountName);
     setAiLoading(prev => ({ ...prev, [accountId]: true }));
     try {
-      const context = updates.map(u => ({
-        date: format(parseISO(u.date), 'yyyy-MM-dd'),
-        content: u.content,
-        type: u.type
-      }));
-      console.log('[AI Advice] Context sent to backend:', context);
-      const response = await fetch('/api/ai/gemini-advice', {
+      // Collect logs as an array of update content
+      const logs = updates.map(u => u.content);
+      const response = await fetch('/api/ai/get-advice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ context, accountName }),
+        body: JSON.stringify({ logs, context: { accountName } }),
       });
       const data = await response.json();
-      console.log('[AI Advice] Response from backend:', data);
-      setNewActivities(prev => ({ ...prev, [accountId]: data.aiAdvice }));
+      setNewActivities(prev => ({
+        ...prev,
+        [accountId]: data.advice
+          ? `${data.advice}\n\nAction Items: ${data.actionItems}\nFollow-up Suggestions: ${data.followUpSuggestions}`
+          : (data.warning || 'AI advice could not be generated.')
+      }));
     } catch (e) {
-      console.error('[AI Advice] Error:', e);
       setNewActivities(prev => ({ ...prev, [accountId]: 'AI advice could not be generated.' }));
     } finally {
       setAiLoading(prev => ({ ...prev, [accountId]: false }));
-      console.log('[AI Advice] Done for accountId:', accountId);
     }
   };
 

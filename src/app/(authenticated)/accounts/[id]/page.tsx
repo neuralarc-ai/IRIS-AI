@@ -225,7 +225,7 @@ export default function AccountDetailsPage() {
                   </div>
                 ) : dailySummary ? (
                   <div className="space-y-1">
-                    <p className="text-sm text-foreground decoration-none">{dailySummary.summary}</p>
+                    <p className="text-sm text-foreground">{dailySummary.summary}</p>
                     <div className="flex items-center text-sm">
                       <MessageSquareHeart className="mr-1.5 h-4 w-4 text-pink-500" />
                       <span className="font-medium text-foreground">Health:</span>&nbsp;

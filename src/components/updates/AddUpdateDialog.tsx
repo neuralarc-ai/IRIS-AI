@@ -65,26 +65,20 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded, for
 
     setIsLoadingAiAdvice(true);
     try {
-      const selectedAccount = accounts.find(acc => acc.id === selectedAccountId);
-      const selectedLead = leads.find(lead => lead.id === selectedLeadId);
-      
-      const response = await fetch('/api/ai/gemini-advice', {
+      const response = await fetch('/api/ai/get-advice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          context: content,
-          accountName: selectedAccount?.name || selectedLead?.company_name || 'Unknown'
-        }),
+        body: JSON.stringify({ logs: [content] }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to get AI advice');
-      }
-
+      if (!response.ok) throw new Error('Failed to get AI advice');
       const data = await response.json();
-      setAiAdvice(data.aiAdvice);
+      setAiAdvice(
+        data.advice
+          ? `${data.advice}\n\nAction Items: ${data.actionItems}\nFollow-up Suggestions: ${data.followUpSuggestions}`
+          : (data.warning || 'AI advice could not be generated.')
+      );
     } catch (error) {
-      console.error('Error getting AI advice:', error);
       toast({
         title: "Error",
         description: "Failed to get AI advice. Please try again.",
