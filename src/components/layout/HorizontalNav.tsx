@@ -146,16 +146,6 @@ export default function HorizontalNav() {
                 </a>
               </Button>
             )}
-            <Button
-              variant="ghost" 
-              size="sm"
-              className="flex flex-col items-center gap-1 px-4 py-2 shadow-none border-none bg-transparent text-black hover:underline hover:bg-transparent transition-all duration-150 text-[15px] min-w-[70px]"
-              onClick={() => setIsAddAccountDialogOpen(true)}
-              style={{ boxShadow: 'none', background: 'none' }}
-            >
-              <PlusCircle className="h-7 w-7" />
-              <span className="text-[15px] leading-tight text-center">Quick Create</span>
-            </Button>
           </nav>
 
           <div className="flex items-center">

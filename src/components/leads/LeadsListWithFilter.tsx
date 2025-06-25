@@ -49,9 +49,12 @@ interface LeadsListWithFilterProps {
   onLeadConverted: (leadId: string, newAccountId: string) => void;
   onLeadAdded?: (newLead: Lead) => void;
   onLeadDeleted: (leadId: string) => void;
+  rejectedLeads?: any[];
+  showingRejected?: boolean;
+  onShowRejected?: () => void;
 }
 
-export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdded, onLeadDeleted }: LeadsListWithFilterProps) {
+export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdded, onLeadDeleted, rejectedLeads = [], showingRejected = false, onShowRejected }: LeadsListWithFilterProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [search, setSearch] = useState('');
@@ -69,6 +72,8 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
   const [logDate, setLogDate] = useState("");
   const [logSubmitting, setLogSubmitting] = useState(false);
   const [updateType, setUpdateType] = useState('');
+  const [fetchedRejectedLeads, setFetchedRejectedLeads] = useState<any[]>([]);
+  const [fetchingRejected, setFetchingRejected] = useState(false);
 
   React.useEffect(() => {
     setLocalLeads(leads);
@@ -202,6 +207,21 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
     fetchLogs(lead.id);
   };
 
+  const handleShowRejected = async () => {
+    if (showingRejected || fetchingRejected) return;
+    setFetchingRejected(true);
+    try {
+      const res = await fetch('/api/leads?status=Unqualified&limit=100');
+      const result = await res.json();
+      setFetchedRejectedLeads(result.data || []);
+      if (onShowRejected) onShowRejected();
+    } catch (e) {
+      toast({ title: 'Failed to fetch rejected leads', variant: 'destructive' });
+    } finally {
+      setFetchingRejected(false);
+    }
+  };
+
   return (
     <div className="w-full flex flex-col gap-6">
       {/* Filter/Search Full Width */}
@@ -210,6 +230,14 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
           <div className="flex items-center">
             <Filter className="mr-2 h-5 w-5 text-primary" />
             <span className="font-semibold text-lg">Filter & Search Leads</span>
+            <Button
+              variant="outline"
+              className={`ml-4 border-red-500 text-red-600 hover:bg-red-50 ${showingRejected || fetchingRejected ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={handleShowRejected}
+              disabled={showingRejected || fetchingRejected}
+            >
+              {fetchingRejected ? 'Loading...' : 'View Rejected'}
+            </Button>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -259,6 +287,42 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
           </div>
         </div>
       </div>
+
+      {/* Show rejected leads cards below filter/search if showingRejected is true */}
+      {showingRejected && (
+        <div className="space-y-4 mt-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-red-700">Rejected Leads</h2>
+            <Button onClick={() => { setFetchedRejectedLeads([]); if (onShowRejected) onShowRejected(); }} className="bg-[#2B2521] text-white px-6 py-2 rounded hover:bg-gray-800">Back</Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {(fetchedRejectedLeads.length > 0 ? fetchedRejectedLeads : rejectedLeads).map((lead, idx) => (
+              <div key={lead.id || idx} className="bg-white rounded-[12px] p-6 shadow border border-red-200 flex flex-col justify-between min-h-[340px]">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xl text-[#97A88C]">{lead.company_name || lead.companyName || 'No Company Name'}</span>
+                    </div>
+                    <span className="bg-red-100 text-red-700 text-xs font-semibold px-3 py-1 rounded-full">Rejected</span>
+                  </div>
+                  <div className="flex items-center text-muted-foreground mb-1">
+                    {lead.person_name || lead.personName || 'N/A'}
+                  </div>
+                  <div className="flex items-center text-muted-foreground mb-1">
+                    {lead.email || 'N/A'}
+                  </div>
+                  <div className="flex items-center text-muted-foreground mb-1">
+                    {lead.country || 'N/A'}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {(fetchedRejectedLeads.length === 0 && rejectedLeads.length === 0) && (
+              <div className="col-span-full text-center text-muted-foreground mt-12">No rejected leads found.</div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* View Mode Content */}
       {viewMode === 'list' ? (
