@@ -27,6 +27,7 @@ import {
   UserCheck,
   UserPlus,
   Trash2,
+  Edit,
 } from "lucide-react";
 import type { Lead } from "@/types";
 import { formatDistanceToNow, parseISO } from "date-fns";
@@ -65,12 +66,16 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
+import { countries } from '@/lib/countryData';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Input } from '@/components/ui/input';
 
 interface LeadCardProps {
   lead: Lead;
   onLeadConverted: (leadId: string, newAccountId: string) => void;
   onStatusChange?: (leadId: string, newStatus: Lead["status"]) => void;
   onDelete?: (leadId: string) => void;
+  isSelectMode?: boolean;
 }
 
 const getStatusBadgeVariant = (
@@ -127,6 +132,7 @@ export default function LeadCard({
   onLeadConverted,
   onStatusChange,
   onDelete,
+  isSelectMode = false,
 }: LeadCardProps) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -141,7 +147,15 @@ export default function LeadCard({
   const [logDate, setLogDate] = useState("");
   const [logSubmitting, setLogSubmitting] = useState(false);
   const [updateType, setUpdateType] = useState('');
-  const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValues, setEditValues] = useState({
+    companyName: initialLead.companyName,
+    personName: initialLead.personName,
+    email: initialLead.email,
+    phone: initialLead.phone || '',
+    country: initialLead.country || '',
+  });
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const isAssignedToMe = lead.assigned_user_id === user?.id;
   const isCreatedByMe = lead.created_by_user_id === user?.id;
@@ -324,6 +338,76 @@ export default function LeadCard({
     }
   };
 
+  // Edit handlers
+  const handleEditClick = () => {
+    setIsEditing(true);
+    setEditValues({
+      companyName: lead.companyName,
+      personName: lead.personName,
+      email: lead.email,
+      phone: lead.phone || '',
+      country: lead.country || '',
+    });
+  };
+
+  const handleEditChange = (field: string, value: string) => {
+    setEditValues((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleEditSave = async () => {
+    setIsSavingEdit(true);
+    try {
+      const response = await fetch(`/api/leads/${lead.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company_name: editValues.companyName,
+          person_name: editValues.personName,
+          email: editValues.email,
+          phone: editValues.phone,
+          country: editValues.country,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update lead');
+      }
+      setLead((prev) => ({
+        ...prev,
+        companyName: editValues.companyName,
+        personName: editValues.personName,
+        email: editValues.email,
+        phone: editValues.phone,
+        country: editValues.country,
+      }));
+      setIsEditing(false);
+      toast({
+        title: 'Lead Updated!',
+        description: 'Lead information has been updated successfully.',
+        className: 'bg-green-100 dark:bg-green-900 border-green-500',
+      });
+    } catch (error) {
+      toast({
+        title: 'Update Failed',
+        description: error instanceof Error ? error.message : 'Could not update lead.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  const handleEditCancel = () => {
+    setIsEditing(false);
+    setEditValues({
+      companyName: lead.companyName,
+      personName: lead.personName,
+      email: lead.email,
+      phone: lead.phone || '',
+      country: lead.country || '',
+    });
+  };
+
   return (
     <>
       <Dialog open={showModal} onOpenChange={(open) => {
@@ -333,8 +417,8 @@ export default function LeadCard({
         <div
           className="flex flex-col h-full bg-white text-black rounded-[8px] p-2 border-none cursor-pointer"
           onClick={e => {
-            // Prevent modal open on action button clicks
-            if ((e.target as HTMLElement).closest("button, a")) return;
+            // Prevent modal open on action button clicks or when in select mode
+            if ((e.target as HTMLElement).closest("button, a") || isSelectMode) return;
             setShowModal(true);
           }}
         >
@@ -538,31 +622,105 @@ export default function LeadCard({
         </div>
         <DialogContent className="max-w-xl w-full bg-white text-black">
           <DialogHeader>
-            <DialogTitle className="text-black">{lead.companyName}</DialogTitle>
+            <DialogTitle className="text-black flex items-center justify-between">
+              <div className="flex items-center">
+                {isEditing ? (
+                  <input
+                    className="text-xl font-semibold border-b border-[#97A88C] bg-transparent focus:outline-none px-1"
+                    value={editValues.companyName}
+                    onChange={e => handleEditChange('companyName', e.target.value)}
+                  />
+                ) : (
+                  lead.companyName
+                )}
+              </div>
+              <div className="flex items-center gap-2 mr-4">
+                {!isEditing && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-9 px-3 border border-[#97A88C] text-[#2B2521] hover:bg-[#97A88C]/10 rounded-lg font-medium shadow-sm flex items-center gap-1 text-base"
+                    style={{ minHeight: 36 }}
+                    onClick={handleEditClick}
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                )}
+                {isEditing && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleEditCancel}
+                      disabled={isSavingEdit}
+                      className="h-9 px-3 border border-[#97A88C] text-[#2B2521] hover:bg-[#97A88C]/10 rounded-lg text-base"
+                      style={{ minHeight: 36 }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={handleEditSave}
+                      disabled={isSavingEdit}
+                      className="h-9 px-3 bg-[#2B2521] hover:bg-[#2B2521]/90 text-white rounded-lg text-base"
+                      style={{ minHeight: 36 }}
+                    >
+                      {isSavingEdit ? 'Saving...' : 'Save'}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </DialogTitle>
             <DialogDescription className="text-gray-600">
               <div className="mt-2 grid grid-cols-2 gap-4">
                 <div className="p-2 bg-gray-50 rounded">
                   <span className="text-black font-semibold">Name: </span>
-                  {lead.personName}
-                </div>
-                <div className="p-2 bg-gray-50 rounded">
-                  <span className="text-black font-semibold">Email: </span>
-                  {lead.email}
-                </div>
-                <div className="p-2 bg-gray-50 rounded">
-                  {lead.phone && (
-                    <>
-                      <span className="text-black font-semibold">Number: </span>
-                      {lead.phone}
-                    </>
+                  {isEditing ? (
+                    <input
+                      className="border rounded px-2 py-1 w-full mt-1"
+                      value={editValues.personName}
+                      onChange={e => handleEditChange('personName', e.target.value)}
+                    />
+                  ) : (
+                    lead.personName
                   )}
                 </div>
                 <div className="p-2 bg-gray-50 rounded">
-                  {lead.country && (
-                    <>
-                      <span className="text-black font-semibold">Location: </span>
-                      {lead.country}
-                    </>
+                  <span className="text-black font-semibold">Email: </span>
+                  {isEditing ? (
+                    <input
+                      className="border rounded px-2 py-1 w-full mt-1"
+                      value={editValues.email}
+                      onChange={e => handleEditChange('email', e.target.value)}
+                    />
+                  ) : (
+                    lead.email
+                  )}
+                </div>
+                <div className="p-2 bg-gray-50 rounded">
+                  <span className="text-black font-semibold">Number: </span>
+                  {isEditing ? (
+                    <input
+                      className="border rounded px-2 py-1 w-full mt-1"
+                      value={editValues.phone}
+                      onChange={e => handleEditChange('phone', e.target.value)}
+                    />
+                  ) : (
+                    lead.phone || 'N/A'
+                  )}
+                </div>
+                <div className="p-2 bg-gray-50 rounded">
+                  <span className="text-black font-semibold">Location: </span>
+                  {isEditing ? (
+                    <CountryCombobox
+                      value={editValues.country}
+                      onChange={val => handleEditChange('country', val)}
+                      countries={countries}
+                    />
+                  ) : (
+                    lead.country || 'N/A'
                   )}
                 </div>
               </div>
@@ -692,5 +850,60 @@ export default function LeadCard({
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+interface CountryComboboxProps {
+  value: string;
+  onChange: (value: string) => void;
+  countries: { code: string; name: string }[];
+}
+
+function CountryCombobox({ value, onChange, countries }: CountryComboboxProps) {
+  const [open, setOpen] = React.useState(false);
+  const [search, setSearch] = React.useState('');
+  const filtered = React.useMemo(() =>
+    countries.filter(c => c.name.toLowerCase().includes(search.toLowerCase())),
+    [search, countries]
+  );
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="w-full border rounded px-2 py-1 bg-white text-left"
+          onClick={() => setOpen(o => !o)}
+        >
+          {value || 'Select country'}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="p-2 w-64">
+        <Input
+          autoFocus
+          placeholder="Type to search..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="mb-2"
+        />
+        <div className="max-h-48 overflow-y-auto">
+          {filtered.length === 0 && (
+            <div className="text-gray-400 px-2 py-1">No results</div>
+          )}
+          {filtered.map(c => (
+            <div
+              key={c.code}
+              className={`px-2 py-1 cursor-pointer rounded hover:bg-[#E5E7E0] ${c.name === value ? 'bg-[#97A88C]/20 font-semibold' : ''}`}
+              onClick={() => {
+                onChange(c.name);
+                setOpen(false);
+                setSearch('');
+              }}
+            >
+              {c.name}
+            </div>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

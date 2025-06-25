@@ -3,9 +3,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Filter, List, Grid3X3, ChevronDown, FileWarning } from 'lucide-react';
+import { Filter, List, Grid3X3, ChevronDown, Users, CheckSquare, Square, X } from 'lucide-react';
 import LeadCard from './LeadCard';
 import AddLeadDialog from './AddLeadDialog';
+import BulkAssignDialog from './BulkAssignDialog';
 import type { Lead } from '@/types';
 import {
   DropdownMenu,
@@ -31,9 +32,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
-import Link from 'next/link';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const STATUS_OPTIONS = [
   'All Statuses',
@@ -49,29 +48,18 @@ interface LeadsListWithFilterProps {
   onLeadConverted: (leadId: string, newAccountId: string) => void;
   onLeadAdded?: (newLead: Lead) => void;
   onLeadDeleted: (leadId: string) => void;
-  rejectedLeads?: any[];
-  onShowRejected?: () => void;
-  showingRejected?: boolean;
+  onBulkAssignmentComplete?: () => void;
 }
 
-export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdded, onLeadDeleted, rejectedLeads = [], onShowRejected, showingRejected = false }: LeadsListWithFilterProps) {
-  const { toast } = useToast();
-  const { user } = useAuth();
+export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdded, onLeadDeleted, onBulkAssignmentComplete }: LeadsListWithFilterProps) {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('All Statuses');
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [localLeads, setLocalLeads] = useState<Lead[]>(leads);
-  
-  // Modal states for list view
-  const [showModal, setShowModal] = useState(false);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [logs, setLogs] = useState<any[]>([]);
-  const [logsLoading, setLogsLoading] = useState(false);
-  const [logContent, setLogContent] = useState("");
-  const [logDate, setLogDate] = useState("");
-  const [logSubmitting, setLogSubmitting] = useState(false);
-  const [updateType, setUpdateType] = useState('');
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
+  const [bulkAssignDialogOpen, setBulkAssignDialogOpen] = useState(false);
+  const [isSelectMode, setIsSelectMode] = useState(false);
 
   React.useEffect(() => {
     setLocalLeads(leads);
@@ -85,6 +73,11 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
 
   const handleLeadConversion = (leadId: string, newAccountId: string) => {
     setLocalLeads((prev) => prev.filter((lead) => lead.id !== leadId));
+    setSelectedLeads((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(leadId);
+      return newSet;
+    });
     onLeadConverted(leadId, newAccountId);
   };
 
@@ -108,7 +101,63 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
 
   const handleDelete = (leadId: string) => {
     setLocalLeads((prev) => prev.filter((l) => l.id !== leadId));
+    setSelectedLeads((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(leadId);
+      return newSet;
+    });
     onLeadDeleted(leadId);
+  };
+
+  // Selection handlers
+  const handleSelectLead = (leadId: string, checked: boolean) => {
+    setSelectedLeads((prev) => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(leadId);
+      } else {
+        newSet.delete(leadId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedLeads(new Set(filteredLeads.map(lead => lead.id)));
+    } else {
+      setSelectedLeads(new Set());
+    }
+  };
+
+  const handleCardClick = (leadId: string) => {
+    if (!isSelectMode) return;
+    
+    setSelectedLeads((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(leadId)) {
+        newSet.delete(leadId);
+      } else {
+        newSet.add(leadId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleBulkAssignmentComplete = () => {
+    // Refresh the leads data to show updated assignments
+    setSelectedLeads(new Set());
+    setIsSelectMode(false);
+    onBulkAssignmentComplete?.();
+  };
+
+  const exitSelectMode = () => {
+    setIsSelectMode(false);
+    setSelectedLeads(new Set());
+  };
+
+  const enterSelectMode = () => {
+    setIsSelectMode(true);
   };
 
   const getStatusBadgeVariant = (status: Lead["status"]) => {
@@ -136,76 +185,9 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
     }
   };
 
-  // Fetch logs for selected lead
-  const fetchLogs = async (leadId: string) => {
-    setLogsLoading(true);
-    try {
-      const res = await fetch(`/api/updates?lead_id=${leadId}`);
-      const result = await res.json();
-      setLogs(result.data || []);
-    } catch (e) {
-      setLogs([]);
-    } finally {
-      setLogsLoading(false);
-    }
-  };
-
-  const todayStr = new Date().toISOString().split('T')[0];
-
-  // Log new activity
-  const handleLogActivity = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!logContent.trim() || !selectedLead) return;
-    if (logDate && logDate < todayStr) {
-      toast({ title: "Invalid Date", description: "Please select today or a future date.", variant: "destructive" });
-      return;
-    }
-    setLogSubmitting(true);
-    const newLog = {
-      id: `temp-${Date.now()}`,
-      content: logContent,
-      date: logDate ? new Date(logDate).toISOString() : new Date().toISOString(),
-    };
-    setLogs(prev => [newLog, ...prev]); // Optimistically add log
-    try {
-      const res = await fetch("/api/updates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lead_id: selectedLead.id,
-          type: updateType || "General",
-          content: logContent,
-          date: logDate ? new Date(logDate).toISOString() : new Date().toISOString(),
-          updated_by_user_id: user?.id,
-        }),
-      });
-      if (res.ok) {
-        setLogContent("");
-        setLogDate("");
-        const result = await res.json();
-        if (result.data) {
-          setLogs(prev => [result.data, ...prev.filter(l => l.id !== newLog.id)]);
-        } else {
-          fetchLogs(selectedLead.id); // fallback if no data returned
-        }
-        toast({ title: "Activity Logged", description: "Activity has been added to records." });
-      } else {
-        setLogs(prev => prev.filter(l => l.id !== newLog.id)); // Remove optimistic log on error
-        toast({ title: "Failed to log activity", variant: "destructive" });
-      }
-    } catch (e) {
-      setLogs(prev => prev.filter(l => l.id !== newLog.id)); // Remove optimistic log on error
-      toast({ title: "Failed to log activity", variant: "destructive" });
-    } finally {
-      setLogSubmitting(false);
-    }
-  };
-
-  const openLeadModal = (lead: Lead) => {
-    setSelectedLead(lead);
-    setShowModal(true);
-    fetchLogs(lead.id);
-  };
+  const selectedCount = selectedLeads.size;
+  const isAllSelected = filteredLeads.length > 0 && selectedCount === filteredLeads.length;
+  const isIndeterminate = selectedCount > 0 && selectedCount < filteredLeads.length;
 
   return (
     <div className="w-full flex flex-col gap-6">
@@ -283,8 +265,85 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
               </SelectContent>
             </Select>
           </div>
+          <div className="flex items-end">
+            {!isSelectMode && (
+              <Button
+                variant="outline"
+                onClick={enterSelectMode}
+                className="flex items-center gap-2 h-10 border-[#97A88C] text-[#2B2521] hover:bg-[#97A88C]/10"
+              >
+                <CheckSquare className="h-4 w-4" />
+                Select
+              </Button>
+            )}
+            {isSelectMode && (
+              <Button
+                variant="outline"
+                onClick={exitSelectMode}
+                className="flex items-center gap-2 h-10 bg-[#97A88C]/20 border-[#97A88C] text-[#2B2521] hover:bg-[#97A88C]/30"
+              >
+                <X className="h-4 w-4" />
+                {selectedCount > 0 ? `${selectedCount} Selected` : 'Cancel'}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Bulk Actions Bar (Card & List View) */}
+      {isSelectMode && (
+        <div className="w-full bg-[#E5E7E0] border border-[#97A88C] rounded-lg p-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium text-[#2B2521]">
+                {selectedCount > 0
+                  ? `${selectedCount} lead${selectedCount !== 1 ? 's' : ''} selected`
+                  : 'Select leads to assign'}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleSelectAll(true)}
+                className="text-[#2B2521] border-[#97A88C] hover:bg-[#97A88C]/10"
+              >
+                <CheckSquare className="mr-1 h-3 w-3" />
+                Select All ({filteredLeads.length})
+              </Button>
+              {selectedCount > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedLeads(new Set())}
+                  className="text-[#2B2521] border-[#97A88C] hover:bg-[#97A88C]/10"
+                >
+                  Clear Selection
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exitSelectMode}
+                className="text-[#2B2521] border-[#97A88C] hover:bg-[#97A88C]/10"
+              >
+                <X className="mr-1 h-3 w-3" />
+                Exit Select Mode
+              </Button>
+            </div>
+            {selectedCount > 0 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => setBulkAssignDialogOpen(true)}
+                  className="bg-[#2B2521] hover:bg-[#2B2521]/90 text-white"
+                  size="sm"
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  Assign to User
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* View Mode Content */}
       {viewMode === 'list' ? (
@@ -293,6 +352,19 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50">
+                {isSelectMode && (
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={isAllSelected}
+                      onCheckedChange={handleSelectAll}
+                      ref={(el) => {
+                        if (el) {
+                          el.indeterminate = isIndeterminate;
+                        }
+                      }}
+                    />
+                  </TableHead>
+                )}
                 <TableHead className="font-semibold">Company</TableHead>
                 <TableHead className="font-semibold">Contact Person</TableHead>
                 <TableHead className="font-semibold">Email</TableHead>
@@ -306,20 +378,21 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
             <TableBody>
               {filteredLeads.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                    {showingRejected ? 'No rejected leads found.' : 'No leads found.'}
+                  <TableCell colSpan={isSelectMode ? 9 : 8} className="text-center text-muted-foreground py-8">
+                    No leads found.
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredLeads.map(lead => (
-                  <TableRow 
-                    key={lead.id} 
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={(e) => {
-                      if ((e.target as HTMLElement).closest("button, a")) return;
-                      openLeadModal(lead);
-                    }}
-                  >
+                  <TableRow key={lead.id} className="hover:bg-gray-50">
+                    {isSelectMode && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedLeads.has(lead.id)}
+                          onCheckedChange={(checked) => handleSelectLead(lead.id, checked as boolean)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium">{lead.companyName}</TableCell>
                     <TableCell>{lead.personName}</TableCell>
                     <TableCell>
@@ -381,149 +454,43 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
             </div>
           ) : (
             filteredLeads.map(lead => (
-              <LeadCard 
+              <div 
                 key={lead.id} 
-                lead={lead} 
-                onLeadConverted={handleLeadConversion} 
-                onStatusChange={handleStatusChange} 
-                onDelete={handleDelete} 
-              />
+                className={`relative transition-all duration-200 ${
+                  isSelectMode && selectedLeads.has(lead.id)
+                    ? 'shadow-[0_0_0_4px_rgba(151,168,140,0.25)] border border-[#97A88C] scale-[1.02] bg-[#97A88C]/10 rounded-[8px]'
+                    : isSelectMode
+                    ? 'cursor-pointer hover:shadow-md hover:bg-[#E5E7E0]/50 rounded-[8px]'
+                    : 'rounded-[8px]'
+                }`}
+                onClick={() => handleCardClick(lead.id)}
+              >
+                <LeadCard 
+                  lead={lead} 
+                  onLeadConverted={handleLeadConversion} 
+                  onStatusChange={handleStatusChange} 
+                  onDelete={handleDelete} 
+                  isSelectMode={isSelectMode}
+                />
+              </div>
             ))
           )}
         </div>
       )}
 
-      {/* Modal for List View */}
-      <Dialog open={showModal} onOpenChange={(open) => {
-        setShowModal(open);
-        if (!open) {
-          setSelectedLead(null);
-          setLogs([]);
-        }
-      }}>
-        <DialogContent className="max-w-xl w-full bg-white text-black">
-          {selectedLead && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="text-black">{selectedLead.companyName}</DialogTitle>
-                <DialogDescription className="text-gray-600">
-                  <div className="mt-2 grid grid-cols-2 gap-4">
-                    <div className="p-2 bg-gray-50 rounded">
-                      <span className="text-black font-semibold">Name: </span>
-                      {selectedLead.personName}
-                    </div>
-                    <div className="p-2 bg-gray-50 rounded">
-                      <span className="text-black font-semibold">Email: </span>
-                      {selectedLead.email}
-                    </div>
-                    <div className="p-2 bg-gray-50 rounded">
-                      {selectedLead.phone && (
-                        <>
-                          <span className="text-black font-semibold">Number: </span>
-                          {selectedLead.phone}
-                        </>
-                      )}
-                    </div>
-                    <div className="p-2 bg-gray-50 rounded">
-                      {selectedLead.country && (
-                        <>
-                          <span className="text-black font-semibold">Location: </span>
-                          {selectedLead.country}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </DialogDescription>
-              </DialogHeader>
-              <div className="mt-4">
-                <div className="flex items-center mb-4">
-                  <span className="mr-2 text-lg"><FileWarning className="inline-block mr-1" /></span>
-                  <span className="text-lg font-medium text-gray-800">Lead: <span className="font-bold text-black text-2xl">{selectedLead.companyName}</span></span>
-                </div>
-                {logsLoading ? (
-                  <div className="text-black">Loading...</div>
-                ) : logs.length === 0 ? (
-                  <div className="text-gray-600">No log found</div>
-                ) : (
-                  <div className="space-y-3 max-h-80 min-h-0 overflow-y-scroll pr-2">
-                    {logs.map((log) => (
-                      <div key={log.id} className="bg-[#EAF4FF] rounded-lg px-5 py-3 flex items-center justify-between">
-                        <div>
-                          <div className="font-bold text-lg text-gray-900 mb-1">{log.content}</div>
-                          <div className="text-xs text-gray-600">Logged on: {log.date ? new Date(log.date).toISOString().slice(0, 10) : "-"}</div>
-                        </div>
-                        {log.type && (
-                          <span className="ml-4 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
-                            {log.type}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <form className="mt-6" onSubmit={handleLogActivity}>
-                <div className="mb-4">
-                  <label className="block font-semibold mb-1 text-black" htmlFor="lead-input">
-                    Lead <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="lead-input"
-                    type="text"
-                    value={selectedLead.companyName}
-                    disabled
-                    className="w-full rounded bg-white border border-black px-4 py-2 text-black text-base cursor-not-allowed mb-2"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block font-semibold mb-1 text-black" htmlFor="update-type">
-                    Update Type <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    id="update-type"
-                    value={updateType}
-                    onChange={e => setUpdateType(e.target.value)}
-                    required
-                    className="w-full rounded bg-white border border-black px-4 py-2 text-black text-base mb-2"
-                  >
-                    <option value="" disabled>Select update type</option>
-                    <option value="General">General</option>
-                    <option value="Call">Call</option>
-                    <option value="Meeting">Meeting</option>
-                    <option value="Email">Email</option>
-                  </select>
-                </div>
-                <div className="mb-4">
-                  <label className="block font-semibold mb-1 text-black" htmlFor="log-content">
-                    Content <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    id="log-content"
-                    className="w-full border border-black rounded p-2 mb-2 text-black bg-white placeholder:text-gray-400"
-                    rows={4}
-                    placeholder="Describe the call, meeting, email, or general update..."
-                    value={logContent}
-                    onChange={e => setLogContent(e.target.value)}
-                    required
-                  />
-                </div>
-                <input
-                  type="date"
-                  className="w-full border border-black rounded p-2 mb-2 text-black bg-white"
-                  value={logDate}
-                  onChange={e => setLogDate(e.target.value)}
-                  min={todayStr}
-                />
-                <DialogFooter>
-                  <Button type="submit" className="bg-green-600 text-white" disabled={logSubmitting}>
-                    {logSubmitting ? "Logging..." : "Log Activity"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Dialogs */}
+      <AddLeadDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        onLeadAdded={onLeadAdded}
+      />
+
+      <BulkAssignDialog
+        open={bulkAssignDialogOpen}
+        onOpenChange={setBulkAssignDialogOpen}
+        selectedLeadIds={Array.from(selectedLeads)}
+        onAssignmentComplete={handleBulkAssignmentComplete}
+      />
     </div>
   );
 } 

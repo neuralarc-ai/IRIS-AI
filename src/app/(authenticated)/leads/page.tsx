@@ -470,22 +470,18 @@ export default function LeadsPage() {
               ))
             )}
           </div>
-          <div className="flex justify-end mt-4">
-            <Button onClick={() => setShowRejectedLeadsDialog(false)} className="bg-[#2B2521] text-white px-6 py-2 rounded hover:bg-gray-800">Close</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Always show filter/search tab, but pass correct leads based on showingRejected */}
-      <LeadsListWithFilter 
-        leads={showingRejected ? [] : leads} 
-        onLeadConverted={handleLeadConverted} 
-        onLeadAdded={handleLeadAdded}
-        onLeadDeleted={handleLeadDeleted}
-        rejectedLeads={rejectedLeads}
-        showingRejected={showingRejected}
-        onShowRejected={() => setShowingRejected(true)}
-      />
+        </div>
+      ) : (
+        <div className="flex-1 space-y-4">
+          <LeadsListWithFilter 
+            leads={leads} 
+            onLeadConverted={handleLeadConverted} 
+            onLeadAdded={handleLeadAdded}
+            onLeadDeleted={handleLeadDeleted}
+            onBulkAssignmentComplete={handleBulkAssignmentComplete}
+          />
+        </div>
+      )}
 
       {user && (
         <AddLeadDialog
