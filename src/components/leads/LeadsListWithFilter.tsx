@@ -3,9 +3,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Filter, List, Grid3X3, ChevronDown, FileWarning } from 'lucide-react';
+import { Filter, List, Grid3X3, ChevronDown, Users, CheckSquare, Square, X, FileWarning } from 'lucide-react';
 import LeadCard from './LeadCard';
 import AddLeadDialog from './AddLeadDialog';
+import BulkAssignDialog from './BulkAssignDialog';
 import type { Lead } from '@/types';
 import {
   DropdownMenu,
@@ -31,6 +32,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
@@ -49,19 +51,33 @@ interface LeadsListWithFilterProps {
   onLeadConverted: (leadId: string, newAccountId: string) => void;
   onLeadAdded?: (newLead: Lead) => void;
   onLeadDeleted: (leadId: string) => void;
+  onBulkAssignmentComplete?: () => void;
+  user: any;
   rejectedLeads?: any[];
   showingRejected?: boolean;
   onShowRejected?: () => void;
 }
 
-export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdded, onLeadDeleted, rejectedLeads = [], showingRejected = false, onShowRejected }: LeadsListWithFilterProps) {
+export default function LeadsListWithFilter({
+  leads,
+  onLeadConverted,
+  onLeadAdded,
+  onLeadDeleted,
+  onBulkAssignmentComplete,
+  user,
+  rejectedLeads = [],
+  showingRejected = false,
+  onShowRejected
+}: LeadsListWithFilterProps) {
   const { toast } = useToast();
-  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('All Statuses');
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [localLeads, setLocalLeads] = useState<Lead[]>(leads);
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
+  const [bulkAssignDialogOpen, setBulkAssignDialogOpen] = useState(false);
+  const [isSelectMode, setIsSelectMode] = useState(false);
   
   // Modal states for list view
   const [showModal, setShowModal] = useState(false);
@@ -87,6 +103,11 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
 
   const handleLeadConversion = (leadId: string, newAccountId: string) => {
     setLocalLeads((prev) => prev.filter((lead) => lead.id !== leadId));
+    setSelectedLeads((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(leadId);
+      return newSet;
+    });
     onLeadConverted(leadId, newAccountId);
   };
 
@@ -108,7 +129,63 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
 
   const handleDelete = (leadId: string) => {
     setLocalLeads((prev) => prev.filter((l) => l.id !== leadId));
+    setSelectedLeads((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(leadId);
+      return newSet;
+    });
     onLeadDeleted(leadId);
+  };
+
+  // Selection handlers
+  const handleSelectLead = (leadId: string, checked: boolean) => {
+    setSelectedLeads((prev) => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(leadId);
+      } else {
+        newSet.delete(leadId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedLeads(new Set(filteredLeads.map(lead => lead.id)));
+    } else {
+      setSelectedLeads(new Set());
+    }
+  };
+
+  const handleCardClick = (leadId: string) => {
+    if (!isSelectMode) return;
+    
+    setSelectedLeads((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(leadId)) {
+        newSet.delete(leadId);
+      } else {
+        newSet.add(leadId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleBulkAssignmentComplete = () => {
+    // Refresh the leads data to show updated assignments
+    setSelectedLeads(new Set());
+    setIsSelectMode(false);
+    onBulkAssignmentComplete?.();
+  };
+
+  const exitSelectMode = () => {
+    setIsSelectMode(false);
+    setSelectedLeads(new Set());
+  };
+
+  const enterSelectMode = () => {
+    setIsSelectMode(true);
   };
 
   const getStatusBadgeVariant = (status: Lead["status"]) => {
@@ -135,6 +212,10 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
       return "Unknown";
     }
   };
+
+  const selectedCount = selectedLeads.size;
+  const isAllSelected = filteredLeads.length > 0 && selectedCount === filteredLeads.length;
+  const isIndeterminate = selectedCount > 0 && selectedCount < filteredLeads.length;
 
   // Fetch logs for selected lead
   const fetchLogs = async (leadId: string) => {
@@ -285,8 +366,85 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
               </SelectContent>
             </Select>
           </div>
+          <div className="flex items-end">
+            {!isSelectMode && (
+              <Button
+                variant="outline"
+                onClick={enterSelectMode}
+                className="flex items-center gap-2 h-10 border border-border text-[#2B2521] bg-[#FAF9F6] hover:bg-[#97A88C]/10 rounded-md font-medium"
+              >
+                <CheckSquare className="h-5 w-5" strokeWidth={2} />
+                Select
+              </Button>
+            )}
+            {isSelectMode && (
+              <Button
+                variant="outline"
+                onClick={exitSelectMode}
+                className="flex items-center gap-2 h-10 bg-[#97A88C]/20 border-[#97A88C] text-[#2B2521] hover:bg-[#97A88C]/30 rounded-md font-medium"
+              >
+                <X className="h-4 w-4" />
+                {selectedCount > 0 ? `${selectedCount} Selected` : 'Cancel'}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Bulk Actions Bar (Card & List View) */}
+      {isSelectMode && (
+        <div className="w-full bg-[#E5E7E0] border border-[#97A88C] rounded-lg p-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium text-[#2B2521]">
+                {selectedCount > 0
+                  ? `${selectedCount} lead${selectedCount !== 1 ? 's' : ''} selected`
+                  : 'Select leads to assign'}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleSelectAll(true)}
+                className="text-[#2B2521] border-[#97A88C] hover:bg-[#97A88C]/10"
+              >
+                <CheckSquare className="mr-1 h-3 w-3" />
+                Select All ({filteredLeads.length})
+              </Button>
+              {selectedCount > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedLeads(new Set())}
+                  className="text-[#2B2521] border-[#97A88C] hover:bg-[#97A88C]/10"
+                >
+                  Clear Selection
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exitSelectMode}
+                className="text-[#2B2521] border-[#97A88C] hover:bg-[#97A88C]/10"
+              >
+                <X className="mr-1 h-3 w-3" />
+                Exit Select Mode
+              </Button>
+            </div>
+            {selectedCount > 0 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => setBulkAssignDialogOpen(true)}
+                  className="bg-[#2B2521] hover:bg-[#2B2521]/90 text-white"
+                  size="sm"
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  Assign to User
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Show rejected leads cards below filter/search if showingRejected is true */}
       {showingRejected && (
@@ -331,6 +489,19 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50">
+                {isSelectMode && (
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={isAllSelected}
+                      onCheckedChange={handleSelectAll}
+                      ref={(el) => {
+                        if (el && 'indeterminate' in el) {
+                          (el as HTMLInputElement).indeterminate = isIndeterminate;
+                        }
+                      }}
+                    />
+                  </TableHead>
+                )}
                 <TableHead className="font-semibold">Company</TableHead>
                 <TableHead className="font-semibold">Contact Person</TableHead>
                 <TableHead className="font-semibold">Email</TableHead>
@@ -344,21 +515,21 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
             <TableBody>
               {filteredLeads.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={isSelectMode ? 9 : 8} className="text-center text-muted-foreground py-8">
                     No leads found.
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredLeads.map(lead => (
-                  <TableRow 
-                    key={lead.id} 
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={(e) => {
-                      // Prevent modal open on action button clicks
-                      if ((e.target as HTMLElement).closest("button, a")) return;
-                      openLeadModal(lead);
-                    }}
-                  >
+                  <TableRow key={lead.id} className="hover:bg-gray-50">
+                    {isSelectMode && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedLeads.has(lead.id)}
+                          onCheckedChange={(checked) => handleSelectLead(lead.id, checked as boolean)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium">{lead.companyName}</TableCell>
                     <TableCell>{lead.personName}</TableCell>
                     <TableCell>
@@ -418,17 +589,46 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
             <div className="col-span-full text-center text-muted-foreground mt-12">No leads found.</div>
           ) : (
             filteredLeads.map(lead => (
-              <LeadCard 
+              <div 
                 key={lead.id} 
-                lead={lead} 
-                onLeadConverted={handleLeadConversion} 
-                onStatusChange={handleStatusChange} 
-                onDelete={handleDelete} 
-              />
+                className={`relative transition-all duration-200 ${
+                  isSelectMode && selectedLeads.has(lead.id)
+                    ? 'border-2 border-[#97A88C] scale-[1.01] bg-[#97A88C]/10 rounded-[8px] shadow-lg'
+                    : isSelectMode
+                    ? 'cursor-pointer hover:shadow-md hover:bg-[#E5E7E0]/50 rounded-[8px]'
+                    : 'rounded-[8px]'
+                }`}
+                onClick={() => handleCardClick(lead.id)}
+              >
+                <LeadCard 
+                  lead={lead} 
+                  onLeadConverted={handleLeadConversion} 
+                  onStatusChange={handleStatusChange} 
+                  onDelete={handleDelete} 
+                  isSelectMode={isSelectMode}
+                />
+              </div>
             ))
           )}
         </div>
       )}
+
+      {/* Dialogs */}
+      {user && (
+        <AddLeadDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          onLeadAdded={onLeadAdded}
+          user={user}
+        />
+      )}
+
+      <BulkAssignDialog
+        open={bulkAssignDialogOpen}
+        onOpenChange={setBulkAssignDialogOpen}
+        selectedLeadIds={Array.from(selectedLeads)}
+        onAssignmentComplete={handleBulkAssignmentComplete}
+      />
 
       {/* Modal for List View */}
       <Dialog open={showModal} onOpenChange={(open) => {
@@ -563,4 +763,4 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
       </Dialog>
     </div>
   );
-} 
+}

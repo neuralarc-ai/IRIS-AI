@@ -170,3 +170,26 @@
     color: hsl(var(--accent-foreground));
   }
 }
+
+@keyframes iris-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(151,168,140,0.25), 0 0 16px 4px #B89B6A;
+    border-color: #97A88C;
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(151,168,140,0.18), 0 0 32px 8px #B89B6A;
+    border-color: #B89B6A;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(151,168,140,0.25), 0 0 16px 4px #97A88C;
+    border-color: #97A88C;
+  }
+}
+.iris-glow {
+  animation: iris-glow 1.5s ease-in-out infinite;
+  border-width: 2px;
+  border-style: solid;
+  border-radius: 8px;
+  background: rgba(151,168,140,0.08);
+  backdrop-filter: blur(2px);
+}

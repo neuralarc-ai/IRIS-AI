@@ -110,6 +110,14 @@ export default function LeadsPage() {
     }
   };
 
+  // Refresh function for after bulk operations
+  const refreshLeads = () => {
+    setPage(1);
+    setLeads([]);
+    setHasMore(true);
+    fetchLeads(1, true);
+  };
+
   useEffect(() => {
     if (!authLoading && user) {
       fetchLeads(1, true);
@@ -148,6 +156,11 @@ export default function LeadsPage() {
       title: "Lead Deleted",
       description: "Lead has been successfully deleted.",
     });
+  };
+
+  const handleBulkAssignmentComplete = () => {
+    // Refresh the leads data to show updated assignments
+    refreshLeads();
   };
 
   const handleImport = async (validData: any[], rejectedData: RejectedLead[]) => {
@@ -472,6 +485,7 @@ export default function LeadsPage() {
         rejectedLeads={rejectedLeads}
         showingRejected={showingRejected}
         onShowRejected={() => setShowingRejected(true)}
+        user={user}
       />
       {/* Show rejected leads cards below filter/search if showingRejected is true */}
       {showingRejected && (
