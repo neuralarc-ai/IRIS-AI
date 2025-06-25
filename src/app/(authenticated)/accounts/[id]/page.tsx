@@ -9,10 +9,11 @@ import { ArrowLeft, Briefcase, Users, Mail, Phone, Building2, CalendarDays, Cloc
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { getOpportunitiesByAccount } from '@/lib/data';
-import type { Account, Opportunity, DailyAccountSummary } from '@/types';
+import type { Account, Opportunity, DailyAccountSummary, Update } from '@/types';
 import { generateDailyAccountSummary } from '@/ai/flows/daily-account-summary';
 import OpportunityCard from '@/components/opportunities/OpportunityCard';
 import AddOpportunityDialog from '@/components/opportunities/AddOpportunityDialog';
+import { mockUpdates } from '@/lib/data'; // Import all updates
 
 const getStatusBadgeColorClasses = (status: Account['status']): string => {
   switch (status) {
@@ -22,6 +23,34 @@ const getStatusBadgeColorClasses = (status: Account['status']): string => {
     default: return 'bg-gray-500/20 text-gray-700 border-gray-500/30';
   }
 };
+
+// Utility to summarize engagement/activity for an account
+function summarizeAccountEngagement(updates: Update[]) {
+  if (!updates || updates.length === 0) return 'No recent updates or engagement.';
+  const now = new Date();
+  const last14Days = updates.filter(u => (now - new Date(u.date)) / (1000 * 60 * 60 * 24) <= 14);
+  const lastUpdate = updates[0];
+  const lastUpdateDate = lastUpdate ? new Date(lastUpdate.date) : null;
+  const daysSinceLast = lastUpdateDate ? Math.floor((now - lastUpdateDate) / (1000 * 60 * 60 * 24)) : null;
+  let engagementTrend = '';
+  if (daysSinceLast !== null && daysSinceLast > 7) {
+    engagementTrend = `No client contact in ${daysSinceLast} days.`;
+  } else if (last14Days.length >= 3) {
+    engagementTrend = 'High engagement in the last 2 weeks.';
+  } else if (last14Days.length === 0) {
+    engagementTrend = 'No engagement in the last 2 weeks.';
+  } else {
+    engagementTrend = 'Moderate engagement.';
+  }
+  return `${last14Days.length} updates in the last 14 days. Last update: '${lastUpdate?.type || 'N/A'}' on ${lastUpdate ? lastUpdate.date.split('T')[0] : 'N/A'}. ${engagementTrend}`;
+}
+
+// Utility to aggregate key metrics for an account
+function getAccountKeyMetrics(opportunities: Opportunity[]) {
+  const openOpportunities = opportunities.filter(o => o.status !== 'Completed' && o.status !== 'Cancelled');
+  const totalValue = openOpportunities.reduce((sum, o) => sum + (o.value || 0), 0);
+  return `Open opportunities: ${openOpportunities.length}, Total open value: $${totalValue.toLocaleString()}`;
+}
 
 export default function AccountDetailsPage() {
   const params = useParams();
@@ -64,14 +93,20 @@ export default function AccountDetailsPage() {
           updatedAt: result.data.updated_at,
         };
         setAccount(accountData);
-        setOpportunities(getOpportunitiesByAccount(accountId));
+        const accountOpportunities = getOpportunitiesByAccount(accountId);
+        setOpportunities(accountOpportunities);
+        // Get all updates for this account
+        const accountUpdates = mockUpdates.filter(u => u.accountId === accountId);
+        const engagementSummary = summarizeAccountEngagement(accountUpdates);
+        const keyMetrics = getAccountKeyMetrics(accountOpportunities);
         if (accountData.status === 'Active') {
           setIsLoadingSummary(true);
           try {
             const summary = await generateDailyAccountSummary({
+              accountId: accountData.id,
               accountName: accountData.name,
-              accountStatus: accountData.status,
-              recentUpdates: "Recent updates indicate steady progress.",
+              recentUpdates: engagementSummary,
+              keyMetrics,
             });
             setDailySummary(summary);
           } catch (error) {

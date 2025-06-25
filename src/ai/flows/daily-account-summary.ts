@@ -46,9 +46,11 @@ const getRelationshipHealth = ai.defineTool({
   outputSchema: z.string().describe('A short description of the relationship health (e.g., healthy, at risk, needs attention).'),
 },
 async (input) => {
-    // Placeholder implementation for relationship health assessment
-    // In a real application, this would involve more sophisticated analysis
-    return `The relationship with ${input.accountName} is currently healthy based on recent updates and key metrics.`
+    // Improved: flag at risk if no updates in 14 days
+    if (input.recentUpdates && input.recentUpdates.includes('No engagement in the last 2 weeks')) {
+      return `The relationship with ${input.accountName} is at risk due to lack of recent engagement.`;
+    }
+    return `The relationship with ${input.accountName} is currently healthy based on recent updates and key metrics.`;
   }
 );
 
@@ -57,22 +59,26 @@ const prompt = ai.definePrompt({
   input: {schema: GenerateDailyAccountSummaryInputSchema},
   output: {schema: GenerateDailyAccountSummaryOutputSchema},
   tools: [getRelationshipHealth],
-  prompt: `You are an AI assistant specializing in generating daily summary reports for key accounts.
+  prompt: `You are an expert AI account manager. Analyze the following account's real engagement and key metrics to generate a concise, actionable daily summary.
 
-  Generate a concise and informative daily summary report for the following account.
-  The report should include key metrics, a summary of recent updates, and an overall assessment of the account's status.
-  Also determine the relationship health with the account using the getRelationshipHealth tool.
+Account Name: {{{accountName}}}
+Recent Updates: {{{recentUpdates}}}
+Key Metrics: {{{keyMetrics}}}
 
-  Account Name: {{{accountName}}}
-  Recent Updates: {{{recentUpdates}}}
-  Key Metrics: {{{keyMetrics}}}
+Your summary must:
+- Reference specific engagement patterns (e.g., high activity, no contact, declining engagement, etc.)
+- Highlight any risks or opportunities (e.g., stalled deals, strong momentum, lack of updates)
+- Suggest next best actions for the account team
+- Use clear, natural, and executive-level language
+- Be dynamic and reflect the actual data above, not just a generic template
 
-  Here's an example of a good summary:
-  "Today's summary for {{accountName}} shows positive trends in key metrics. Recent updates indicate successful project milestones.  The relationship health is strong."
+Also, use the getRelationshipHealth tool to assess the relationship health based on the engagement and metrics.
 
-  Return the summary in the 'summary' field.
-  Return a brief assessment of the relationship health in the 'relationshipHealth' field, using the getRelationshipHealth tool to determine the relationship health.
-  `,
+Example style:
+"Today's summary for {{accountName}}: Engagement has been moderate with 2 updates in the last 14 days. No client contact in 10 days signals a risk of declining momentum. Recommend scheduling a check-in call this week to re-engage the client and discuss next steps. Relationship health: at risk."
+
+Return the summary in the 'summary' field and the relationship health in the 'relationshipHealth' field.
+`,
 });
 
 const generateDailyAccountSummaryFlow = ai.defineFlow(

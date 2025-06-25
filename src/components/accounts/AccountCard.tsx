@@ -88,6 +88,7 @@ export default function AccountCard({
   const [logContent, setLogContent] = useState("");
   const [logDate, setLogDate] = useState("");
   const [logSubmitting, setLogSubmitting] = useState(false);
+  const [showAIBriefModal, setShowAIBriefModal] = useState(false);
   const { toast } = useToast();
 
   const fetchLogs = async () => {
@@ -301,8 +302,7 @@ export default function AccountCard({
           {account.status === "Active" && (
             <div className="pt-3 border-t mt-3">
               <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1.5 flex items-center text-left">
-                <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" /> AI
-                Daily Brief
+                <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" /> AI Daily Brief
               </h4>
               {isLoadingSummary ? (
                 <div className="flex items-center space-x-2 h-10">
@@ -312,19 +312,25 @@ export default function AccountCard({
                   </span>
                 </div>
               ) : dailySummary ? (
-                <div className="space-y-1">
-                  <p className="text-xs text-foreground line-clamp-2 text-left">
-                    {dailySummary.summary}
-                  </p>
-                  <div className="flex items-center text-xs text-left">
-                    <MessageSquareHeart className="mr-1.5 h-3.5 w-3.5 text-pink-500" />
-                    <span className="font-medium text-foreground">Health:</span>
-                    &nbsp;
-                    <span className="text-muted-foreground">
-                      {dailySummary.relationshipHealth}
-                    </span>
+                <button
+                  className="w-full text-left bg-transparent border-none p-0 m-0 cursor-pointer focus:outline-none"
+                  onClick={e => { e.stopPropagation(); setShowAIBriefModal(true); }}
+                  title="View full AI Daily Brief"
+                >
+                  <div className="space-y-1">
+                    <p className="text-xs text-foreground line-clamp-2 text-left underline hover:text-primary">
+                      {dailySummary.summary}
+                    </p>
+                    <div className="flex items-center text-xs text-left">
+                      <MessageSquareHeart className="mr-1.5 h-3.5 w-3.5 text-pink-500" />
+                      <span className="font-medium text-foreground">Health:</span>
+                      &nbsp;
+                      <span className="text-muted-foreground">
+                        {dailySummary.relationshipHealth}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                </button>
               ) : (
                 <p className="text-xs text-muted-foreground h-10 flex items-center text-left">
                   No AI brief available for this account.
@@ -482,6 +488,33 @@ export default function AccountCard({
         forceEntityType="account"
         forceEntityId={account.id}
       />
+      {/* AI Daily Brief Modal */}
+      <Dialog open={showAIBriefModal} onOpenChange={setShowAIBriefModal}>
+        <DialogContent className="max-w-lg w-full bg-white text-black">
+          <DialogHeader>
+            <DialogTitle>AI Daily Brief - {account.name}</DialogTitle>
+          </DialogHeader>
+          {isLoadingSummary ? (
+            <div className="flex items-center space-x-2 h-10">
+              <LoadingSpinner size={16} />
+              <span className="text-xs text-muted-foreground">Generating brief...</span>
+            </div>
+          ) : dailySummary ? (
+            <div className="space-y-4">
+              <div>
+                <strong>Summary:</strong>
+                <div className="mt-1 text-sm text-foreground">{dailySummary.summary}</div>
+              </div>
+              <div>
+                <strong>Relationship Health:</strong>
+                <div className="mt-1 text-sm text-foreground">{dailySummary.relationshipHealth}</div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-xs text-muted-foreground">No AI brief available for this account.</div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -39,9 +39,9 @@ const prompt = ai.definePrompt({
   name: 'aiPoweredOpportunityForecastingPrompt',
   input: {schema: AiPoweredOpportunityForecastingInputSchema},
   output: {schema: AiPoweredOpportunityForecastingOutputSchema},
-  prompt: `You are an expert AI sales analyst specializing in opportunity forecasting and timeline analysis.
+  prompt: `You are an expert AI sales strategy analyst. Your job is to provide a holistic, prioritized, and actionable summary for each sales opportunity, using natural, executive-level language.
 
-Analyze the following opportunity details and provide a detailed forecast:
+Given the following opportunity details, generate a comprehensive forecast and strategic summary:
 
 Opportunity: {{{opportunityName}}}
 Description: {{{opportunityDescription}}}
@@ -50,22 +50,20 @@ Value: {{{opportunityValue}}}
 Current Status: {{{opportunityStatus}}}
 Recent Updates: {{{recentUpdates}}}
 
-Consider the following factors in your analysis:
-1. Current status and its typical duration
-2. Project complexity from the description
-3. Timeline feasibility
-4. Value impact on stakeholder decisions
-5. Industry-standard timelines for similar opportunities
-6. Potential risks and delays
+Your analysis must:
+- Give a holistic, prioritized summary of the opportunity's outlook and momentum
+- Highlight the top opportunities and the most significant risks, referencing both the provided data and any patterns you detect (e.g., deals stalling, leads not contacted, declining engagement, etc.)
+- Suggest the next best actions for the sales team to maximize success or mitigate risk
+- Assign a score or rank to each key item (e.g., "high potential", "at risk", "needs follow-up"), and explain your reasoning
+- Reference internal signals such as engagement, update frequency, and deal stage
+- Use clear, natural, and insight-driven language suitable for an executive dashboard
 
-Provide a structured analysis with:
-1. A realistic completion date estimate
-2. Revenue forecast considering potential adjustments
-3. Specific bottlenecks or challenges that could affect the timeline
-4. Confidence level in the prediction
+Format your response to match the output schema, but ensure the timelinePrediction and bottleneckIdentification fields are written in this holistic, prioritized, and actionable style. The completionDateEstimate and revenueForecast should be as precise as possible, but the rest should read as a natural-language summary, not a list of bullet points.
 
-Format your response to match the output schema, focusing on actionable insights and specific dates/values.
-Keep bottleneck identification concise but specific, highlighting the most critical potential issues.`,
+Example style:
+"This opportunity is showing strong momentum and is ranked as 'high potential' due to recent positive client engagement and timely progress. However, there is a moderate risk of delay if stakeholder alignment is not maintained. Next action: schedule a follow-up with the client to confirm decision timelines."
+
+Be concise but insightful, and always prioritize clarity and actionability.`,
 });
 
 const aiPoweredOpportunityForecastingFlow = ai.defineFlow(

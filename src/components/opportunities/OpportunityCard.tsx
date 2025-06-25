@@ -151,6 +151,7 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
   const [logContent, setLogContent] = useState("");
   const [logDate, setLogDate] = useState("");
   const [logSubmitting, setLogSubmitting] = useState(false);
+  const [showAIForecastModal, setShowAIForecastModal] = useState(false);
 
   const handleStatusChange = async (newStatus: Opportunity["status"]) => {
     if (opportunity.status === newStatus) return;
@@ -493,8 +494,7 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
           opportunity.status !== "Loss" && (
             <div className="pt-3 border-t mt-3">
               <h4 className="text-sm font-semibold uppercase text-muted-foreground mb-1.5 flex items-center">
-                <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" /> AI
-                Forecast
+                <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" /> AI Forecast
               </h4>
               {isLoadingForecast ? (
                 <div className="flex items-center space-x-2 h-12">
@@ -504,16 +504,22 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
                   </span>
                 </div>
               ) : forecast ? (
-                <div className="space-y-1 text-[14px]">
-                  <p className="text-foreground line-clamp-1">
-                    <span className="font-medium">Est. Completion:</span>{" "}
-                    {forecast.completionDateEstimate}
-                  </p>
-                  <p className="text-foreground line-clamp-2 leading-snug">
-                    <span className="font-medium">Bottlenecks:</span>{" "}
-                    {forecast.bottleneckIdentification || "None identified"}
-                  </p>
-                </div>
+                <button
+                  className="w-full text-left bg-transparent border-none p-0 m-0 cursor-pointer focus:outline-none"
+                  onClick={e => { e.stopPropagation(); setShowAIForecastModal(true); }}
+                  title="View full AI Forecast"
+                >
+                  <div className="space-y-1 text-[14px]">
+                    <p className="text-foreground line-clamp-1">
+                      <span className="font-medium">Est. Completion:</span>{' '}
+                      {forecast.completionDateEstimate}
+                    </p>
+                    <p className="text-foreground line-clamp-2 leading-snug">
+                      <span className="font-medium">Bottlenecks:</span>{' '}
+                      {forecast.bottleneckIdentification || "None identified"}
+                    </p>
+                  </div>
+                </button>
               ) : (
                 <p className="text-xs text-muted-foreground h-12 flex items-center">
                   No AI forecast data for this opportunity.
@@ -663,6 +669,42 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
           forceEntityType="opportunity"
           forceEntityId={opportunity.id}
         />
+
+      {/* AI Forecast Modal */}
+      <Dialog open={showAIForecastModal} onOpenChange={setShowAIForecastModal}>
+        <DialogContent className="max-w-lg w-full bg-white text-black">
+          <DialogHeader>
+            <DialogTitle>AI Forecast - {opportunity.name}</DialogTitle>
+          </DialogHeader>
+          {isLoadingForecast ? (
+            <div className="flex items-center space-x-2 h-10">
+              <LoadingSpinner size={16} />
+              <span className="text-xs text-muted-foreground">Generating forecast...</span>
+            </div>
+          ) : forecast ? (
+            <div className="space-y-4">
+              <div>
+                <strong>Summary:</strong>
+                <div className="mt-1 text-sm text-foreground">{forecast.timelinePrediction}</div>
+              </div>
+              <div>
+                <strong>Bottleneck:</strong>
+                <div className="mt-1 text-sm text-foreground">{forecast.bottleneckIdentification}</div>
+              </div>
+              <div>
+                <strong>Estimated Completion:</strong>
+                <div className="mt-1 text-sm text-foreground">{forecast.completionDateEstimate}</div>
+              </div>
+              <div>
+                <strong>Forecasted Revenue:</strong>
+                <div className="mt-1 text-sm text-foreground">${forecast.revenueForecast.toLocaleString()}</div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-xs text-muted-foreground">No AI forecast available for this opportunity.</div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

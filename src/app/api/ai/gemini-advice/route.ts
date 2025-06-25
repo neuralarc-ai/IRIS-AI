@@ -17,17 +17,36 @@ export async function POST(req: NextRequest) {
         ).join('\n')
       : String(context);
 
-    const prompt = `As an AI sales assistant, analyze this update for ${accountName || 'the account'}:
+    // Check if all logs are very short or generic
+    if (Array.isArray(context)) {
+      const allShort = context.every(log => (log.content || '').trim().length < 10);
+      const genericTerms = ['meet', 'call', 'email', 'fs', 'yt', 'gv', 'meey', 'aaaa,', 'meeting', 'general', 'note', 'update', 'activity'];
+      const allGeneric = context.every(log => {
+        const c = (log.content || '').trim().toLowerCase();
+        return genericTerms.includes(c) || c.length < 10;
+      });
+      if (allShort || allGeneric) {
+        return NextResponse.json({
+          aiAdvice: "Your recent updates are too brief or generic for AI to generate meaningful advice. Please log more detailed activity (e.g., what was discussed, outcomes, next steps)."
+        });
+      }
+    }
 
+    const prompt = `You are an expert sales strategist. Analyze the following recent activity log for the account "${accountName || 'the account'}".
+
+Activity Log:
 ${formattedLogs}
 
-Based on this update, provide a brief, actionable suggestion for the next best step. Consider:
-1. Follow-up actions needed
-2. Potential opportunities to explore
-3. Ways to strengthen the relationship
-4. Any risks to address
+If the updates are very brief or lack detail, mention that more detail would help and make a best guess based on what you see.
 
-Focus on providing specific, practical advice that moves the relationship forward. Keep the response concise and action-oriented.`;
+First, briefly summarize the main themes or issues you see in these updates. Then, provide a specific, actionable next step for the sales or account team. If you see any risks or opportunities, mention them. Your advice should be unique to this log, not generic.
+
+Format:
+- Summary: [your summary]
+- Next Best Action: [your advice]
+- Risks/Opportunities: [if any]
+
+Be concise, but insightful.`;
 
     const geminiResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1/models/gemini:generateContent?key=${GEMINI_API_KEY}`,
