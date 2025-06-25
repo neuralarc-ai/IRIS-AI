@@ -422,7 +422,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
                 key={lead.id} 
                 className={`relative transition-all duration-200 ${
                   isSelectMode && selectedLeads.has(lead.id)
-                    ? 'shadow-[0_0_0_4px_rgba(151,168,140,0.25)] border border-[#97A88C] scale-[1.02] bg-[#97A88C]/10 rounded-[8px]'
+                    ? 'border-2 border-[#97A88C] scale-[1.01] bg-[#97A88C]/10 rounded-[8px] shadow-lg'
                     : isSelectMode
                     ? 'cursor-pointer hover:shadow-md hover:bg-[#E5E7E0]/50 rounded-[8px]'
                     : 'rounded-[8px]'
