@@ -195,7 +195,7 @@ export default function UpdatesPage() {
       setNewActivities(prev => ({
         ...prev,
         [accountId]: data.advice
-          ? `${data.advice}\n\nAction Items: ${data.actionItems}\nFollow-up Suggestions: ${data.followUpSuggestions}`
+          ? data.advice
           : (data.warning || 'AI advice could not be generated.')
       }));
     } catch (e) {

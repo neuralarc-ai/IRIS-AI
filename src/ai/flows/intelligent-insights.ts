@@ -212,11 +212,7 @@ const summarizeUpdatePrompt = ai.definePrompt({
   name: 'summarizeUpdatePrompt',
   input: {schema: UpdateSummaryInputSchema},
   output: {schema: UpdateSummaryOutputSchema},
-  prompt: `You are an AI assistant specializing in summarizing updates, extracting action items, and suggesting follow-up actions.
-
-  Summarize the following update content, extract action items, and suggest follow-up actions.
-
-  Update Content: {{{updateContent}}}`,
+  prompt: `You are an AI assistant specializing in sales and CRM updates. Summarize the following update content into a single, concise log entry suitable for direct entry into a CRM. Capture the key actions, outcomes, and next steps in a brief, readable sentence or two. Do not include section headers, bullet points, or extra commentary—just the log description.\n\nUpdate Content: {{{updateContent}}}`,
 });
 
 const analyzeCommunicationFlow = ai.defineFlow(

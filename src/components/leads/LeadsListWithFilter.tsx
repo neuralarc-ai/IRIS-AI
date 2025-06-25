@@ -49,9 +49,12 @@ interface LeadsListWithFilterProps {
   onLeadConverted: (leadId: string, newAccountId: string) => void;
   onLeadAdded?: (newLead: Lead) => void;
   onLeadDeleted: (leadId: string) => void;
+  rejectedLeads?: any[];
+  onShowRejected?: () => void;
+  showingRejected?: boolean;
 }
 
-export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdded, onLeadDeleted }: LeadsListWithFilterProps) {
+export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdded, onLeadDeleted, rejectedLeads = [], onShowRejected, showingRejected = false }: LeadsListWithFilterProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [search, setSearch] = useState('');
@@ -85,12 +88,14 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
     onLeadConverted(leadId, newAccountId);
   };
 
+  // Use correct data source based on showingRejected
+  const displayLeads = showingRejected ? rejectedLeads : localLeads;
+
+  // Filtered leads logic only applies to normal leads
   const filteredLeads = useMemo(() => {
+    if (showingRejected) return displayLeads;
     return localLeads.filter(lead => {
-      // First filter out converted leads
       if (lead.status === "Converted to Account") return false;
-      
-      // Then apply other filters
       const matchesStatus = status === 'All Statuses' || lead.status === status;
       const matchesSearch =
         lead.companyName.toLowerCase().includes(search.toLowerCase()) ||
@@ -99,7 +104,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
         (lead.country && lead.country.toLowerCase().includes(search.toLowerCase()));
       return matchesStatus && matchesSearch;
     });
-  }, [localLeads, search, status]);
+  }, [localLeads, search, status, showingRejected, displayLeads]);
 
   const handleDelete = (leadId: string) => {
     setLocalLeads((prev) => prev.filter((l) => l.id !== leadId));
@@ -207,9 +212,29 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
       {/* Filter/Search Full Width */}
       <div className="w-full bg-white rounded-lg shadow p-5">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
             <Filter className="mr-2 h-5 w-5 text-primary" />
             <span className="font-semibold text-lg">Filter & Search Leads</span>
+            {rejectedLeads && rejectedLeads.length > 0 && onShowRejected && !showingRejected && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="ml-4"
+                onClick={onShowRejected}
+              >
+                View Rejected ({rejectedLeads.length})
+              </Button>
+            )}
+            {showingRejected && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-2"
+                onClick={() => window.location.reload()} // Or pass a prop to go back
+              >
+                Back to Leads
+              </Button>
+            )}
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -239,11 +264,12 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
               placeholder="Search by company, name, email, country..."
               value={search}
               onChange={e => setSearch(e.target.value)}
+              disabled={showingRejected}
             />
           </div>
           <div className="w-60">
             <Label htmlFor="lead-status" className="text-sm font-medium mb-1 block">Status</Label>
-            <Select value={status} onValueChange={setStatus}>
+            <Select value={status} onValueChange={setStatus} disabled={showingRejected}>
               <SelectTrigger id="lead-status">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
@@ -281,7 +307,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
               {filteredLeads.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                    No leads found.
+                    {showingRejected ? 'No rejected leads found.' : 'No leads found.'}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -290,7 +316,6 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
                     key={lead.id} 
                     className="hover:bg-gray-50 cursor-pointer"
                     onClick={(e) => {
-                      // Prevent modal open on action button clicks
                       if ((e.target as HTMLElement).closest("button, a")) return;
                       openLeadModal(lead);
                     }}
@@ -327,7 +352,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
                             View
                           </Link>
                         </Button>
-                        {lead.status !== "Converted to Account" && lead.status !== "Lost" && (
+                        {lead.status !== "Converted to Account" && lead.status !== "Lost" && !showingRejected && (
                           <Button
                             size="sm"
                             variant="default"
@@ -351,7 +376,9 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
         // Card View
         <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredLeads.length === 0 ? (
-            <div className="col-span-full text-center text-muted-foreground mt-12">No leads found.</div>
+            <div className="col-span-full text-center text-muted-foreground mt-12">
+              {showingRejected ? 'No rejected leads found.' : 'No leads found.'}
+            </div>
           ) : (
             filteredLeads.map(lead => (
               <LeadCard 

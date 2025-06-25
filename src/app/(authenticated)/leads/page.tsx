@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload, ChevronUp } from 'lucide-react';
+import { PlusCircle, Upload, ChevronUp, Briefcase, Users, Mail, Phone, MapPin, Linkedin, CalendarPlus, History, Trash2 } from 'lucide-react';
 import PageTitle from '@/components/common/PageTitle';
 import AddLeadDialog from '@/components/leads/AddLeadDialog';
 import LeadCard from '@/components/leads/LeadCard';
@@ -70,6 +70,10 @@ export default function LeadsPage() {
     
     if (node) observerRef.current.observe(node);
   }, [isLoading, isFetchingMore, hasMore]);
+  const [showImportSummary, setShowImportSummary] = useState(false);
+  const [importSummary, setImportSummary] = useState({ success: 0, rejected: 0 });
+  const [showRejectedLeadsDialog, setShowRejectedLeadsDialog] = useState(false);
+  const [showingRejected, setShowingRejected] = useState(false);
 
   const fetchLeads = async (pageNum: number, isInitial: boolean = false) => {
     try {
@@ -104,6 +108,14 @@ export default function LeadsPage() {
       setIsLoading(false);
       setIsFetchingMore(false);
     }
+  };
+
+  // Refresh function for after bulk operations
+  const refreshLeads = () => {
+    setPage(1);
+    setLeads([]);
+    setHasMore(true);
+    fetchLeads(1, true);
   };
 
   useEffect(() => {
@@ -144,6 +156,11 @@ export default function LeadsPage() {
       title: "Lead Deleted",
       description: "Lead has been successfully deleted.",
     });
+  };
+
+  const handleBulkAssignmentComplete = () => {
+    // Refresh the leads data to show updated assignments
+    refreshLeads();
   };
 
   const handleImport = async (validData: any[], rejectedData: RejectedLead[]) => {
@@ -217,6 +234,10 @@ export default function LeadsPage() {
         setEditingLeads(rejectedData);
         setShowRejectedDialog(true);
       }
+
+      setImportSummary({ success: successCount, rejected: rejectedData.length });
+      setShowImportSummary(true);
+      setRejectedLeads(rejectedData);
 
       toast({
         title: "Import Summary",
@@ -376,32 +397,95 @@ export default function LeadsPage() {
         </div>
       )}
 
-      {leads.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-muted-foreground mb-4">
-            <PlusCircle className="mx-auto h-12 w-12 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No leads yet</h3>
-            <p className="text-sm">Get started by adding your first lead or importing from CSV.</p>
-              </div>
-          <div className="flex justify-center gap-2">
-            <Button onClick={() => setIsAddLeadDialogOpen(true)} variant="beige">
-              <PlusCircle className="mr-2 h-4 w-4" /> Add First Lead
-            </Button>
-            <Button variant="outline" onClick={() => setShowImport(true)}>
-              <Upload className="mr-2 h-4 w-4" /> Import CSV
-            </Button>
+      {/* Import Summary Dialog */}
+      <Dialog open={showImportSummary} onOpenChange={setShowImportSummary}>
+        <DialogContent className="max-w-md w-full">
+          <DialogHeader>
+            <DialogTitle>Import Summary</DialogTitle>
+            <DialogDescription>
+              <div className="text-lg font-semibold mb-2">Leads Import Results</div>
+              <div className="mb-2">Accepted: <span className="text-green-700 font-bold">{importSummary.success}</span></div>
+              <div className="mb-4">Rejected: <span className="text-red-600 font-bold">{importSummary.rejected}</span></div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end mt-4">
+            <Button onClick={() => setShowImportSummary(false)} className="bg-[#2B2521] text-white px-6 py-2 rounded hover:bg-gray-800">OK</Button>
           </div>
-        </div>
-      ) : (
-        <div className="flex-1 space-y-4">
-          <LeadsListWithFilter 
-            leads={leads} 
-            onLeadConverted={handleLeadConverted} 
-            onLeadAdded={handleLeadAdded}
-            onLeadDeleted={handleLeadDeleted}
-          />
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Rejected Leads Dialog */}
+      <Dialog open={showRejectedLeadsDialog} onOpenChange={setShowRejectedLeadsDialog}>
+        <DialogContent className="max-w-4xl w-full">
+          <DialogHeader>
+            <DialogTitle>Rejected Leads</DialogTitle>
+            <DialogDescription>
+              The following leads could not be imported due to errors. Please review and fix them in your CSV file.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto mt-2">
+            {rejectedLeads.length === 0 ? (
+              <div className="text-center text-muted-foreground">No rejected leads.</div>
+            ) : (
+              rejectedLeads.map((lead, idx) => (
+                <div key={idx} className="bg-white border border-red-200 rounded-lg shadow p-6 flex flex-col gap-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Briefcase className="h-5 w-5 text-red-500" />
+                    <span className="font-bold text-lg text-red-800">{lead.company_name || 'No Company Name'}</span>
+                  </div>
+                  <div className="flex items-center text-muted-foreground text-sm">
+                    <Users className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
+                    {lead.person_name || 'N/A'}
+                  </div>
+                  <div className="flex items-center text-muted-foreground text-sm">
+                    <Mail className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
+                    {lead.email || 'N/A'}
+                  </div>
+                  {lead.phone && (
+                    <div className="flex items-center text-muted-foreground text-sm">
+                      <Phone className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
+                      {lead.phone}
+                    </div>
+                  )}
+                  {lead.country && (
+                    <div className="flex items-center text-muted-foreground text-sm">
+                      <MapPin className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
+                      {lead.country}
+                    </div>
+                  )}
+                  {lead.linkedin_profile_url && (
+                    <div className="flex items-center text-muted-foreground text-sm">
+                      <Linkedin className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
+                      {lead.linkedin_profile_url}
+                    </div>
+                  )}
+                  {lead._errors && lead._errors.length > 0 && (
+                    <ul className="mt-2 text-sm text-red-600 list-disc list-inside">
+                      {lead._errors.map((err, i) => (
+                        <li key={i}>{err}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+          <div className="flex justify-end mt-4">
+            <Button onClick={() => setShowRejectedLeadsDialog(false)} className="bg-[#2B2521] text-white px-6 py-2 rounded hover:bg-gray-800">Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Always show filter/search tab, but pass correct leads based on showingRejected */}
+      <LeadsListWithFilter 
+        leads={showingRejected ? [] : leads} 
+        onLeadConverted={handleLeadConverted} 
+        onLeadAdded={handleLeadAdded}
+        onLeadDeleted={handleLeadDeleted}
+        rejectedLeads={rejectedLeads}
+        showingRejected={showingRejected}
+        onShowRejected={() => setShowingRejected(true)}
+      />
 
       {user && (
         <AddLeadDialog
@@ -411,88 +495,6 @@ export default function LeadsPage() {
           user={user}
         />
       )}
-
-      <Dialog open={showRejectedDialog} onOpenChange={setShowRejectedDialog}>
-        <DialogContent className="max-w-4xl bg-background border-border">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">Review Rejected Leads ({rejectedLeads.length})</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              These records were rejected due to missing or invalid data. Please review and fix the issues below.
-            </DialogDescription>
-          </DialogHeader>
-
-          <ScrollArea className="max-h-[600px] overflow-auto rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-[100px]">Row</TableHead>
-                  <TableHead>Company Name</TableHead>
-                  <TableHead>Person Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Issues</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {editingLeads.map((lead, index) => (
-                  <TableRow key={index} className={lead._errors?.length ? 'bg-destructive/5 hover:bg-destructive/10' : 'hover:bg-muted/50'}>
-                    <TableCell className="font-medium">{lead._rowIndex + 1}</TableCell>
-                    <TableCell>
-                      <Input
-                        value={lead.company_name}
-                        onChange={e => {
-                          const newLeads = [...editingLeads];
-                          newLeads[index] = { ...lead, company_name: e.target.value };
-                          setEditingLeads(newLeads);
-                        }}
-                        className={!lead.company_name ? 'border-destructive focus-visible:ring-destructive' : 'bg-background'}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        value={lead.person_name}
-                        onChange={e => {
-                          const newLeads = [...editingLeads];
-                          newLeads[index] = { ...lead, person_name: e.target.value };
-                          setEditingLeads(newLeads);
-                        }}
-                        className={!lead.person_name ? 'border-destructive focus-visible:ring-destructive' : 'bg-background'}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="email"
-                        value={lead.email}
-                        onChange={e => {
-                          const newLeads = [...editingLeads];
-                          newLeads[index] = { ...lead, email: e.target.value };
-                          setEditingLeads(newLeads);
-                        }}
-                        className={!lead.email ? 'border-destructive focus-visible:ring-destructive' : 'bg-background'}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-destructive space-y-1">
-                        {lead._errors?.map((error, i) => (
-                          <div key={i}>• {error}</div>
-                        ))}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-
-          <div className="flex justify-end gap-2 mt-6">
-            <Button variant="outline" onClick={() => setShowRejectedDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveRejectedLeads}>
-              Save All Fixed Leads
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
