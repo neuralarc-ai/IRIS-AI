@@ -318,7 +318,7 @@ export default function AccountCard({
                   title="View full AI Daily Brief"
                 >
                   <div className="space-y-1">
-                    <p className="text-xs text-foreground line-clamp-2 text-left underline hover:text-primary">
+                    <p className="text-xs text-foreground line-clamp-2 text-left">
                       {dailySummary.summary}
                     </p>
                     <div className="flex items-center text-xs text-left">
