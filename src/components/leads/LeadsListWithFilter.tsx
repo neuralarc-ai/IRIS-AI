@@ -40,9 +40,10 @@ interface LeadsListWithFilterProps {
   onLeadAdded?: (newLead: Lead) => void;
   onLeadDeleted: (leadId: string) => void;
   onBulkAssignmentComplete?: () => void;
+  user: any;
 }
 
-export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdded, onLeadDeleted, onBulkAssignmentComplete }: LeadsListWithFilterProps) {
+export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdded, onLeadDeleted, onBulkAssignmentComplete, user }: LeadsListWithFilterProps) {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('All Statuses');
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
@@ -238,9 +239,9 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
               <Button
                 variant="outline"
                 onClick={enterSelectMode}
-                className="flex items-center gap-2 h-10 border-[#97A88C] text-[#2B2521] hover:bg-[#97A88C]/10"
+                className="flex items-center gap-2 h-10 border border-border text-[#2B2521] bg-[#FAF9F6] hover:bg-[#97A88C]/10 rounded-md font-medium"
               >
-                <CheckSquare className="h-4 w-4" />
+                <CheckSquare className="h-5 w-5" strokeWidth={2} />
                 Select
               </Button>
             )}
@@ -248,7 +249,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
               <Button
                 variant="outline"
                 onClick={exitSelectMode}
-                className="flex items-center gap-2 h-10 bg-[#97A88C]/20 border-[#97A88C] text-[#2B2521] hover:bg-[#97A88C]/30"
+                className="flex items-center gap-2 h-10 bg-[#97A88C]/20 border-[#97A88C] text-[#2B2521] hover:bg-[#97A88C]/30 rounded-md font-medium"
               >
                 <X className="h-4 w-4" />
                 {selectedCount > 0 ? `${selectedCount} Selected` : 'Cancel'}
@@ -326,8 +327,8 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
                       checked={isAllSelected}
                       onCheckedChange={handleSelectAll}
                       ref={(el) => {
-                        if (el) {
-                          el.indeterminate = isIndeterminate;
+                        if (el && 'indeterminate' in el) {
+                          (el as HTMLInputElement).indeterminate = isIndeterminate;
                         }
                       }}
                     />
@@ -447,6 +448,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         onLeadAdded={onLeadAdded}
+        user={user}
       />
 
       <BulkAssignDialog
