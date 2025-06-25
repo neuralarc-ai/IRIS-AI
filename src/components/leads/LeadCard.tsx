@@ -71,6 +71,7 @@ interface LeadCardProps {
   onLeadConverted: (leadId: string, newAccountId: string) => void;
   onStatusChange?: (leadId: string, newStatus: Lead["status"]) => void;
   onDelete?: (leadId: string) => void;
+  isSelectMode?: boolean;
 }
 
 const getStatusBadgeVariant = (
@@ -127,6 +128,7 @@ export default function LeadCard({
   onLeadConverted,
   onStatusChange,
   onDelete,
+  isSelectMode = false,
 }: LeadCardProps) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -331,8 +333,8 @@ export default function LeadCard({
         <div
           className="flex flex-col h-full bg-white text-black rounded-[8px] p-2 border-none cursor-pointer"
           onClick={e => {
-            // Prevent modal open on action button clicks
-            if ((e.target as HTMLElement).closest("button, a")) return;
+            // Prevent modal open on action button clicks or when in select mode
+            if ((e.target as HTMLElement).closest("button, a") || isSelectMode) return;
             setShowModal(true);
           }}
         >
