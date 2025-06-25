@@ -28,12 +28,12 @@ export default function LoginPage() {
           </Alert>
         </CardContent>
         <CardFooter className="flex flex-col items-center text-sm text-muted-foreground">
-          <div className="flex gap-4 mt-4">
+          {/* <div className="flex gap-4 mt-4">
             <Link href="#" className="hover:text-primary transition-colors">Help</Link>
             <Link href="#" className="hover:text-primary transition-colors">Privacy</Link>
             <Link href="#" className="hover:text-primary transition-colors">Contact</Link>
-          </div>
-          <p className="mt-4">&copy; {new Date().getFullYear()} Iris AI. All rights reserved.</p>
+          </div> */}
+          {/* <p className="mt-4">&copy; {new Date().getFullYear()} Iris AI. All rights reserved.</p> */}
         </CardFooter>
       </Card>
     </div>

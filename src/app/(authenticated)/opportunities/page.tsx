@@ -5,7 +5,7 @@ import PageTitle from '@/components/common/PageTitle';
 import OpportunityCard from '@/components/opportunities/OpportunityCard';
 import type { Opportunity, OpportunityStatus } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ListFilter, Search, BarChartBig } from 'lucide-react';
+import { PlusCircle, ListFilter, Search, BarChartBig, List, Grid3X3, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,12 @@ import { Label } from '@/components/ui/label';
 import AddOpportunityDialog from '@/components/opportunities/AddOpportunityDialog';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 
 export default function OpportunitiesPage() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -40,6 +46,7 @@ export default function OpportunitiesPage() {
     
     if (node) observerRef.current.observe(node);
   }, [isLoading, isFetchingMore, hasMore]);
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
 
   const opportunityStatusOptions: OpportunityStatus[] = ["Scope Of Work", "Proposal", "Negotiation", "Win", "Loss"];
 
@@ -138,9 +145,28 @@ export default function OpportunitiesPage() {
       </PageTitle>
 
       <div className="w-full bg-white rounded-lg shadow p-5 mb-6">
-        <div className="flex items-center mb-4">
-          <ListFilter className="mr-2 h-5 w-5 text-primary" />
-          <span className="font-semibold text-lg">Filter & Search Opportunities</span>
+        <div className="flex items-center mb-4 justify-between">
+          <div className="flex items-center">
+            <ListFilter className="mr-2 h-5 w-5 text-primary" />
+            <span className="font-semibold text-lg">Filter & Search Opportunities</span>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                {viewMode === 'list' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
+                {viewMode === 'list' ? 'List View' : 'Card View'}
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setViewMode('card')}>
+                <Grid3X3 className="mr-2 h-4 w-4" /> Card View
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewMode('list')}>
+                <List className="mr-2 h-4 w-4" /> List View
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div>
@@ -188,37 +214,92 @@ export default function OpportunitiesPage() {
         </div>
       </div>
 
-      {filteredOpportunities.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
-          {filteredOpportunities.map((opportunity, index) => (
-            <div
-              key={opportunity.id}
-              ref={index === filteredOpportunities.length - 1 ? lastOpportunityElementRef : null}
-            >
-              <OpportunityCard 
-                opportunity={opportunity} 
-                onDelete={handleOpportunityDeleted}
-              />
-            </div>
-          ))}
-
-          {(isLoading || isFetchingMore) && (
-            <div className="col-span-full flex justify-center py-8">
-              <div className="space-y-4">
-                <LoadingSpinner />
-                <p className="text-sm text-muted-foreground animate-pulse">
-                  {isLoading ? 'Loading opportunities...' : 'Loading more opportunities...'}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {!hasMore && opportunities.length > 0 && (
-            <div className="col-span-full text-center py-8">
-              <p className="text-sm text-muted-foreground">You've reached the end of the list.</p>
-            </div>
-          )}
+      {opportunities.length === 0 ? (
+        <div className="text-center py-16">
+          <BarChartBig className="mx-auto h-16 w-16 text-muted-foreground/50 mb-6" />
+          <p className="text-xl font-semibold text-foreground mb-2">No Opportunities Found</p>
+          <p className="text-muted-foreground">Try adjusting your search or filter criteria, or add a new opportunity.</p>
         </div>
+      ) : filteredOpportunities.length > 0 ? (
+        viewMode === 'card' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
+            {filteredOpportunities.map((opportunity, index) => (
+              <div
+                key={opportunity.id}
+                ref={index === filteredOpportunities.length - 1 ? lastOpportunityElementRef : null}
+              >
+                <OpportunityCard
+                  opportunity={opportunity}
+                  onDelete={handleOpportunityDeleted}
+                />
+              </div>
+            ))}
+            {(isLoading || isFetchingMore) && (
+              <div className="col-span-full flex justify-center py-8">
+                <div className="space-y-4">
+                  <LoadingSpinner />
+                  <p className="text-sm text-muted-foreground animate-pulse">
+                    {isLoading ? 'Loading opportunities...' : 'Loading more opportunities...'}
+                  </p>
+                </div>
+              </div>
+            )}
+            {!hasMore && opportunities.length > 0 && (
+              <div className="col-span-full text-center py-8">
+                <p className="text-sm text-muted-foreground">You've reached the end of the list.</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="w-full bg-white rounded-lg shadow overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timeline</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredOpportunities.map((opportunity, index) => (
+                  <tr key={opportunity.id} ref={index === filteredOpportunities.length - 1 ? lastOpportunityElementRef : null}>
+                    <td className="px-6 py-4 whitespace-nowrap font-semibold">{opportunity.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{accounts.find(acc => acc.id === opportunity.associated_account_id)?.name || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">${opportunity.amount?.toLocaleString() || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{opportunity.status}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{opportunity.expected_close_date || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={`/opportunities/${opportunity.id}`}>View</a>
+                      </Button>
+                      <Button size="sm" variant="destructive" className="ml-2" onClick={() => handleOpportunityDeleted(opportunity.id)}>
+                        Delete
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {(isLoading || isFetchingMore) && (
+              <div className="flex justify-center py-8">
+                <div className="space-y-4">
+                  <LoadingSpinner />
+                  <p className="text-sm text-muted-foreground animate-pulse">
+                    {isLoading ? 'Loading opportunities...' : 'Loading more opportunities...'}
+                  </p>
+                </div>
+              </div>
+            )}
+            {!hasMore && opportunities.length > 0 && (
+              <div className="text-center py-8">
+                <p className="text-sm text-muted-foreground">You've reached the end of the list.</p>
+              </div>
+            )}
+          </div>
+        )
       ) : (
         <div className="text-center py-16">
           <BarChartBig className="mx-auto h-16 w-16 text-muted-foreground/50 mb-6" />

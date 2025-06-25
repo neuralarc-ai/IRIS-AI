@@ -156,6 +156,7 @@ export default function LeadCard({
     country: initialLead.country || '',
   });
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [showConvertDialog, setShowConvertDialog] = useState(false);
 
   const isAssignedToMe = lead.assigned_user_id === user?.id;
   const isCreatedByMe = lead.created_by_user_id === user?.id;

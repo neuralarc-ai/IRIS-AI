@@ -5,7 +5,7 @@ import PageTitle from '@/components/common/PageTitle';
 import AccountCard from '@/components/accounts/AccountCard';
 import type { Account, AccountType, AccountStatus } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Search, ListFilter } from 'lucide-react';
+import { PlusCircle, Search, ListFilter, List, Grid3X3, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AddAccountDialog from '@/components/accounts/AddAccountDialog';
@@ -14,6 +14,12 @@ import { Label } from '@/components/ui/label';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/use-auth';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -25,6 +31,7 @@ export default function AccountsPage() {
   const [statusFilter, setStatusFilter] = useState<AccountStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<AccountType | 'all'>('all');
   const [isAddAccountDialogOpen, setIsAddAccountDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const { toast } = useToast();
   const { user, isAdmin, isLoading: authLoading } = useAuth();
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -162,9 +169,28 @@ export default function AccountsPage() {
       </PageTitle>
 
       <div className="w-full bg-white rounded-lg shadow p-5 mb-6">
-        <div className="flex items-center mb-4">
-          <ListFilter className="mr-2 h-5 w-5 text-primary" />
-          <span className="font-semibold text-lg">Filter & Search Accounts</span>
+        <div className="flex items-center mb-4 justify-between">
+          <div className="flex items-center">
+            <ListFilter className="mr-2 h-5 w-5 text-primary" />
+            <span className="font-semibold text-lg">Filter & Search Accounts</span>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                {viewMode === 'list' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
+                {viewMode === 'list' ? 'List View' : 'Card View'}
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setViewMode('card')}>
+                <Grid3X3 className="mr-2 h-4 w-4" /> Card View
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewMode('list')}>
+                <List className="mr-2 h-4 w-4" /> List View
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div>
@@ -222,37 +248,86 @@ export default function AccountsPage() {
           </Button>
         </div>
       ) : filteredAccounts.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
-          {filteredAccounts.map((account, index) => (
-            <div
-              key={account.id}
-              ref={index === filteredAccounts.length - 1 ? lastAccountElementRef : null}
-            >
-              <AccountCard
-                account={account}
-                isConverted={!!account.convertedFromLeadId}
-                onDelete={handleAccountDeleted}
-              />
-            </div>
-          ))}
-          
-          {(isLoading || isFetchingMore) && (
-            <div className="col-span-full flex justify-center py-8">
-              <div className="space-y-4">
-                <LoadingSpinner />
-                <p className="text-sm text-muted-foreground animate-pulse">
-                  {isLoading ? 'Loading accounts...' : 'Loading more accounts...'}
-                </p>
+        viewMode === 'card' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
+            {filteredAccounts.map((account, index) => (
+              <div
+                key={account.id}
+                ref={index === filteredAccounts.length - 1 ? lastAccountElementRef : null}
+              >
+                <AccountCard
+                  account={account}
+                  isConverted={!!account.convertedFromLeadId}
+                  onDelete={handleAccountDeleted}
+                />
               </div>
-            </div>
-          )}
-
-          {!hasMore && accounts.length > 0 && (
-            <div className="col-span-full text-center py-8">
-              <p className="text-sm text-muted-foreground">You've reached the end of the list.</p>
-            </div>
-          )}
-        </div>
+            ))}
+            {(isLoading || isFetchingMore) && (
+              <div className="col-span-full flex justify-center py-8">
+                <div className="space-y-4">
+                  <LoadingSpinner />
+                  <p className="text-sm text-muted-foreground animate-pulse">
+                    {isLoading ? 'Loading accounts...' : 'Loading more accounts...'}
+                  </p>
+                </div>
+              </div>
+            )}
+            {!hasMore && accounts.length > 0 && (
+              <div className="col-span-full text-center py-8">
+                <p className="text-sm text-muted-foreground">You've reached the end of the list.</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="w-full bg-white rounded-lg shadow overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredAccounts.map((account, index) => (
+                  <tr key={account.id} ref={index === filteredAccounts.length - 1 ? lastAccountElementRef : null}>
+                    <td className="px-6 py-4 whitespace-nowrap font-semibold">{account.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{account.contactPersonName || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{account.contactEmail || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{account.type}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{account.status}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={`/accounts/${account.id}`}>View</a>
+                      </Button>
+                      <Button size="sm" variant="destructive" className="ml-2" onClick={() => handleAccountDeleted(account.id)}>
+                        Delete
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {(isLoading || isFetchingMore) && (
+              <div className="flex justify-center py-8">
+                <div className="space-y-4">
+                  <LoadingSpinner />
+                  <p className="text-sm text-muted-foreground animate-pulse">
+                    {isLoading ? 'Loading accounts...' : 'Loading more accounts...'}
+                  </p>
+                </div>
+              </div>
+            )}
+            {!hasMore && accounts.length > 0 && (
+              <div className="text-center py-8">
+                <p className="text-sm text-muted-foreground">You've reached the end of the list.</p>
+              </div>
+            )}
+          </div>
+        )
       ) : (
         <div className="text-center py-16">
           <Search className="mx-auto h-16 w-16 text-muted-foreground/50 mb-6" />

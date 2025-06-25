@@ -8,11 +8,11 @@ import {
 import { Lightbulb } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO } from "date-fns";
-import type { OpportunityWithForecast } from '@/types';
+import type { OpportunityForecast } from '@/types';
 
 interface KeyOpportunityInsightsProps {
   isLoading: boolean;
-  opportunities: OpportunityWithForecast[];
+  opportunities: OpportunityForecast[];
 }
 
 export default function KeyOpportunityInsights({ isLoading, opportunities }: KeyOpportunityInsightsProps) {
@@ -24,11 +24,11 @@ export default function KeyOpportunityInsights({ isLoading, opportunities }: Key
           Key Opportunity Insights
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="p-0 ">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {isLoading ? (
             Array.from({ length: 2 }).map((_, i) => (
-              <Card key={i} className="h-full">
+              <Card key={i} className="h-full bg-white">
                 <CardHeader>
                   <div className="h-6 bg-muted/50 rounded w-3/4 mb-2"></div>
                   <div className="h-4 bg-muted/50 rounded w-1/2"></div>
@@ -41,7 +41,7 @@ export default function KeyOpportunityInsights({ isLoading, opportunities }: Key
             ))
           ) : opportunities.length > 0 ? (
             opportunities.map((opportunity) => (
-              <Card key={opportunity.id} className="h-full">
+              <Card key={opportunity.id} className="h-full bg-white">
                 <CardHeader>
                   <CardTitle className="text-lg">{opportunity.name}</CardTitle>
                   <div className="flex items-center gap-2">

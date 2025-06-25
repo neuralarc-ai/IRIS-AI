@@ -33,6 +33,8 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import Link from 'next/link';
+import { useAuth } from '@/hooks/use-auth';
 
 const STATUS_OPTIONS = [
   'All Statuses',
@@ -49,9 +51,11 @@ interface LeadsListWithFilterProps {
   onLeadAdded?: (newLead: Lead) => void;
   onLeadDeleted: (leadId: string) => void;
   onBulkAssignmentComplete?: () => void;
+  backButton?: React.ReactNode;
 }
 
-export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdded, onLeadDeleted, onBulkAssignmentComplete }: LeadsListWithFilterProps) {
+export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdded, onLeadDeleted, onBulkAssignmentComplete, backButton }: LeadsListWithFilterProps) {
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('All Statuses');
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
@@ -82,12 +86,11 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
   };
 
   // Use correct data source based on showingRejected
-  const displayLeads = showingRejected ? rejectedLeads : localLeads;
+  const displayLeads = localLeads;
 
   // Filtered leads logic only applies to normal leads
   const filteredLeads = useMemo(() => {
-    if (showingRejected) return displayLeads;
-    return localLeads.filter(lead => {
+    return localLeads.filter((lead: Lead) => {
       if (lead.status === "Converted to Account") return false;
       const matchesStatus = status === 'All Statuses' || lead.status === status;
       const matchesSearch =
@@ -97,7 +100,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
         (lead.country && lead.country.toLowerCase().includes(search.toLowerCase()));
       return matchesStatus && matchesSearch;
     });
-  }, [localLeads, search, status, showingRejected, displayLeads]);
+  }, [localLeads, search, status]);
 
   const handleDelete = (leadId: string) => {
     setLocalLeads((prev) => prev.filter((l) => l.id !== leadId));
@@ -197,26 +200,6 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
           <div className="flex items-center gap-2">
             <Filter className="mr-2 h-5 w-5 text-primary" />
             <span className="font-semibold text-lg">Filter & Search Leads</span>
-            {rejectedLeads && rejectedLeads.length > 0 && onShowRejected && !showingRejected && (
-              <Button
-                variant="destructive"
-                size="sm"
-                className="ml-4"
-                onClick={onShowRejected}
-              >
-                View Rejected ({rejectedLeads.length})
-              </Button>
-            )}
-            {showingRejected && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="ml-2"
-                onClick={() => window.location.reload()} // Or pass a prop to go back
-              >
-                Back to Leads
-              </Button>
-            )}
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -246,12 +229,11 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
               placeholder="Search by company, name, email, country..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              disabled={showingRejected}
             />
           </div>
           <div className="w-60">
             <Label htmlFor="lead-status" className="text-sm font-medium mb-1 block">Status</Label>
-            <Select value={status} onValueChange={setStatus} disabled={showingRejected}>
+            <Select value={status} onValueChange={setStatus}>
               <SelectTrigger id="lead-status">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
@@ -289,6 +271,9 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
           </div>
         </div>
       </div>
+
+      {/* Back button injected above cards if provided */}
+      {backButton}
 
       {/* Bulk Actions Bar (Card & List View) */}
       {isSelectMode && (
@@ -357,11 +342,6 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
                     <Checkbox
                       checked={isAllSelected}
                       onCheckedChange={handleSelectAll}
-                      ref={(el) => {
-                        if (el) {
-                          el.indeterminate = isIndeterminate;
-                        }
-                      }}
                     />
                   </TableHead>
                 )}
@@ -383,7 +363,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredLeads.map(lead => (
+                filteredLeads.map((lead: Lead) => (
                   <TableRow key={lead.id} className="hover:bg-gray-50">
                     {isSelectMode && (
                       <TableCell>
@@ -425,7 +405,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
                             View
                           </Link>
                         </Button>
-                        {lead.status !== "Converted to Account" && lead.status !== "Lost" && !showingRejected && (
+                        {lead.status !== "Converted to Account" && lead.status !== "Lost" && (
                           <Button
                             size="sm"
                             variant="default"
@@ -450,10 +430,10 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
         <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredLeads.length === 0 ? (
             <div className="col-span-full text-center text-muted-foreground mt-12">
-              {showingRejected ? 'No rejected leads found.' : 'No leads found.'}
+              No leads found.
             </div>
           ) : (
-            filteredLeads.map(lead => (
+            filteredLeads.map((lead: Lead) => (
               <div 
                 key={lead.id} 
                 className={`relative transition-all duration-200 ${
@@ -479,11 +459,14 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
       )}
 
       {/* Dialogs */}
-      <AddLeadDialog
-        open={addDialogOpen}
-        onOpenChange={setAddDialogOpen}
-        onLeadAdded={onLeadAdded}
-      />
+      {user && (
+        <AddLeadDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          onLeadAdded={onLeadAdded}
+          user={user}
+        />
+      )}
 
       <BulkAssignDialog
         open={bulkAssignDialogOpen}

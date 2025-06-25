@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload, ChevronUp, Briefcase, Users, Mail, Phone, MapPin, Linkedin, CalendarPlus, History, Trash2 } from 'lucide-react';
+import { PlusCircle, Upload, ChevronUp, Briefcase, Users, Mail, Phone, MapPin, Linkedin, CalendarPlus, History, Trash2, ArrowLeft } from 'lucide-react';
 import PageTitle from '@/components/common/PageTitle';
 import AddLeadDialog from '@/components/leads/AddLeadDialog';
 import LeadCard from '@/components/leads/LeadCard';
@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
 interface RejectedLead {
   company_name: string;
@@ -74,6 +75,7 @@ export default function LeadsPage() {
   const [importSummary, setImportSummary] = useState({ success: 0, rejected: 0 });
   const [showRejectedLeadsDialog, setShowRejectedLeadsDialog] = useState(false);
   const [showingRejected, setShowingRejected] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'rejected'>('all');
 
   const fetchLeads = async (pageNum: number, isInitial: boolean = false) => {
     try {
@@ -344,22 +346,31 @@ export default function LeadsPage() {
   return (
     <div className="container mx-auto space-y-6 mt-6">
       <PageTitle title="Lead Management" subtitle="Track and manage potential clients.">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-4 md:gap-6 py-2">
+          {rejectedLeads.length > 0 && (
             <Button
-              variant="outline"
-              onClick={() => {
-                console.log('🔄 Import CSV button clicked');
-                console.log('🔄 Current showImport state:', showImport);
-                setShowImport(true);
-                console.log('🔄 showImport set to true');
-              }}
-              className="flex items-center"
+              variant={activeTab === 'rejected' ? 'destructive' : 'outline'}
+              onClick={() => setActiveTab('rejected')}
+              className="flex items-center min-w-[140px] h-12 text-lg font-medium"
             >
-                <Upload className="mr-2 h-4 w-4" /> Import CSV
+              <span className="mr-2">Rejected</span>
+              <span className="bg-white text-red-600 rounded-full px-2 py-0.5 font-bold border border-red-300 text-base">{rejectedLeads.length}</span>
             </Button>
-            <Button onClick={() => setIsAddLeadDialogOpen(true)} variant="beige">
-                <PlusCircle className="mr-2 h-4 w-4" /> Add New Lead
-            </Button>
+          )}
+          <Button
+            onClick={() => setIsAddLeadDialogOpen(true)}
+            variant="beige"
+            className="flex items-center min-w-[180px] h-12 text-lg font-medium"
+          >
+            <PlusCircle className="mr-2 h-5 w-5" /> Add New Lead
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowImport(true)}
+            className="flex items-center min-w-[160px] h-12 text-lg font-medium"
+          >
+            <Upload className="mr-2 h-5 w-5" /> Import CSV
+          </Button>
         </div>
       </PageTitle>
 
@@ -414,65 +425,8 @@ export default function LeadsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Rejected Leads Dialog */}
-      <Dialog open={showRejectedLeadsDialog} onOpenChange={setShowRejectedLeadsDialog}>
-        <DialogContent className="max-w-4xl w-full">
-          <DialogHeader>
-            <DialogTitle>Rejected Leads</DialogTitle>
-            <DialogDescription>
-              The following leads could not be imported due to errors. Please review and fix them in your CSV file.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto mt-2">
-            {rejectedLeads.length === 0 ? (
-              <div className="text-center text-muted-foreground">No rejected leads.</div>
-            ) : (
-              rejectedLeads.map((lead, idx) => (
-                <div key={idx} className="bg-white border border-red-200 rounded-lg shadow p-6 flex flex-col gap-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Briefcase className="h-5 w-5 text-red-500" />
-                    <span className="font-bold text-lg text-red-800">{lead.company_name || 'No Company Name'}</span>
-                  </div>
-                  <div className="flex items-center text-muted-foreground text-sm">
-                    <Users className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-                    {lead.person_name || 'N/A'}
-                  </div>
-                  <div className="flex items-center text-muted-foreground text-sm">
-                    <Mail className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-                    {lead.email || 'N/A'}
-                  </div>
-                  {lead.phone && (
-                    <div className="flex items-center text-muted-foreground text-sm">
-                      <Phone className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-                      {lead.phone}
-                    </div>
-                  )}
-                  {lead.country && (
-                    <div className="flex items-center text-muted-foreground text-sm">
-                      <MapPin className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-                      {lead.country}
-                    </div>
-                  )}
-                  {lead.linkedin_profile_url && (
-                    <div className="flex items-center text-muted-foreground text-sm">
-                      <Linkedin className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-                      {lead.linkedin_profile_url}
-                    </div>
-                  )}
-                  {lead._errors && lead._errors.length > 0 && (
-                    <ul className="mt-2 text-sm text-red-600 list-disc list-inside">
-                      {lead._errors.map((err, i) => (
-                        <li key={i}>{err}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="flex-1 space-y-4">
+      <div className="flex-1 space-y-4">
+        {activeTab === 'all' ? (
           <LeadsListWithFilter 
             leads={leads} 
             onLeadConverted={handleLeadConverted} 
@@ -480,8 +434,51 @@ export default function LeadsPage() {
             onLeadDeleted={handleLeadDeleted}
             onBulkAssignmentComplete={handleBulkAssignmentComplete}
           />
-        </div>
-      )}
+        ) : (
+          <LeadsListWithFilter
+            leads={rejectedLeads.map((lead, idx) => ({
+              id: `rejected-${idx}`,
+              companyName: lead.company_name,
+              personName: lead.person_name,
+              email: lead.email,
+              phone: lead.phone,
+              linkedinProfileUrl: lead.linkedin_profile_url,
+              country: lead.country,
+              status: 'Lost',
+              opportunityIds: [],
+              updateIds: [],
+              createdAt: '',
+              updatedAt: '',
+              assigned_user_id: '',
+              created_by_user_id: '',
+            }))}
+            onLeadConverted={() => {}}
+            onLeadAdded={() => {}}
+            onLeadDeleted={() => {}}
+            onBulkAssignmentComplete={() => {}}
+            backButton={
+              <div className="mb-4">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        onClick={() => setActiveTab('all')}
+                        className="flex items-center justify-center w-12 h-12 p-0"
+                      >
+                        <ArrowLeft className="h-5 w-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Back to Accepted Leads
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            }
+          />
+        )}
+      </div>
 
       {user && (
         <AddLeadDialog
