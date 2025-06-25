@@ -442,49 +442,47 @@ const Footer: React.FC = () => {
     setDialogOpen(true);
   };
 
-  const LinkButton = ({
-    topic,
-    children,
-  }: {
-    topic: LegalTopic;
-    children: React.ReactNode;
-  }) => (
-    <button
-      onClick={() => openDialog(topic)}
-      className="px-3 py-1 rounded-full bg-[#282828] text-gray-300 hover:bg-[#B89B6A] hover:text-white focus-visible:bg-[#B89B6A] focus-visible:text-white transition-colors font-medium text-xs md:text-sm"
-      style={{ minWidth: 90 }}
-    >
-      {children}
-    </button>
-  );
-
   return (
     <>
-      <footer className="max-w-screen-2xl mx-auto rounded-t-lg w-full bg-[#202020] text-gray-400 py-6 mt-5">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap justify-center items-center text-center gap-x-2 sm:gap-x-3 gap-y-2 text-xs md:text-sm">
-            <LinkButton topic="terms">Terms of use</LinkButton>
-            <span className="text-gray-600">|</span>
-            <LinkButton topic="privacy">Privacy Policy</LinkButton>
-            <span className="text-gray-600">|</span>
-            <LinkButton topic="disclaimer">Disclaimer</LinkButton>
-            <span className="text-gray-600">|</span>
-            <LinkButton topic="responsible-ai">Responsible AI</LinkButton>
-          </div>
-          <div className="mt-3 text-center text-xs text-gray-500">
-            All rights reserved. Iris, a thing by{" "}
-            <a
-              href="https://neuralarc.ai"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-colors font-bold text-[#B89B6A] hover:text-white focus-visible:text-white"
-            >
-              NeuralArc
-            </a>
-          </div>
+      <footer className="w-full bg-[#FCFAF7] border-t border-[#F3F0EA] py-4 mt-8">
+        <div className="max-w-screen-2xl mx-auto px-4 flex flex-wrap justify-center items-center text-center text-[16px] font-normal text-[#222] gap-x-2 gap-y-2">
+          <button
+            onClick={() => openDialog('terms')}
+            className="underline bg-transparent border-none p-0 m-0 hover:text-black focus:outline-none cursor-pointer"
+            style={{ fontSize: '16px', fontWeight: 400 }}
+          >
+            Terms of use
+          </button>
+          <span className="mx-2 text-[#222]">&bull;</span>
+          <button
+            onClick={() => openDialog('privacy')}
+            className="underline bg-transparent border-none p-0 m-0 hover:text-black focus:outline-none cursor-pointer"
+            style={{ fontSize: '16px', fontWeight: 400 }}
+          >
+            Privacy Policy
+          </button>
+          <span className="mx-2 text-[#222]">&bull;</span>
+          <button
+            onClick={() => openDialog('disclaimer')}
+            className="underline bg-transparent border-none p-0 m-0 hover:text-black focus:outline-none cursor-pointer"
+            style={{ fontSize: '16px', fontWeight: 400 }}
+          >
+            Disclaimer
+          </button>
+          <span className="mx-2 text-[#222]">&bull;</span>
+          <button
+            onClick={() => openDialog('responsible-ai')}
+            className="underline bg-transparent border-none p-0 m-0 hover:text-black focus:outline-none cursor-pointer"
+            style={{ fontSize: '16px', fontWeight: 400 }}
+          >
+            Responsible AI
+          </button>
+          <span className="mx-2 text-[#222]">&bull;</span>
+          <span className="ml-2 text-[#222]" style={{ fontSize: '16px', fontWeight: 400 }}>
+            All rights reserved. IRIS, a thing by <span style={{ fontWeight: 700 }}>NeuralArc</span>
+          </span>
         </div>
       </footer>
-
       <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[600px] bg-white">
           {activeTopic && (

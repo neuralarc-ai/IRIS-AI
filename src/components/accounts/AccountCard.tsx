@@ -56,6 +56,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import AddUpdateDialog from "@/components/updates/AddUpdateDialog";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 interface AccountCardProps {
   account: Account;
@@ -82,6 +88,7 @@ export default function AccountCard({
   const [logContent, setLogContent] = useState("");
   const [logDate, setLogDate] = useState("");
   const [logSubmitting, setLogSubmitting] = useState(false);
+  const [isReverting, setIsReverting] = useState(false);
   const { toast } = useToast();
 
   const fetchLogs = async () => {
@@ -215,6 +222,40 @@ export default function AccountCard({
     }
   };
 
+  const handleRevertToLead = async () => {
+    setIsReverting(true);
+    try {
+      const res = await fetch(`/api/accounts/${account.id}/revert-to-lead`, {
+        method: 'POST',
+      });
+      const result = await res.json();
+      if (res.ok) {
+        toast({
+          title: 'Reverted to Lead',
+          description: 'This account has been marked inactive and the lead restored.',
+          className: 'bg-green-100 dark:bg-green-900 border-green-500',
+        });
+        // Optionally, you can trigger a refresh or callback here
+        // For now, just reload the page or remove the card from UI
+        window.location.reload();
+      } else {
+        toast({
+          title: 'Revert Failed',
+          description: result.error || 'Could not revert account to lead.',
+          variant: 'destructive',
+        });
+      }
+    } catch (e) {
+      toast({
+        title: 'Revert Failed',
+        description: 'Could not revert account to lead.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsReverting(false);
+    }
+  };
+
   return (
     <>
       <Dialog open={showModal} onOpenChange={setShowModal}>
@@ -226,110 +267,120 @@ export default function AccountCard({
             fetchLogs();
           }}
         >
-          <Card className="flex flex-col h-full bg-white text-black rounded-[8px] p-2 border-none text-left">
-            <CardHeader className="pb-3 px-6 pt-6 text-left">
-              <div className="flex flex-row items-center justify-between w-full mb-1 text-left">
-                <div className="flex flex-col items-start text-left">
-                  <div className="flex items-center gap-2 text-left">
-                    <Briefcase className="h-5 w-5" style={{ color: '#97A88C' }} />
-                    <CardTitle className="text-xl font-headline mb-0 text-left" style={{ color: '#97A88C' }}>
-                      {account.name}
-                    </CardTitle>
+      <Card className="flex flex-col h-full bg-white text-black rounded-[8px] p-2 border-none text-left">
+        <CardHeader className="pb-3 px-6 pt-6 text-left">
+          <div className="flex flex-row items-center justify-between w-full mb-1 text-left">
+            <div className="flex flex-col items-start text-left">
+              <div className="flex items-center gap-2 text-left">
+                <Briefcase className="h-5 w-5" style={{ color: '#97A88C' }} />
+                <CardTitle className="text-xl font-headline mb-0 text-left" style={{ color: '#97A88C' }}>
+                  {account.name}
+                </CardTitle>
+              </div>
+              {(account.type || account.industry) && (
+                <div className="flex items-center mt-2 text-muted-foreground text-sm text-left">
+                  <Tag className="mr-1 h-4 w-4 shrink-0" />
+                  <span>
+                    {account.type}
+                    {account.type && account.industry ? " | " : ""}
+                    {account.industry}
+                  </span>
+                </div>
+              )}
+            </div>
+                          <div className="flex items-center gap-2">
+            <Badge
+              variant={account.status === "Active" ? "default" : "secondary"}
+              className={`capitalize whitespace-nowrap ml-2 ${
+                account.status === "Active"
+                  ? "bg-green-500/20 text-green-700 border-green-500/30"
+                  : "bg-amber-500/20 text-amber-700 border-amber-500/30"
+              } !hover:bg-inherit !hover:text-inherit !hover:border-inherit`}
+            >
+              {account.status}
+            </Badge>
+                  {(account.convertedFromLeadId && account.status !== 'Inactive') && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleRevertToLead}
+                      disabled={isReverting}
+                      className="ml-2 border border-yellow-700 text-yellow-900 bg-yellow-100 hover:bg-yellow-200"
+                    >
+                      {isReverting ? 'Reverting...' : 'Revert to Lead'}
+                    </Button>
+                  )}
+                </div>
+          </div>
+        </CardHeader>
+        <CardContent className="flex-grow space-y-3 text-sm px-6 text-left">
+          <p className="text-muted-foreground line-clamp-2 text-left">
+            {account.description}
+          </p>
+
+          {account.contactPersonName && (
+            <div className="flex items-center text-muted-foreground">
+              <Users className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
+              {account.contactPersonName}
+            </div>
+          )}
+          {account.contactEmail && (
+            <div className="flex items-center text-muted-foreground">
+              <Mail className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
+              {account.contactEmail}
+            </div>
+          )}
+          {account.contactPhone && (
+            <div className="flex items-center text-muted-foreground">
+              <Phone className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
+              {account.contactPhone}
+            </div>
+          )}
+
+          <div className="text-sm flex items-center text-foreground font-medium text-left">
+            <ListChecks className="mr-2 h-4 w-4" />
+            <span>
+              {opportunities.length} Active Opportunit{opportunities.length !== 1 ? "ies" : "y"}
+            </span>
+          </div>
+
+          {account.status === "Active" && (
+            <div className="pt-3 border-t mt-3">
+              <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1.5 flex items-center text-left">
+                <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" /> AI
+                Daily Brief
+              </h4>
+              {isLoadingSummary ? (
+                <div className="flex items-center space-x-2 h-10">
+                  <LoadingSpinner size={16} />
+                  <span className="text-xs text-muted-foreground">
+                    Generating brief...
+                  </span>
+                </div>
+              ) : dailySummary ? (
+                <div className="space-y-1">
+                  <p className="text-xs text-foreground line-clamp-2 text-left">
+                    {dailySummary.summary}
+                  </p>
+                  <div className="flex items-center text-xs text-left">
+                    <MessageSquareHeart className="mr-1.5 h-3.5 w-3.5 text-pink-500" />
+                    <span className="font-medium text-foreground">Health:</span>
+                    &nbsp;
+                    <span className="text-muted-foreground">
+                      {dailySummary.relationshipHealth}
+                    </span>
                   </div>
-                  {(account.type || account.industry) && (
-                    <div className="flex items-center mt-2 text-muted-foreground text-sm text-left">
-                      <Tag className="mr-1 h-4 w-4 shrink-0" />
-                      <span>
-                        {account.type}
-                        {account.type && account.industry ? " | " : ""}
-                        {account.industry}
-                      </span>
-                    </div>
-                  )}
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant={account.status === "Active" ? "default" : "secondary"}
-                    className={`capitalize whitespace-nowrap ml-2 ${
-                      account.status === "Active"
-                        ? "bg-green-500/20 text-green-700 border-green-500/30"
-                        : "bg-amber-500/20 text-amber-700 border-amber-500/30"
-                    } !hover:bg-inherit !hover:text-inherit !hover:border-inherit`}
-                  >
-                    {account.status}
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-grow space-y-3 text-sm px-6 text-left">
-              <p className="text-muted-foreground line-clamp-2 text-left">
-                {account.description}
-              </p>
-
-              {account.contactPersonName && (
-                <div className="flex items-center text-muted-foreground">
-                  <Users className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-                  {account.contactPersonName}
-                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground h-10 flex items-center text-left">
+                  No AI brief available for this account.
+                </p>
               )}
-              {account.contactEmail && (
-                <div className="flex items-center text-muted-foreground">
-                  <Mail className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-                  {account.contactEmail}
-                </div>
-              )}
-              {account.contactPhone && (
-                <div className="flex items-center text-muted-foreground">
-                  <Phone className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-                  {account.contactPhone}
-                </div>
-              )}
-
-              <div className="text-sm flex items-center text-foreground font-medium text-left">
-                <ListChecks className="mr-2 h-4 w-4" />
-                <span>
-                  {opportunities.length} Active Opportunit{opportunities.length !== 1 ? "ies" : "y"}
-                </span>
-              </div>
-
-              {account.status === "Active" && (
-                <div className="pt-3 border-t mt-3">
-                  <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1.5 flex items-center text-left">
-                    <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" /> AI
-                    Daily Brief
-                  </h4>
-                  {isLoadingSummary ? (
-                    <div className="flex items-center space-x-2 h-10">
-                      <LoadingSpinner size={16} />
-                      <span className="text-xs text-muted-foreground">
-                        Generating brief...
-                      </span>
-                    </div>
-                  ) : dailySummary ? (
-                    <div className="space-y-1">
-                      <p className="text-xs text-foreground line-clamp-2 text-left">
-                        {dailySummary.summary}
-                      </p>
-                      <div className="flex items-center text-xs text-left">
-                        <MessageSquareHeart className="mr-1.5 h-3.5 w-3.5 text-pink-500" />
-                        <span className="font-medium text-foreground">Health:</span>
-                        &nbsp;
-                        <span className="text-muted-foreground">
-                          {dailySummary.relationshipHealth}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground h-10 flex items-center text-left">
-                      No AI brief available for this account.
-                    </p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="pt-4 border-t mt-auto px-6 pb-6 flex justify-between items-center gap-2">
-              <Button
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="pt-4 border-t mt-auto px-6 pb-6 flex justify-between items-center gap-2">
+          <Button
                 onClick={() => setIsAddOpportunityDialogOpen(true)}
                 title="New Opportunity"
                 className="flex flex-row items-center justify-center"
@@ -350,23 +401,30 @@ export default function AccountCard({
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5v14" /><path d="M5 12h14" /></svg>
                 <span>New Opportunity</span>
-              </Button>
+          </Button>
               <div className="flex-grow" />
-              <Button
-                size="sm"
-                variant="ghost"
-                className="p-0 bg-transparent border-none shadow-none focus:outline-none hover:bg-transparent ml-auto"
-                onClick={() => setShowDeleteDialog(true)}
-                title="Delete Account"
-                style={{ width: 40, height: 40 }}
-              >
-                <span className="flex items-center justify-center w-10 h-10 rounded-full" style={{ background: 'none', position: 'relative' }}>
-                  <img src="/glob.svg" alt="bg" className="absolute w-10 h-10 left-0 top-0" style={{ pointerEvents: 'none' }} />
-                  <span className="flex items-center justify-center w-10 h-10 rounded-full relative z-10">
-                    <Trash2 className="h-4 w-4 text-white" />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="p-0 bg-transparent border-none shadow-none focus:outline-none hover:bg-transparent ml-auto group"
+                  onClick={() => setShowDeleteDialog(true)}
+                  title="Delete Account"
+                  style={{ width: 40, height: 40 }}
+                >
+                  <span className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-150 group-hover:bg-black/40 group-hover:scale-110" style={{ background: 'none', position: 'relative' }}>
+                    <img src="/glob.svg" alt="bg" className="absolute w-10 h-10 left-0 top-0" style={{ pointerEvents: 'none' }} />
+                    <span className="flex items-center justify-center w-10 h-10 rounded-full relative z-10">
+                      <Trash2 className="h-4 w-4 text-white" />
+                    </span>
                   </span>
-                </span>
-              </Button>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
             </CardFooter>
           </Card>
         </div>
@@ -432,30 +490,30 @@ export default function AccountCard({
             <DialogFooter>
               <Button type="submit" className="bg-green-600 text-white" disabled={logSubmitting}>
                 {logSubmitting ? "Logging..." : "Log Activity"}
-              </Button>
+          </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Account</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this account? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel asChild>
-              <Button variant="outline">Cancel</Button>
-            </AlertDialogCancel>
-            <AlertDialogAction asChild>
-              <Button variant="destructive" onClick={handleDelete}>Delete</Button>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Account</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this account? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel asChild>
+                  <Button variant="outline">Cancel</Button>
+                </AlertDialogCancel>
+                <AlertDialogAction asChild>
+                  <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
       <AddOpportunityDialog
         open={isAddOpportunityDialogOpen}
         onOpenChange={setIsAddOpportunityDialogOpen}

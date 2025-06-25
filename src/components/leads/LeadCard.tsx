@@ -59,6 +59,12 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 interface LeadCardProps {
   lead: Lead;
@@ -134,6 +140,7 @@ export default function LeadCard({
   const [logContent, setLogContent] = useState("");
   const [logDate, setLogDate] = useState("");
   const [logSubmitting, setLogSubmitting] = useState(false);
+  const [updateType, setUpdateType] = useState('');
 
   const isAssignedToMe = lead.assigned_user_id === user?.id;
   const isCreatedByMe = lead.created_by_user_id === user?.id;
@@ -287,7 +294,7 @@ export default function LeadCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           lead_id: lead.id,
-          type: "General",
+          type: updateType || "General",
           content: logContent,
           date: logDate ? new Date(logDate).toISOString() : new Date().toISOString(),
           updated_by_user_id: user?.id,
@@ -317,14 +324,16 @@ export default function LeadCard({
 
   return (
     <>
-      <Dialog open={showModal} onOpenChange={setShowModal}>
+      <Dialog open={showModal} onOpenChange={(open) => {
+        setShowModal(open);
+        if (open) fetchLogs();
+      }}>
         <div
           className="flex flex-col h-full bg-white text-black rounded-[8px] p-2 border-none cursor-pointer"
           onClick={e => {
             // Prevent modal open on action button clicks
             if ((e.target as HTMLElement).closest("button, a")) return;
             setShowModal(true);
-            fetchLogs();
           }}
         >
           <CardHeader className="pb-3 px-6 pt-6">
@@ -471,40 +480,54 @@ export default function LeadCard({
               ) : (
                 lead.status !== "Lost" && (
                   <>
-                    <Button
-                      size="sm"
-                      onClick={handleConvert}
-                      disabled={isConverting}
-                      variant="ghost"
-                      className="p-0 bg-transparent border-none shadow-none focus:outline-none hover:bg-transparent"
-                      style={{ width: 40, height: 40 }}
-                    >
-                      <span className="flex items-center justify-center w-10 h-10 rounded-full" style={{ background: 'none', position: 'relative' }}>
-                        <img src="/glob.svg" alt="bg" className="absolute w-10 h-10 left-0 top-0" style={{ pointerEvents: 'none' }} />
-                        <span className="flex items-center justify-center w-10 h-10 rounded-full relative z-10">
-                          {isConverting ? (
-                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                          ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 5v6a3 3 0 0 0 3 3h7" /><path d="M10 10l4 4l-4 4m5 -8l4 4l-4 4" /></svg>
-                          )}
-                        </span>
-                      </span>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setShowDeleteDialog(true)}
-                      title="Delete Lead"
-                      className="p-0 bg-transparent border-none shadow-none focus:outline-none hover:bg-transparent"
-                      style={{ width: 40, height: 40 }}
-                    >
-                      <span className="flex items-center justify-center w-10 h-10 rounded-full" style={{ background: 'none', position: 'relative' }}>
-                        <img src="/glob.svg" alt="bg" className="absolute w-10 h-10 left-0 top-0" style={{ pointerEvents: 'none' }} />
-                        <span className="flex items-center justify-center w-10 h-10 rounded-full relative z-10">
-                          <Trash2 className="h-4 w-4 text-white" />
-                        </span>
-                      </span>
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            onClick={handleConvert}
+                            disabled={isConverting}
+                            variant="ghost"
+                            className="p-0 bg-transparent border-none shadow-none focus:outline-none hover:bg-transparent group"
+                            style={{ width: 40, height: 40 }}
+                          >
+                            <span className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-150 group-hover:bg-[#B89B6A]/80 group-hover:scale-110" style={{ background: 'none', position: 'relative' }}>
+                              <img src="/glob.svg" alt="bg" className="absolute w-10 h-10 left-0 top-0" style={{ pointerEvents: 'none' }} />
+                              <span className="flex items-center justify-center w-10 h-10 rounded-full relative z-10">
+                            {isConverting ? (
+                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                            ) : (
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 5v6a3 3 0 0 0 3 3h7" /><path d="M10 10l4 4l-4 4m5 -8l4 4l-4 4" /></svg>
+                            )}
+                              </span>
+                            </span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Convert to Account</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setShowDeleteDialog(true)}
+                            title="Delete Lead"
+                            className="p-0 bg-transparent border-none shadow-none focus:outline-none hover:bg-transparent group"
+                            style={{ width: 40, height: 40 }}
+                          >
+                            <span className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-150 group-hover:bg-black/40 group-hover:scale-110" style={{ background: 'none', position: 'relative' }}>
+                              <img src="/glob.svg" alt="bg" className="absolute w-10 h-10 left-0 top-0" style={{ pointerEvents: 'none' }} />
+                              <span className="flex items-center justify-center w-10 h-10 rounded-full relative z-10">
+                                <Trash2 className="h-4 w-4 text-white" />
+                              </span>
+                            </span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Delete</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </>
                 )
               )}
@@ -544,32 +567,77 @@ export default function LeadCard({
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4">
-            <h3 className="font-semibold mb-2 text-black">Records</h3>
+            <div className="flex items-center mb-4">
+              <span className="mr-2 text-lg"><FileWarning className="inline-block mr-1" /></span>
+              <span className="text-lg font-medium text-gray-800">Lead: <span className="font-bold text-black text-2xl">{lead.companyName}</span></span>
+            </div>
             {logsLoading ? (
               <div className="text-black">Loading...</div>
             ) : logs.length === 0 ? (
               <div className="text-gray-600">No log found</div>
             ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
+              <div className="space-y-3 max-h-80 min-h-0 overflow-y-scroll pr-2">
                 {logs.map((log) => (
-                  <div key={log.id} className="bg-gray-100 rounded p-2">
-                    <div className="text-sm text-black">{log.content}</div>
-                    <div className="text-xs  text-gray-600 mt-1">Logged on: {log.date ? new Date(log.date).toLocaleDateString() : "-"}</div>
+                  <div key={log.id} className="bg-[#EAF4FF] rounded-lg px-5 py-3 flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-lg text-gray-900 mb-1">{log.content}</div>
+                      <div className="text-xs text-gray-600">Logged on: {log.date ? new Date(log.date).toISOString().slice(0, 10) : "-"}</div>
+                    </div>
+                    {log.type && (
+                      <span className="ml-4 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
+                        {log.type}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </div>
           <form className="mt-6" onSubmit={handleLogActivity}>
-            <h4 className="font-semibold mb-2 text-black">Log New Activity</h4>
-            <textarea
-              className="w-full border border-black rounded p-2 mb-2 text-black bg-white"
-              rows={3}
-              placeholder="e.g., Follow-up call, sent proposal..."
-              value={logContent}
-              onChange={e => setLogContent(e.target.value)}
-              required
-            />
+            <div className="mb-4">
+              <label className="block font-semibold mb-1 text-black" htmlFor="lead-input">
+                Lead <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="lead-input"
+                type="text"
+                value={lead.companyName}
+                disabled
+                className="w-full rounded bg-white border border-black px-4 py-2 text-black text-base cursor-not-allowed mb-2"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block font-semibold mb-1 text-black" htmlFor="update-type">
+                Update Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="update-type"
+                value={updateType}
+                onChange={e => setUpdateType(e.target.value)}
+                required
+                className="w-full rounded bg-white border border-black px-4 py-2 text-black text-base mb-2"
+              >
+                <option value="" disabled>Select update type</option>
+                <option value="General">General</option>
+                <option value="Call">Call</option>
+                <option value="Meeting">Meeting</option>
+                <option value="Email">Email</option>
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="block font-semibold mb-1 text-black" htmlFor="log-content">
+                Content <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                id="log-content"
+                className="w-full border border-black rounded p-2 mb-2 text-black bg-white placeholder:text-gray-400"
+                rows={4}
+                placeholder="Describe the call, meeting, email, or general update..."
+                value={logContent}
+                onChange={e => setLogContent(e.target.value)}
+                required
+              />
+            </div>
             <input
               type="date"
               className="w-full border border-black rounded p-2 mb-2 text-black bg-white"

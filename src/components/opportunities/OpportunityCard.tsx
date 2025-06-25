@@ -68,6 +68,12 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 interface OpportunityCardProps {
   opportunity: Opportunity;
@@ -386,139 +392,139 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
             fetchLogs();
           }}
         >
-          <Card className="flex flex-col h-full bg-white text-black rounded-[8px] border-none">
-            <CardHeader className="pb-3 px-6 pt-6">
-              <div className="flex flex-row items-center justify-between w-full">
-                <div className="flex flex-col items-start">
-                  <div className="flex flex-row items-center">
-                    <BarChartBig className="mr-2 h-5 w-5 shrink-0" style={{ color: '#97A88C' }} />
-                    <CardTitle className="font-headline mb-0 ml-2" style={{ color: '#97A88C', fontSize: '1.5rem', fontWeight: 700 }}>
-                      {initialOpportunity.name}
-                    </CardTitle>
-                  </div>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      className={`capitalize whitespace-nowrap ml-2 focus:outline-none ${getStatusBadgeColorClasses(opportunity.status)} inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors`}
-                      disabled={isStatusUpdating || opportunity.status === "Win" || opportunity.status === "Loss"}
-                      aria-label="Change status"
-                    >
-                      {isStatusUpdating ? (
-                        <span className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      ) : null}
-                      {opportunity.status}
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {VALID_OPPORTUNITY_STATUSES.map((status) => (
-                      <DropdownMenuItem
-                        key={status}
-                        onSelect={() => handleStatusChange(status)}
-                        disabled={status === opportunity.status || opportunity.status === "Win" || opportunity.status === "Loss"}
-                        className={`capitalize ${status === opportunity.status ? "opacity-60 font-bold" : "cursor-pointer"}`}
-                      >
-                        {status}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-grow space-y-3 text-sm px-6 text-left">
-              {associatedAccount?.name && (
-                <div className="flex items-center mb-1">
-                  <Briefcase className="mr-2 h-4 w-4 shrink-0" />
-                  <span className="font-semibold text-muted-foreground mr-1" style={{ fontSize: '1.05rem' }}>
-                    For:
-                  </span>{' '}
-                  <span className="font-bold text-foreground" style={{ fontSize: '1.15rem' }}>
-                    {associatedAccount.name}
+    <Card className="flex flex-col h-full bg-white text-black rounded-[8px] border-none">
+      <CardHeader className="pb-3 px-6 pt-6">
+        <div className="flex flex-row items-center justify-between w-full">
+          <div className="flex flex-col items-start">
+            <div className="flex flex-row items-center">
+              <BarChartBig className="mr-2 h-5 w-5 shrink-0" style={{ color: '#97A88C' }} />
+              <CardTitle className="font-headline mb-0 ml-2" style={{ color: '#97A88C', fontSize: '1.5rem', fontWeight: 700 }}>
+                {initialOpportunity.name}
+              </CardTitle>
+            </div>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={`capitalize whitespace-nowrap ml-2 focus:outline-none ${getStatusBadgeColorClasses(opportunity.status)} inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors`}
+                disabled={isStatusUpdating || opportunity.status === "Win" || opportunity.status === "Loss"}
+                aria-label="Change status"
+              >
+                {isStatusUpdating ? (
+                  <span className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : null}
+                {opportunity.status}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {VALID_OPPORTUNITY_STATUSES.map((status) => (
+                <DropdownMenuItem
+                  key={status}
+                  onSelect={() => handleStatusChange(status)}
+                  disabled={status === opportunity.status || opportunity.status === "Win" || opportunity.status === "Loss"}
+                  className={`capitalize ${status === opportunity.status ? "opacity-60 font-bold" : "cursor-pointer"}`}
+                >
+                  {status}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-grow space-y-3 text-sm px-6 text-left">
+        {associatedAccount?.name && (
+          <div className="flex items-center mb-1">
+            <Briefcase className="mr-2 h-4 w-4 shrink-0" />
+            <span className="font-semibold text-muted-foreground mr-1" style={{ fontSize: '1.05rem' }}>
+              For:
+            </span>{' '}
+            <span className="font-bold text-foreground" style={{ fontSize: '1.15rem' }}>
+              {associatedAccount.name}
+            </span>
+          </div>
+        )}
+        {typeof opportunity.amount !== "undefined" &&
+          opportunity.amount !== null && (
+            <div className="flex items-center mb-1">
+              <span className="font-semibold text-muted-foreground mr-1" style={{ fontSize: '0.95rem' }}>
+                Quoted Value:
+              </span>{" "}
+              <span className="text-black font-bold" style={{ fontSize: '1.35rem' }}>
+                ${Number(opportunity.amount).toLocaleString()}
+              </span>
+            </div>
+          )}
+        {opportunity.description && (
+          <div className="mb-1">
+            <p className="text-muted-foreground">{opportunity.description}</p>
+          </div>
+        )}
+        {opportunity.created_at && opportunity.expected_close_date && (
+          <div className="flex items-center text-muted-foreground mb-1">
+            <CalendarDays className="mr-2 h-4 w-4 shrink-0" />
+            <span>
+              {opportunity.created_at
+                ? format(parseISO(opportunity.created_at), "MMM dd, yyyy")
+                : "N/A"}{" "}
+              -{" "}
+              {opportunity.expected_close_date
+                ? format(
+                    parseISO(opportunity.expected_close_date),
+                    "MMM dd, yyyy"
+                  )
+                : "N/A"}
+            </span>
+          </div>
+        )}
+        <div className="mb-2">
+          <Progress value={progress} className="h-2 bg-[#E5E7E0] [&>div]:bg-[#97A88C]" />
+        </div>
+        <div className="flex justify-between text-[14px] text-muted-foreground mb-1">
+          <span className="flex items-center">
+            <Clock className="mr-1 h-3 w-3 shrink-0" />
+            {timeRemaining(opportunity.status)}
+          </span>
+          <div className="flex items-center gap-1">
+            {opportunityHealthIcon} {opportunityHealthText}
+          </div>
+        </div>
+        {(forecast || isLoadingForecast) &&
+          opportunity.status !== "Win" &&
+          opportunity.status !== "Loss" && (
+            <div className="pt-3 border-t mt-3">
+              <h4 className="text-sm font-semibold uppercase text-muted-foreground mb-1.5 flex items-center">
+                <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" /> AI
+                Forecast
+              </h4>
+              {isLoadingForecast ? (
+                <div className="flex items-center space-x-2 h-12">
+                  <LoadingSpinner size={16} />
+                  <span className="text-sm text-muted-foreground">
+                    Generating forecast...
                   </span>
                 </div>
-              )}
-              {typeof opportunity.amount !== "undefined" &&
-                opportunity.amount !== null && (
-                  <div className="flex items-center mb-1">
-                    <span className="font-semibold text-muted-foreground mr-1" style={{ fontSize: '0.95rem' }}>
-                      Quoted Value:
-                    </span>{" "}
-                    <span className="text-black font-bold" style={{ fontSize: '1.35rem' }}>
-                      ${Number(opportunity.amount).toLocaleString()}
-                    </span>
-                  </div>
-                )}
-              {opportunity.description && (
-                <div className="mb-1">
-                  <p className="text-muted-foreground">{opportunity.description}</p>
+              ) : forecast ? (
+                <div className="space-y-1 text-[14px]">
+                  <p className="text-foreground line-clamp-1">
+                    <span className="font-medium">Est. Completion:</span>{" "}
+                    {forecast.completionDateEstimate}
+                  </p>
+                  <p className="text-foreground line-clamp-2 leading-snug">
+                    <span className="font-medium">Bottlenecks:</span>{" "}
+                    {forecast.bottleneckIdentification || "None identified"}
+                  </p>
                 </div>
+              ) : (
+                <p className="text-xs text-muted-foreground h-12 flex items-center">
+                  No AI forecast data for this opportunity.
+                </p>
               )}
-              {opportunity.created_at && opportunity.expected_close_date && (
-                <div className="flex items-center text-muted-foreground mb-1">
-                  <CalendarDays className="mr-2 h-4 w-4 shrink-0" />
-                  <span>
-                    {opportunity.created_at
-                      ? format(parseISO(opportunity.created_at), "MMM dd, yyyy")
-                      : "N/A"}{" "}
-                    -{" "}
-                    {opportunity.expected_close_date
-                      ? format(
-                          parseISO(opportunity.expected_close_date),
-                          "MMM dd, yyyy"
-                        )
-                      : "N/A"}
-                  </span>
-                </div>
-              )}
-              <div className="mb-2">
-                <Progress value={progress} className="h-2 bg-[#E5E7E0] [&>div]:bg-[#97A88C]" />
-              </div>
-              <div className="flex justify-between text-[14px] text-muted-foreground mb-1">
-                <span className="flex items-center">
-                  <Clock className="mr-1 h-3 w-3 shrink-0" />
-                  {timeRemaining(opportunity.status)}
-                </span>
-                <div className="flex items-center gap-1">
-                  {opportunityHealthIcon} {opportunityHealthText}
-                </div>
-              </div>
-              {(forecast || isLoadingForecast) &&
-                opportunity.status !== "Win" &&
-                opportunity.status !== "Loss" && (
-                  <div className="pt-3 border-t mt-3">
-                    <h4 className="text-sm font-semibold uppercase text-muted-foreground mb-1.5 flex items-center">
-                      <Lightbulb className="mr-1.5 h-3.5 w-3.5 text-yellow-500" /> AI
-                      Forecast
-                    </h4>
-                    {isLoadingForecast ? (
-                      <div className="flex items-center space-x-2 h-12">
-                        <LoadingSpinner size={16} />
-                        <span className="text-sm text-muted-foreground">
-                          Generating forecast...
-                        </span>
-                      </div>
-                    ) : forecast ? (
-                      <div className="space-y-1 text-[14px]">
-                        <p className="text-foreground line-clamp-1">
-                          <span className="font-medium">Est. Completion:</span>{" "}
-                          {forecast.completionDateEstimate}
-                        </p>
-                        <p className="text-foreground line-clamp-2 leading-snug">
-                          <span className="font-medium">Bottlenecks:</span>{" "}
-                          {forecast.bottleneckIdentification || "None identified"}
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground h-12 flex items-center">
-                        No AI forecast data for this opportunity.
-                      </p>
-                    )}
-                  </div>
-                )}
-            </CardContent>
+            </div>
+          )}
+      </CardContent>
             <CardFooter className="pt-4 border-t mt-auto px-6 pb-6 flex justify-start items-center gap-6">
-              <Button
-                onClick={() => setShowAddUpdateDialog(true)}
+        <Button
+          onClick={() => setShowAddUpdateDialog(true)}
                 title="New Opportunity"
                 className="flex flex-row items-center justify-center"
                 style={{
@@ -535,25 +541,32 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
                   lineHeight: '24px',
                   boxSizing: 'border-box',
                 }}
-              >
+        >
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5v14" /><path d="M5 12h14" /></svg>
                 <span>New Opportunity</span>
-              </Button>
+        </Button>
               <div className="flex-grow" />
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => setShowDeleteDialog(true)}
                 title="Delete Opportunity"
-                className="p-0 bg-transparent border-none shadow-none focus:outline-none hover:bg-transparent ml-auto"
+                className="p-0 bg-transparent border-none shadow-none focus:outline-none hover:bg-transparent ml-auto group"
                 style={{ width: 40, height: 40 }}
               >
-                <span className="flex items-center justify-center w-10 h-10 rounded-full bg-black/30">
+                <span className="flex items-center justify-center w-10 h-10 rounded-full bg-black/30 transition-all duration-150 group-hover:bg-black/40 group-hover:scale-110">
                   <span className="flex items-center justify-center w-6 h-6 rounded-full" style={{ background: '#E2D4C3' }}>
                     <Trash2 className="h-4 w-4 text-black" />
                   </span>
                 </span>
               </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
             </CardFooter>
           </Card>
         </div>
@@ -619,37 +632,37 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
             <DialogFooter>
               <Button type="submit" className="bg-green-600 text-white" disabled={logSubmitting}>
                 {logSubmitting ? "Logging..." : "Log Activity"}
-              </Button>
+        </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Opportunity</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this opportunity? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel asChild>
-              <Button variant="outline">Cancel</Button>
-            </AlertDialogCancel>
-            <AlertDialogAction asChild>
-              <Button variant="destructive" onClick={handleDelete}>Delete</Button>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <AddUpdateDialog
-        open={showAddUpdateDialog}
-        onOpenChange={setShowAddUpdateDialog}
-        onUpdateAdded={() => setShowAddUpdateDialog(false)}
-        forceEntityType="opportunity"
-        forceEntityId={opportunity.id}
-      />
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Opportunity</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this opportunity? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel asChild>
+                <Button variant="outline">Cancel</Button>
+              </AlertDialogCancel>
+              <AlertDialogAction asChild>
+                <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <AddUpdateDialog
+          open={showAddUpdateDialog}
+          onOpenChange={setShowAddUpdateDialog}
+          onUpdateAdded={() => setShowAddUpdateDialog(false)}
+          forceEntityType="opportunity"
+          forceEntityId={opportunity.id}
+        />
     </>
   );
 }
