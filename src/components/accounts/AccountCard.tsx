@@ -24,6 +24,7 @@ import {
   Tag,
   Trash2,
   MessageSquare,
+  Edit,
 } from "lucide-react";
 import {
   Dialog,
@@ -62,6 +63,8 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 
 interface AccountCardProps {
   account: Account;
@@ -90,6 +93,15 @@ export default function AccountCard({
   const [logSubmitting, setLogSubmitting] = useState(false);
   const [isReverting, setIsReverting] = useState(false);
   const { toast } = useToast();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValues, setEditValues] = useState({
+    name: account.name,
+    contactPersonName: account.contactPersonName || '',
+    contactEmail: account.contactEmail || '',
+    contactPhone: account.contactPhone || '',
+    status: account.status,
+  });
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const fetchLogs = async () => {
     setLogsLoading(true);
@@ -254,6 +266,67 @@ export default function AccountCard({
     } finally {
       setIsReverting(false);
     }
+  };
+
+  // Edit handlers
+  const handleEditClick = () => {
+    setIsEditing(true);
+    setEditValues({
+      name: account.name,
+      contactPersonName: account.contactPersonName || '',
+      contactEmail: account.contactEmail || '',
+      contactPhone: account.contactPhone || '',
+      status: account.status,
+    });
+  };
+  const handleEditChange = (field: string, value: string) => {
+    setEditValues((prev) => ({ ...prev, [field]: value }));
+  };
+  const handleEditSave = async () => {
+    setIsSavingEdit(true);
+    try {
+      const response = await fetch(`/api/accounts/${account.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editValues.name,
+          contact_person_name: editValues.contactPersonName,
+          contact_email: editValues.contactEmail,
+          contact_phone: editValues.contactPhone,
+          status: editValues.status,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update account');
+      }
+      // Update UI
+      setIsEditing(false);
+      toast({
+        title: 'Account Updated!',
+        description: 'Account information has been updated.',
+        className: 'bg-green-100 dark:bg-green-900 border-green-500',
+      });
+      window.location.reload(); // Or update state if you want instant UI update
+    } catch (error) {
+      toast({
+        title: 'Update Failed',
+        description: error instanceof Error ? error.message : 'Could not update account.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+  const handleEditCancel = () => {
+    setIsEditing(false);
+    setEditValues({
+      name: account.name,
+      contactPersonName: account.contactPersonName || '',
+      contactEmail: account.contactEmail || '',
+      contactPhone: account.contactPhone || '',
+      status: account.status,
+    });
   };
 
   return (
@@ -431,24 +504,110 @@ export default function AccountCard({
 
         <DialogContent className="max-w-xl w-full bg-white text-black">
           <DialogHeader>
-            <DialogTitle className="text-black">{account.name}</DialogTitle>
+            <DialogTitle className="text-black flex items-center justify-between">
+              <div className="flex items-center">
+                {isEditing ? (
+                  <Input
+                    className="text-xl font-semibold border-b border-[#97A88C] bg-transparent focus:outline-none px-1"
+                    value={editValues.name}
+                    onChange={e => handleEditChange('name', e.target.value)}
+                  />
+                ) : (
+                  account.name
+                )}
+              </div>
+              <div className="flex items-center gap-2 mr-4">
+                {!isEditing && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-9 px-3 border border-[#97A88C] text-[#2B2521] hover:bg-[#97A88C]/10 rounded-lg font-medium shadow-sm flex items-center gap-1 text-base"
+                    style={{ minHeight: 36 }}
+                    onClick={handleEditClick}
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                )}
+                {isEditing && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleEditCancel}
+                      disabled={isSavingEdit}
+                      className="h-9 px-3 border border-[#97A88C] text-[#2B2521] hover:bg-[#97A88C]/10 rounded-lg text-base"
+                      style={{ minHeight: 36 }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={handleEditSave}
+                      disabled={isSavingEdit}
+                      className="h-9 px-3 bg-[#2B2521] hover:bg-[#2B2521]/90 text-white rounded-lg text-base"
+                      style={{ minHeight: 36 }}
+                    >
+                      {isSavingEdit ? 'Saving...' : 'Save'}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </DialogTitle>
             <DialogDescription className="text-gray-600">
               <div className="mt-2 grid grid-cols-2 gap-4">
                 <div className="p-2 bg-gray-50 rounded">
                   <span className="text-black font-semibold">Contact: </span>
-                  {account.contactPersonName || 'N/A'}
+                  {isEditing ? (
+                    <Input
+                      className="border rounded px-2 py-1 w-full mt-1"
+                      value={editValues.contactPersonName}
+                      onChange={e => handleEditChange('contactPersonName', e.target.value)}
+                    />
+                  ) : (
+                    account.contactPersonName || 'N/A'
+                  )}
                 </div>
                 <div className="p-2 bg-gray-50 rounded">
                   <span className="text-black font-semibold">Email: </span>
-                  {account.contactEmail || 'N/A'}
+                  {isEditing ? (
+                    <Input
+                      className="border rounded px-2 py-1 w-full mt-1"
+                      value={editValues.contactEmail}
+                      onChange={e => handleEditChange('contactEmail', e.target.value)}
+                    />
+                  ) : (
+                    account.contactEmail || 'N/A'
+                  )}
                 </div>
                 <div className="p-2 bg-gray-50 rounded">
                   <span className="text-black font-semibold">Phone: </span>
-                  {account.contactPhone || 'N/A'}
+                  {isEditing ? (
+                    <Input
+                      className="border rounded px-2 py-1 w-full mt-1"
+                      value={editValues.contactPhone}
+                      onChange={e => handleEditChange('contactPhone', e.target.value)}
+                    />
+                  ) : (
+                    account.contactPhone || 'N/A'
+                  )}
                 </div>
                 <div className="p-2 bg-gray-50 rounded">
                   <span className="text-black font-semibold">Status: </span>
-                  {account.status}
+                  {isEditing ? (
+                    <Select value={editValues.status} onValueChange={val => handleEditChange('status', val)}>
+                      <SelectTrigger className="w-full mt-1">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    account.status
+                  )}
                 </div>
               </div>
             </DialogDescription>
