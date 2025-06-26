@@ -163,7 +163,7 @@ export default function AccountsPage() {
   return (
     <div className="container mx-auto space-y-6 mt-6">
       <PageTitle title="Accounts Management" subtitle="Oversee all client and partner accounts.">
-        <Button onClick={() => setIsAddAccountDialogOpen(true)} variant="beige">
+        <Button onClick={() => setIsAddAccountDialogOpen(true)} variant="dark">
           <PlusCircle className="mr-2 h-4 w-4" /> Add New Account
         </Button>
       </PageTitle>
@@ -243,7 +243,7 @@ export default function AccountsPage() {
             <h3 className="text-lg font-semibold mb-2">No accounts yet</h3>
             <p className="text-sm">Get started by adding your first account or converting a lead.</p>
           </div>
-          <Button onClick={() => setIsAddAccountDialogOpen(true)} variant="beige">
+          <Button onClick={() => setIsAddAccountDialogOpen(true)} variant="dark">
             <PlusCircle className="mr-2 h-4 w-4" /> Add First Account
           </Button>
         </div>

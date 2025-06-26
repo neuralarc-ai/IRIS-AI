@@ -454,13 +454,14 @@ export default function LeadsPage() {
           )}
           <Button
             onClick={() => setIsAddLeadDialogOpen(true)}
-            className="flex items-center justify-center min-w-[128px] rounded-[4px] px-[27px] py-[16px] gap-2 bg-[#2B2521] text-white text-base font-normal shadow-none border-none"
+            variant="dark"
           >
             <PlusCircle className="mr-2 h-5 w-5" /> Add New Lead
           </Button>
           <Button
+            variant="outline"
             onClick={() => setShowImport(true)}
-            className="flex items-center justify-center w-[171px] h-[56px] min-w-[128px] rounded-[4px] px-[27px] py-[16px] gap-2 border border-[#2B2521] text-[#2B2521] bg-white text-base font-normal shadow-none transition-colors duration-150 hover:bg-[#C5B496]"
+            className="flex items-center min-w-[160px] h-12 text-lg font-medium"
           >
             <Upload className="mr-2 h-5 w-5" /> Import CSV
           </Button>

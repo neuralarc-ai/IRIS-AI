@@ -20,7 +20,7 @@ export default function KeyOpportunityInsights({ isLoading, opportunities }: Key
     <>
       <CardHeader>
         <CardTitle className="text-2xl font-semibold flex items-center text-foreground">
-          <Lightbulb className="mr-3 h-6 w-6" style={{ color: '#5E6156' }} />
+          <Lightbulb className="mr-3 h-6 w-6 text-yellow-500" />
           Key Opportunity Insights
         </CardTitle>
       </CardHeader>

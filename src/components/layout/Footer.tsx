@@ -444,121 +444,41 @@ const Footer: React.FC = () => {
 
   return (
     <>
-      <footer className="w-full border-t py-4 mt-8" style={{ background: '#202020' }}>
-        <div
-          className="max-w-screen-2xl mx-auto px-4 flex flex-wrap justify-center items-center text-center gap-x-2 gap-y-2"
-          style={{
-            fontFamily: 'Fustat, sans-serif',
-            fontWeight: 300,
-            fontSize: '12px',
-            lineHeight: '14px',
-            letterSpacing: 0,
-            color: '#798682',
-            textAlign: 'center',
-            textDecoration: 'underline',
-            textDecorationStyle: 'solid',
-            textDecorationThickness: 0,
-            textDecorationColor: '#798682',
-            textDecorationSkipInk: 'none',
-            textUnderlineOffset: 0,
-          }}
-        >
+      <footer className="w-full bg-[#FCFAF7] border-t border-[#F3F0EA] py-4 mt-8">
+        <div className="max-w-screen-2xl mx-auto px-4 flex flex-wrap justify-center items-center text-center text-[16px] font-normal text-[#222] gap-x-2 gap-y-2">
           <button
             onClick={() => openDialog('terms')}
-            className="bg-transparent border-none p-0 m-0 focus:outline-none cursor-pointer"
-            style={{
-              textDecoration: 'underline',
-              textDecorationStyle: 'solid',
-              textDecorationThickness: 0,
-              textUnderlineOffset: 0,
-              color: '#798682',
-              fontFamily: 'Fustat, sans-serif',
-              fontWeight: 300,
-              fontSize: '12px',
-              lineHeight: '14px',
-              letterSpacing: 0,
-              textAlign: 'center',
-            }}
+            className="underline bg-transparent border-none p-0 m-0 hover:text-black focus:outline-none cursor-pointer"
+            style={{ fontSize: '16px', fontWeight: 400 }}
           >
             Terms of use
           </button>
-          <span className="mx-2" style={{ color: '#798682' }}>&bull;</span>
+          <span className="mx-2 text-[#222]">&bull;</span>
           <button
             onClick={() => openDialog('privacy')}
-            className="bg-transparent border-none p-0 m-0 focus:outline-none cursor-pointer"
-            style={{
-              textDecoration: 'underline',
-              textDecorationStyle: 'solid',
-              textDecorationThickness: 0,
-              textUnderlineOffset: 0,
-              color: '#798682',
-              fontFamily: 'Fustat, sans-serif',
-              fontWeight: 300,
-              fontSize: '12px',
-              lineHeight: '14px',
-              letterSpacing: 0,
-              textAlign: 'center',
-            }}
+            className="underline bg-transparent border-none p-0 m-0 hover:text-black focus:outline-none cursor-pointer"
+            style={{ fontSize: '16px', fontWeight: 400 }}
           >
             Privacy Policy
           </button>
-          <span className="mx-2" style={{ color: '#798682' }}>&bull;</span>
+          <span className="mx-2 text-[#222]">&bull;</span>
           <button
             onClick={() => openDialog('disclaimer')}
-            className="bg-transparent border-none p-0 m-0 focus:outline-none cursor-pointer"
-            style={{
-              textDecoration: 'underline',
-              textDecorationStyle: 'solid',
-              textDecorationThickness: 0,
-              textUnderlineOffset: 0,
-              color: '#798682',
-              fontFamily: 'Fustat, sans-serif',
-              fontWeight: 300,
-              fontSize: '12px',
-              lineHeight: '14px',
-              letterSpacing: 0,
-              textAlign: 'center',
-            }}
+            className="underline bg-transparent border-none p-0 m-0 hover:text-black focus:outline-none cursor-pointer"
+            style={{ fontSize: '16px', fontWeight: 400 }}
           >
             Disclaimer
           </button>
-          <span className="mx-2" style={{ color: '#798682' }}>&bull;</span>
+          <span className="mx-2 text-[#222]">&bull;</span>
           <button
             onClick={() => openDialog('responsible-ai')}
-            className="bg-transparent border-none p-0 m-0 focus:outline-none cursor-pointer"
-            style={{
-              textDecoration: 'underline',
-              textDecorationStyle: 'solid',
-              textDecorationThickness: 0,
-              textUnderlineOffset: 0,
-              color: '#798682',
-              fontFamily: 'Fustat, sans-serif',
-              fontWeight: 300,
-              fontSize: '12px',
-              lineHeight: '14px',
-              letterSpacing: 0,
-              textAlign: 'center',
-            }}
+            className="underline bg-transparent border-none p-0 m-0 hover:text-black focus:outline-none cursor-pointer"
+            style={{ fontSize: '16px', fontWeight: 400 }}
           >
             Responsible AI
           </button>
-          <span className="mx-2" style={{ color: '#798682' }}>&bull;</span>
-          <span
-            className="ml-2"
-            style={{
-              color: '#798682',
-              fontFamily: 'Fustat, sans-serif',
-              fontWeight: 300,
-              fontSize: '12px',
-              lineHeight: '14px',
-              letterSpacing: 0,
-              textAlign: 'center',
-              textDecoration: 'underline',
-              textDecorationStyle: 'solid',
-              textDecorationThickness: 0,
-              textUnderlineOffset: 0,
-            }}
-          >
+          <span className="mx-2 text-[#222]">&bull;</span>
+          <span className="ml-2 text-[#222]" style={{ fontSize: '16px', fontWeight: 400 }}>
             All rights reserved. IRIS, a thing by <span style={{ fontWeight: 700 }}>NeuralArc</span>
           </span>
         </div>

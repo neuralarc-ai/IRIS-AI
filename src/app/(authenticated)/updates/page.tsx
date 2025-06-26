@@ -208,7 +208,7 @@ export default function UpdatesPage() {
   return (
     <div className="container mx-auto space-y-6 mt-6">
       <PageTitle title="Communication Updates" subtitle="Log and review all opportunity-related communications.">
-        <Button onClick={() => setIsAddUpdateDialogOpen(true)} variant="beige"> 
+        <Button onClick={() => setIsAddUpdateDialogOpen(true)} variant="dark"> 
           <PlusCircle className="mr-2 h-4 w-4" /> New Record
         </Button>
       </PageTitle>

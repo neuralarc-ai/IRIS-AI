@@ -374,30 +374,9 @@ export default function DashboardPage() {
                   const forecast = opp.forecast;
                   if (!forecast) return null;
                   return (
-                    <Card
-                      key={opp.id}
-                      className="border border-gray-200 shadow-sm p-3 flex flex-col justify-between h-full min-h-[170px] transition-colors duration-150 group"
-                      style={{ cursor: 'pointer' }}
-                    >
+                    <Card key={opp.id} className="border border-gray-200 shadow-sm p-3 flex flex-col justify-between h-full min-h-[170px]">
                       <div>
-                        <div
-                          className="font-semibold text-base mb-1 truncate"
-                          title={opp.name}
-                          style={{ color: 'black' }}
-                        >
-                          {opp.name}
-                        </div>
-                        {/* Subtext: person/country, if available */}
-                        {opp.person_name || opp.country ? (
-                          <div
-                            className="text-sm mb-2"
-                            style={{ color: 'black', opacity: 0.5 }}
-                          >
-                            {opp.person_name}
-                            {opp.person_name && opp.country ? ' • ' : ''}
-                            {opp.country}
-                          </div>
-                        ) : null}
+                        <div className="font-semibold text-base mb-1 truncate" title={opp.name}>{opp.name}</div>
                         <div className="text-xs mb-2 text-foreground" style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>
                           <strong>Summary:</strong> {truncateSummary(forecast.timelinePrediction)}
                         </div>
@@ -406,7 +385,7 @@ export default function DashboardPage() {
                       </div>
                       <Dialog open={modalOpen && selectedForecast?.id === opp.id} onOpenChange={(open) => { setModalOpen(open); if (!open) setSelectedForecast(null); }}>
                         <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="mt-2 w-full group-hover:bg-[#2B2521] group-hover:text-white transition-colors duration-150" onClick={() => { setSelectedForecast({ ...opp, forecast }); setModalOpen(true); }}>
+                          <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => { setSelectedForecast({ ...opp, forecast }); setModalOpen(true); }}>
                             View Details
                           </Button>
                         </DialogTrigger>

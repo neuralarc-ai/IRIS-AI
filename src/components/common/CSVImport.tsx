@@ -203,59 +203,62 @@ export default function CSVImport({ type, onImport, templateUrl, disabled = fals
   };
 
   return (
-    <Card className="bg-white border border-[#ECECEC] shadow-card rounded-[1.25rem] p-8 flex flex-col items-center max-w-xl mx-auto">
-      <div className="w-full flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-[#B88A5A]">Import Leads</h3>
-        {templateUrl && (
-          <Button variant="outline" size="sm" asChild>
-            <a href={templateUrl} download className="flex items-center">
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              Download Template
-            </a>
-          </Button>
-        )}
-      </div>
-      <div
-        className={`w-full border-2 border-dashed border-[#B88A5A] rounded-lg p-8 text-center flex flex-col items-center justify-center transition-colors duration-150 ${
-          isDragging ? 'bg-[#F7F5F2]' : 'bg-white'
-        } ${disabled ? 'opacity-60 pointer-events-none' : ''}`}
-        onDragOver={disabled ? undefined : handleDragOver}
-        onDragLeave={disabled ? undefined : handleDragLeave}
-        onDrop={disabled ? undefined : handleDrop}
-        style={{ minHeight: 180 }}
-      >
-        <input
-          type="file"
-          accept=".csv"
-          onChange={disabled ? undefined : handleFileSelect}
-          className="hidden"
-          id="csv-upload"
-          disabled={disabled}
-        />
-        <label
-          htmlFor="csv-upload"
-          className={`cursor-pointer flex flex-col items-center ${disabled ? 'pointer-events-none' : ''}`}
+    <Card className="p-6">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Import {type.charAt(0).toUpperCase() + type.slice(1)}</h3>
+          {templateUrl && (
+            <Button variant="outline" size="sm" asChild>
+              <a href={templateUrl} download className="flex items-center">
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Download Template
+              </a>
+            </Button>
+          )}
+        </div>
+
+        <div
+          className={`border-2 border-dashed rounded-lg p-8 text-center ${
+            isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
+          } ${disabled ? 'opacity-60 pointer-events-none' : ''}`}
+          onDragOver={disabled ? undefined : handleDragOver}
+          onDragLeave={disabled ? undefined : handleDragLeave}
+          onDrop={disabled ? undefined : handleDrop}
         >
-          <Upload className="h-8 w-8 text-[#B88A5A] mb-2" />
-          <p className="text-sm text-[#2B2521]">
-            Drag and drop your CSV file here, or click to select
-          </p>
-          <p className="text-xs text-[#A6A6A6] mt-1">
-            Only CSV files are supported
-          </p>
-        </label>
-        {disabled && (
-          <div className="absolute inset-0 bg-white/60 z-20 rounded-lg flex items-center justify-center">
-            <span className="text-muted-foreground font-medium">Importing...</span>
+          <input
+            type="file"
+            accept=".csv"
+            onChange={disabled ? undefined : handleFileSelect}
+            className="hidden"
+            id="csv-upload"
+            disabled={disabled}
+          />
+          <label
+            htmlFor="csv-upload"
+            className={`cursor-pointer flex flex-col items-center ${disabled ? 'pointer-events-none' : ''}`}
+          >
+            <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">
+              Drag and drop your CSV file here, or click to select
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Only CSV files are supported
+            </p>
+          </label>
+          {disabled && (
+            <div className="absolute inset-0 bg-white/60 z-20 rounded-lg flex items-center justify-center">
+              <span className="text-muted-foreground font-medium">Importing...</span>
+            </div>
+          )}
+        </div>
+
+        {isLoading && (
+          <div className="flex items-center justify-center text-muted-foreground">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2" />
+            Processing file...
           </div>
         )}
       </div>
-      {isLoading && (
-        <div className="flex items-center justify-center text-muted-foreground mt-4">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2" />
-          Processing file...
-        </div>
-      )}
     </Card>
   );
 } 

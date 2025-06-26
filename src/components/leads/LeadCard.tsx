@@ -127,6 +127,11 @@ const VALID_STATUSES: Lead["status"][] = [
   "Lost",
 ];
 
+// Helper to check if a string is a valid UUID
+function isValidUUID(id: string) {
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id);
+}
+
 export default function LeadCard({
   lead: initialLead,
   onLeadConverted,
@@ -157,9 +162,19 @@ export default function LeadCard({
   });
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [isEditingEmailOnly, setIsEditingEmailOnly] = useState(false);
+  const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
 
   const isAssignedToMe = lead.assigned_user_id === user?.id;
   const isCreatedByMe = lead.created_by_user_id === user?.id;
+
+  // Update: Track which required fields are missing for rejected leads
+  const requiredFields = [
+    { key: 'companyName', label: 'Company Name' },
+    { key: 'personName', label: 'Person Name' },
+    { key: 'email', label: 'Email' },
+  ];
+  const missingFields = requiredFields.filter(f => !lead[f.key as keyof typeof lead]);
 
   const handleStatusChange = async (newStatus: Lead["status"]) => {
     if (lead.status === newStatus) return;
@@ -339,9 +354,16 @@ export default function LeadCard({
     }
   };
 
-  // Edit handlers
+  // Update handleEditClick to allow editing all missing required fields for rejected leads
   const handleEditClick = () => {
-    setIsEditing(true);
+    if ((lead.status as string) === "Lost" && missingFields.length > 0) {
+      setIsEditingEmailOnly(false);
+      setIsEditing(true);
+    } else if ((lead.status as string) === "Lost" && !lead.email) {
+      setIsEditingEmailOnly(true);
+    } else {
+      setIsEditing(true);
+    }
     setEditValues({
       companyName: lead.companyName,
       personName: lead.personName,
@@ -355,10 +377,62 @@ export default function LeadCard({
     setEditValues((prev) => ({ ...prev, [field]: value }));
   };
 
+  // Update handleEditSave to validate all required fields for rejected leads
   const handleEditSave = async () => {
+    if ((lead.status as string) === 'Lost' && (isEditing || isEditingEmailOnly)) {
+      if (!editValues.companyName || !editValues.personName || !editValues.email) {
+        toast({
+          title: 'Missing Required Fields',
+          description: 'Please fill in all required fields: Company Name, Person Name, and Email.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(editValues.email)) {
+        toast({
+          title: 'Invalid Email',
+          description: 'Please enter a valid email address.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setShowAcceptConfirm(true);
+      return;
+    }
     setIsSavingEdit(true);
     try {
-      const response = await fetch(`/api/leads/${lead.id}`, {
+      let leadId = lead.id;
+      if (!isValidUUID(leadId)) {
+        const createRes = await fetch('/api/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            company_name: editValues.companyName,
+            person_name: editValues.personName,
+            email: editValues.email,
+            phone: editValues.phone,
+            country: editValues.country,
+            status: 'New',
+          }),
+        });
+        const createData = await createRes.json();
+        if (!createRes.ok || !createData.data?.id) {
+          toast({
+            title: 'Create Failed',
+            description: createData.error || 'Could not create lead.',
+            variant: 'destructive',
+          });
+          setIsSavingEdit(false);
+          return;
+        }
+        leadId = createData.data.id;
+        setLead((prev) => ({ ...prev, id: leadId, status: 'New' }));
+        if (onStatusChange) {
+          onStatusChange(leadId, 'New');
+        }
+      }
+      const response = await fetch(`/api/leads/${leadId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -367,11 +441,18 @@ export default function LeadCard({
           email: editValues.email,
           phone: editValues.phone,
           country: editValues.country,
+          ...(isEditingEmailOnly ? { status: 'New' } : {}),
         }),
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to update lead');
+        toast({
+          title: 'Update Failed',
+          description: result.error || 'Could not update lead.',
+          variant: 'destructive',
+        });
+        setIsSavingEdit(false);
+        return;
       }
       setLead((prev) => ({
         ...prev,
@@ -380,13 +461,19 @@ export default function LeadCard({
         email: editValues.email,
         phone: editValues.phone,
         country: editValues.country,
+        ...(isEditingEmailOnly ? { status: 'New' } : {}),
+        id: leadId,
       }));
       setIsEditing(false);
+      setIsEditingEmailOnly(false);
       toast({
         title: 'Lead Updated!',
         description: 'Lead information has been updated successfully.',
         className: 'bg-green-100 dark:bg-green-900 border-green-500',
       });
+      if ((isEditing || isEditingEmailOnly) && onStatusChange) {
+        onStatusChange(leadId, 'New');
+      }
     } catch (error) {
       toast({
         title: 'Update Failed',
@@ -395,6 +482,107 @@ export default function LeadCard({
       });
     } finally {
       setIsSavingEdit(false);
+    }
+  };
+
+  // Handler for confirmation dialog
+  const handleAcceptConfirm = async (accept: boolean) => {
+    setShowAcceptConfirm(false);
+    if (accept) {
+      // Validate email format before saving
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!editValues.email || !emailRegex.test(editValues.email)) {
+        toast({
+          title: 'Invalid Email',
+          description: 'Please enter a valid email address.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setIsSavingEdit(true);
+      try {
+        let leadId = lead.id;
+        // If the lead id is not a valid UUID, create the lead first
+        if (!isValidUUID(leadId)) {
+          const createRes = await fetch('/api/leads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              company_name: editValues.companyName,
+              person_name: editValues.personName,
+              email: editValues.email,
+              phone: editValues.phone,
+              country: editValues.country,
+              status: 'New',
+            }),
+          });
+          const createData = await createRes.json();
+          if (!createRes.ok || !createData.data?.id) {
+            toast({
+              title: 'Create Failed',
+              description: createData.error || 'Could not create lead.',
+              variant: 'destructive',
+            });
+            setIsSavingEdit(false);
+            return;
+          }
+          leadId = createData.data.id;
+          setLead((prev) => ({ ...prev, id: leadId, status: 'New' }));
+          if (onStatusChange) {
+            onStatusChange(leadId, 'New');
+          }
+        }
+        const response = await fetch(`/api/leads/${leadId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            company_name: editValues.companyName,
+            person_name: editValues.personName,
+            email: editValues.email,
+            phone: editValues.phone,
+            country: editValues.country,
+            status: 'New',
+          }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          toast({
+            title: 'Update Failed',
+            description: result.error || 'Could not update lead.',
+            variant: 'destructive',
+          });
+          setIsSavingEdit(false);
+          return;
+        }
+        setLead((prev) => ({
+          ...prev,
+          companyName: editValues.companyName,
+          personName: editValues.personName,
+          email: editValues.email,
+          phone: editValues.phone,
+          country: editValues.country,
+          status: 'New',
+          id: leadId,
+        }));
+        setIsEditing(false);
+        setIsEditingEmailOnly(false);
+        toast({
+          title: 'Lead Updated!',
+          description: 'Lead has been moved to accepted leads.',
+          className: 'bg-green-100 dark:bg-green-900 border-green-500',
+        });
+        if (onStatusChange) {
+          onStatusChange(leadId, 'New');
+        }
+      } catch (error) {
+        toast({
+          title: 'Update Failed',
+          description: error instanceof Error ? error.message : 'Could not update lead.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsSavingEdit(false);
+      }
     }
   };
 
@@ -418,7 +606,6 @@ export default function LeadCard({
         <div
           className="flex flex-col h-full bg-white text-black rounded-[8px] p-2 border-none cursor-pointer"
           onClick={e => {
-            // Prevent modal open on action button clicks or when in select mode
             if ((e.target as HTMLElement).closest("button, a") || isSelectMode) return;
             setShowModal(true);
           }}
@@ -436,42 +623,11 @@ export default function LeadCard({
                 )}
               </CardTitle>
               <div className="flex items-center gap-2">
-                <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                  <AlertDialogTrigger asChild>
-                    <button
-                      className={`capitalize whitespace-nowrap ml-2 focus:outline-none ${getStatusBadgeColorClasses(
-                        lead.status
-                      )} inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors`}
-                      disabled={
-                        isStatusUpdating ||
-                        lead.status === "Converted to Account" ||
-                        lead.status === "Lost"
-                      }
-                      aria-label="Change status"
-                    >
-                      {isStatusUpdating ? (
-                        <span className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      ) : null}
-                      {lead.status}
-                    </button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Lead</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete this lead? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel asChild>
-                        <Button variant="outline">Cancel</Button>
-                      </AlertDialogCancel>
-                      <AlertDialogAction asChild>
-                        <Button variant="destructive" onClick={handleDelete}>Delete</Button>
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                {lead.status !== "Lost" && (
+                  <span className={`capitalize whitespace-nowrap ml-2 focus:outline-none ${getStatusBadgeColorClasses(lead.status)} inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors`}>
+                    {lead.status}
+                  </span>
+                )}
               </div>
             </div>
             <CardDescription className="text-sm text-muted-foreground flex items-center">
@@ -480,16 +636,33 @@ export default function LeadCard({
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-grow space-y-2.5 text-sm px-6">
-            {lead.email && (
+            {/* Always show email field for rejected (Lost) leads, even if missing */}
+            {lead.status === "Lost" ? (
               <div className="flex items-center text-muted-foreground">
                 <Mail className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
-                <a
-                  href={`mailto:${lead.email}`}
-                  className="hover:text-primary hover:underline"
-                >
-                  {lead.email}
-                </a>
+                {lead.email ? (
+                  <a
+                    href={`mailto:${lead.email}`}
+                    className="hover:text-primary hover:underline"
+                  >
+                    {lead.email}
+                  </a>
+                ) : (
+                  <span className="italic text-red-500">Missing</span>
+                )}
               </div>
+            ) : (
+              lead.email && (
+                <div className="flex items-center text-muted-foreground">
+                  <Mail className="mr-2 h-4 w-4 shrink-0 text-gray-700" />
+                  <a
+                    href={`mailto:${lead.email}`}
+                    className="hover:text-primary hover:underline"
+                  >
+                    {lead.email}
+                  </a>
+                </div>
+              )
             )}
             {lead.phone && (
               <div className="flex items-center text-muted-foreground">
@@ -530,97 +703,168 @@ export default function LeadCard({
             </div>
           </CardContent>
           <CardFooter className="pt-4 border-t mt-auto px-6 pb-6 flex items-center justify-between gap-2">
-            <Button
-              asChild
-              className="flex flex-row items-center justify-center"
-              style={{
-                width: '152px',
-                height: '56px',
-                minWidth: '128px',
-                borderRadius: '4px',
-                padding: '16px 27px',
-                gap: '8px',
-                background: '#2B2521',
-                color: 'white',
-                fontWeight: 500,
-                fontSize: '16px',
-                lineHeight: '24px',
-                boxSizing: 'border-box',
-              }}
-            >
-              <Link href={`/leads/${lead.id}`} className="flex items-center gap-2 w-full h-full" style={{ color: 'white', textDecoration: 'none' }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 17h6" /><path d="M9 13h6" /></svg>
-                <span>View Details</span>
-              </Link>
-            </Button>
-            <div className="flex items-center gap-6">
-              {lead.status === "Converted to Account" ? (
+            {lead.status === "Lost" ? (
+              <div className="w-full flex flex-col items-center">
+                <span className="text-sm text-gray-600 mb-2">If you want edit missing field enter it manually</span>
+              </div>
+            ) : (
+              <>
                 <Button
-                  size="sm"
-                  disabled
-                  variant="beige"
-                  className="cursor-not-allowed opacity-70"
+                  asChild
+                  className="flex flex-row items-center justify-center"
+                  style={{
+                    width: '152px',
+                    height: '56px',
+                    minWidth: '128px',
+                    borderRadius: '4px',
+                    padding: '16px 27px',
+                    gap: '8px',
+                    background: '#2B2521',
+                    color: 'white',
+                    fontWeight: 500,
+                    fontSize: '16px',
+                    lineHeight: '24px',
+                    boxSizing: 'border-box',
+                  }}
                 >
-                  <CheckSquare className="mr-2 h-4 w-4" />
-                  Converted
+                  <Link href={`/leads/${lead.id}`} className="flex items-center gap-2 w-full h-full" style={{ color: 'white', textDecoration: 'none' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 17h6" /><path d="M9 13h6" /></svg>
+                    <span>View Details</span>
+                  </Link>
                 </Button>
-              ) : (
-                lead.status !== "Lost" && (
-                  <>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="sm"
-                            onClick={() => setShowConvertDialog(true)}
-                            disabled={isConverting}
-                            variant="ghost"
-                            className="p-0 bg-transparent border-none shadow-none focus:outline-none hover:bg-transparent group"
-                            style={{ width: 40, height: 40 }}
-                          >
-                            <span className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-150 group-hover:bg-[#B89B6A]/80 group-hover:scale-110" style={{ background: 'none', position: 'relative' }}>
-                              <img src="/glob.svg" alt="bg" className="absolute w-10 h-10 left-0 top-0" style={{ pointerEvents: 'none' }} />
-                              <span className="flex items-center justify-center w-10 h-10 rounded-full relative z-10">
-                            {isConverting ? (
-                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                            ) : (
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 5v6a3 3 0 0 0 3 3h7" /><path d="M10 10l4 4l-4 4m5 -8l4 4l-4 4" /></svg>
-                            )}
-                              </span>
-                            </span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Convert to Account</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setShowDeleteDialog(true)}
-                            title="Delete Lead"
-                            className="p-0 bg-transparent border-none shadow-none focus:outline-none hover:bg-transparent group"
-                            style={{ width: 40, height: 40 }}
-                          >
-                            <span className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-150 group-hover:bg-black/40 group-hover:scale-110" style={{ background: 'none', position: 'relative' }}>
-                              <img src="/glob.svg" alt="bg" className="absolute w-10 h-10 left-0 top-0" style={{ pointerEvents: 'none' }} />
-                              <span className="flex items-center justify-center w-10 h-10 rounded-full relative z-10">
-                                <Trash2 className="h-4 w-4 text-white" />
-                              </span>
-                            </span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Delete</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </>
-                )
-              )}
-            </div>
+                <div className="flex items-center gap-6">
+                  {lead.status === "Converted to Account" ? (
+                    <Button
+                      size="sm"
+                      disabled
+                      variant="beige"
+                      className="cursor-not-allowed opacity-70"
+                    >
+                      <CheckSquare className="mr-2 h-4 w-4" />
+                      Converted
+                    </Button>
+                  ) : (
+                    lead.status !== "Lost" && (
+                      <>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                onClick={() => setShowConvertDialog(true)}
+                                disabled={isConverting}
+                                variant="ghost"
+                                className="p-0 bg-transparent border-none shadow-none focus:outline-none hover:bg-transparent group"
+                                style={{ width: 40, height: 40 }}
+                              >
+                                <span className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-150 group-hover:bg-[#B89B6A]/80 group-hover:scale-110" style={{ background: 'none', position: 'relative' }}>
+                                  <img src="/glob.svg" alt="bg" className="absolute w-10 h-10 left-0 top-0" style={{ pointerEvents: 'none' }} />
+                                  <span className="flex items-center justify-center w-10 h-10 rounded-full relative z-10">
+                                    {isConverting ? (
+                                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                    ) : (
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 5v6a3 3 0 0 0 3 3h7" /><path d="M10 10l4 4l-4 4m5 -8l4 4l-4 4" /></svg>
+                                    )}
+                                  </span>
+                                </span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Convert to Account</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={e => { e.stopPropagation(); setShowDeleteDialog(true); }}
+                                title="Delete Lead"
+                                className="p-0 bg-transparent border-none shadow-none focus:outline-none hover:bg-transparent group"
+                                style={{ width: 40, height: 40 }}
+                              >
+                                <span className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-150 group-hover:bg-black/40 group-hover:scale-110" style={{ background: 'none', position: 'relative' }}>
+                                  <img src="/glob.svg" alt="bg" className="absolute w-10 h-10 left-0 top-0" style={{ pointerEvents: 'none' }} />
+                                  <span className="flex items-center justify-center w-10 h-10 rounded-full relative z-10">
+                                    <Trash2 className="h-4 w-4 text-white" />
+                                  </span>
+                                </span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Delete</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </>
+                    )
+                  )}
+                </div>
+              </>
+            )}
           </CardFooter>
         </div>
+        {isEditingEmailOnly && (
+          <DialogContent className="max-w-md w-full bg-white text-black">
+            <DialogHeader>
+              <DialogTitle className="text-black">Edit Email</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              <label className="block font-semibold mb-1 text-black" htmlFor="edit-email">Email <span className="text-red-500">*</span></label>
+              <input
+                id="edit-email"
+                type="email"
+                value={editValues.email}
+                onChange={e => handleEditChange('email', e.target.value)}
+                className="w-full border border-black rounded p-2 mb-2 text-black bg-white"
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => { setIsEditingEmailOnly(false); setEditValues({ ...editValues, email: lead.email }); }}
+                disabled={isSavingEdit}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="default"
+                onClick={handleEditSave}
+                disabled={isSavingEdit || !editValues.email}
+                className="bg-[#2B2521] text-white"
+              >
+                {isSavingEdit ? 'Saving...' : 'Save'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+        {/* Confirmation dialog for moving to accepted leads */}
+        {showAcceptConfirm && (
+          <DialogContent className="max-w-md w-full bg-white text-black">
+            <DialogHeader>
+              <DialogTitle className="text-black">Move to Accepted Leads?</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4 text-base text-gray-800">
+              Do you want to show this on accepted lead section?
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => handleAcceptConfirm(false)}
+                disabled={isSavingEdit}
+              >
+                No
+              </Button>
+              <Button
+                variant="default"
+                onClick={() => handleAcceptConfirm(true)}
+                disabled={isSavingEdit}
+                className="bg-[#2B2521] text-white"
+              >
+                Yes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
         <DialogContent className="max-w-xl w-full bg-white text-black">
           <DialogHeader>
             <DialogTitle className="text-black flex items-center justify-between">
@@ -850,6 +1094,28 @@ export default function LeadCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Delete confirmation dialog for accepted leads */}
+      {lead.status !== "Lost" && (
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Lead</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this lead? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel asChild>
+                <Button variant="outline">Cancel</Button>
+              </AlertDialogCancel>
+              <AlertDialogAction asChild>
+                <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   );
 }

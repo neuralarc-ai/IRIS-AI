@@ -205,7 +205,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2 bg-[#CBCAC5] hover:bg-[#2B2521] hover:text-white transition-colors duration-150">
+              <Button variant="outline" className="flex items-center gap-2">
                 {viewMode === 'list' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
                 {viewMode === 'list' ? 'List View' : 'Card View'}
                 <ChevronDown className="h-4 w-4" />
@@ -236,7 +236,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
           <div className="w-60">
             <Label htmlFor="lead-status" className="text-sm font-medium mb-1 block">Status</Label>
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger id="lead-status" className="bg-[#CBCAC5]">
+              <SelectTrigger id="lead-status">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>

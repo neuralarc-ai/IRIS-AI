@@ -19,10 +19,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Fustat', 'sans-serif'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
         body: ['Fustat', 'sans-serif'],
         headline: ['Fustat', 'sans-serif'],
-        code: ['Fustat', 'sans-serif'],
+        code: ['var(--font-source-code-pro)', 'monospace'],
       },
       colors: {
         border: '#ECECEC',

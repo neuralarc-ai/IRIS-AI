@@ -447,10 +447,10 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
         {typeof opportunity.amount !== "undefined" &&
           opportunity.amount !== null && (
             <div className="flex items-center mb-1">
-              <span className="font-semibold mr-1" style={{ fontSize: '0.95rem', color: '#5E6156' }}>
-                Revenue:
+              <span className="font-semibold text-muted-foreground mr-1" style={{ fontSize: '0.95rem' }}>
+                Quoted Value:
               </span>{" "}
-              <span className="font-bold" style={{ fontSize: '1.15rem', color: '#97A487' }}>
+              <span className="text-black font-bold" style={{ fontSize: '1.35rem' }}>
                 ${Number(opportunity.amount).toLocaleString()}
               </span>
             </div>
@@ -460,15 +460,19 @@ export default function OpportunityCard({ opportunity: initialOpportunity, onSta
             <p className="text-muted-foreground">{opportunity.description}</p>
           </div>
         )}
-        {opportunity.expected_close_date && (
-          <div className="flex items-center mb-1">
-            <CalendarDays className="mr-2 h-4 w-4 shrink-0" style={{ color: '#5E6156' }} />
-            <span className="font-semibold mr-1" style={{ color: '#5E6156' }}>
-              Est. Completion:
-            </span>
-            <span style={{ color: '#97A487' }}>
+        {opportunity.created_at && opportunity.expected_close_date && (
+          <div className="flex items-center text-muted-foreground mb-1">
+            <CalendarDays className="mr-2 h-4 w-4 shrink-0" />
+            <span>
+              {opportunity.created_at
+                ? format(parseISO(opportunity.created_at), "MMM dd, yyyy")
+                : "N/A"}{" "}
+              -{" "}
               {opportunity.expected_close_date
-                ? format(parseISO(opportunity.expected_close_date), "yyyy-MM-dd")
+                ? format(
+                    parseISO(opportunity.expected_close_date),
+                    "MMM dd, yyyy"
+                  )
                 : "N/A"}
             </span>
           </div>

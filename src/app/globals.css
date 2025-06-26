@@ -100,14 +100,14 @@
     font-feature-settings: "rlig" 1, "calt" 1;
     background: #F7F5F2;
     color: #B88A5A;
-    font-family: 'Fustat', sans-serif;
+    font-family: 'Inter', sans-serif;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Fustat', sans-serif;
+    @apply font-headline;
     color: #C89B6B;
   }
   code, pre {
-    font-family: 'Fustat', sans-serif;
+    @apply font-code;
   }
   .font-fustat {
     font-family: 'Fustat', sans-serif;

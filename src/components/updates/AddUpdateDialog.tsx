@@ -334,19 +334,17 @@ export default function AddUpdateDialog({ open, onOpenChange, onUpdateAdded, for
               Cancel
             </Button>
             <Button 
-                type="submit"
+                type="submit" 
                 disabled={
-                    isLoading ||
+                    isLoading || 
                     isLoadingData ||
                     (entityType === 'account' && !selectedAccountId) ||
                     (entityType === 'lead' && !selectedLeadId) ||
                     !updateType ||
                     !content.trim()
                 }
-                className="min-w-[128px] rounded-[4px] px-[27px] py-[16px] gap-2 bg-[#2B2521] text-white flex items-center justify-center"
-                style={{ background: '#2B2521' }}
             >
-              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Log Activity"}
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Log Update"}
             </Button>
           </DialogFooter>
         </form>
