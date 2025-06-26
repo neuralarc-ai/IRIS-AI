@@ -74,80 +74,102 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     
     console.log('📥 Received lead creation request:', body);
+    console.log('📥 Request body type:', typeof body);
+    console.log('📥 is_rejected value:', body.is_rejected);
+    console.log('📥 is_rejected type:', typeof body.is_rejected);
     
-    // Validate required fields
+    // Check if this is a rejected lead first
+    const isRejected = body.is_rejected === true;
+    console.log('🔍 isRejected determined:', isRejected);
+    
+    // Validate required fields only for non-rejected leads
     const { company_name, person_name, email } = body
     
-    if (!company_name || !person_name || !email) {
-      console.error('❌ Missing required fields:', { company_name, person_name, email });
-      return NextResponse.json(
-        { error: 'Missing required fields: company_name, person_name, email' },
-        { status: 400 }
-      )
+    if (!isRejected) {
+      // Only validate required fields for non-rejected leads
+      if (!company_name || !person_name || !email) {
+        console.error('❌ Missing required fields for non-rejected lead:', { company_name, person_name, email });
+        return NextResponse.json(
+          { error: 'Missing required fields: company_name, person_name, email' },
+          { status: 400 }
+        )
+      }
+    } else {
+      // For rejected leads, only require company_name and person_name
+      if (!company_name || !person_name) {
+        console.error('❌ Missing required fields for rejected lead:', { company_name, person_name });
+        return NextResponse.json(
+          { error: 'Missing required fields: company_name, person_name' },
+          { status: 400 }
+        )
+      }
+      console.log('⚠️ Rejected lead - email validation skipped');
     }
 
     // Clean up email - remove any mailto: prefixes and extra formatting
-    let cleanEmail = email.trim();
+    let cleanEmail = email?.trim() || '';
     if (cleanEmail.includes('mailto:')) {
       cleanEmail = cleanEmail.replace('mailto:', '').split(':')[0];
     }
     
     console.log('🧹 Cleaned email:', { original: email, cleaned: cleanEmail });
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(cleanEmail)) {
-      console.error('❌ Invalid email format:', cleanEmail);
-      return NextResponse.json(
-        { error: `Invalid email format: ${cleanEmail}` },
-        { status: 400 }
-      )
+    if (!isRejected) {
+      console.log('✅ Validating email for non-rejected lead');
+      // Validate email format only for non-rejected leads
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(cleanEmail)) {
+        console.error('❌ Invalid email format:', cleanEmail);
+        return NextResponse.json(
+          { error: `Invalid email format: ${cleanEmail}` },
+          { status: 400 }
+        )
+      }
+
+      // Check if lead with same email already exists only for non-rejected leads
+      console.log('🔍 Checking for duplicate email');
+      const { data: existingLead } = await supabase
+        .from('leads')
+        .select('id')
+        .eq('email', cleanEmail)
+        .single()
+
+      if (existingLead) {
+        console.error('❌ Lead with email already exists:', cleanEmail);
+        return NextResponse.json(
+          { error: 'Lead with this email already exists' },
+          { status: 409 }
+        )
+      }
+    } else {
+      console.log('⚠️ Skipping email validation for rejected lead:', cleanEmail);
     }
 
-    // Check if lead with same email already exists
-    const { data: existingLead } = await supabase
-      .from('leads')
-      .select('id')
-      .eq('email', cleanEmail)
-      .single()
-
-    if (existingLead) {
-      console.error('❌ Lead with email already exists:', cleanEmail);
-      return NextResponse.json(
-        { error: 'Lead with this email already exists' },
-        { status: 409 }
-      )
-    }
-
-    console.log('✅ Validation passed, creating lead with data:', {
+    const insertData = {
       company_name,
       person_name,
-      email: cleanEmail,
+      email: cleanEmail || null, // Allow null for rejected leads
       phone: body.phone || null,
       linkedin_profile_url: body.linkedin_profile_url || null,
       country: body.country || null,
       status: body.status || 'New',
-      created_by_user_id: body.created_by_user_id || null
-    });
+      created_by_user_id: body.created_by_user_id || null,
+      is_rejected: isRejected
+    };
+
+    console.log('✅ Validation passed, creating lead with data:', insertData);
+    console.log('📊 Insert data JSON:', JSON.stringify(insertData));
 
     // Create new lead
     const { data, error } = await supabase
       .from('leads')
-      .insert({
-        company_name,
-        person_name,
-        email: cleanEmail,
-        phone: body.phone || null,
-        linkedin_profile_url: body.linkedin_profile_url || null,
-        country: body.country || null,
-        status: body.status || 'New',
-        created_by_user_id: body.created_by_user_id || null
-      })
+      .insert(insertData)
       .select()
       .single()
 
     if (error) {
       console.error('❌ Error creating lead:', error)
+      console.error('❌ Error details:', JSON.stringify(error))
       return NextResponse.json(
         { error: `Failed to create lead: ${error.message}` },
         { status: 500 }
@@ -155,6 +177,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ Lead created successfully:', data);
+    console.log('✅ Created lead JSON:', JSON.stringify(data));
 
     return NextResponse.json(
       { 
@@ -166,6 +189,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Unexpected error:', error)
+    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

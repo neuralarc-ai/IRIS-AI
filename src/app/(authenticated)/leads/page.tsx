@@ -166,6 +166,9 @@ export default function LeadsPage() {
   };
 
   const handleImport = async (validData: any[], rejectedData: RejectedLead[]) => {
+    console.log('🚀 handleImport started with:', { validData: validData.length, rejectedData: rejectedData.length });
+    console.log('📋 Rejected data details:', rejectedData);
+    
     setIsImporting(true);
     try {
       if (!user) {
@@ -178,29 +181,40 @@ export default function LeadsPage() {
         return;
       }
       
+      console.log('👤 User found:', user.id);
+      
       // Process valid data first
       const newLeads: Lead[] = [];
       let successCount = 0;
       let errorCount = 0;
       
+      console.log('✅ Processing valid data...');
       for (const leadData of validData) {
         try {
+          const requestBody = {
+            company_name: leadData.company_name,
+            person_name: leadData.person_name,
+            email: leadData.email,
+            phone: leadData.phone,
+            linkedin_profile_url: leadData.linkedin_profile_url,
+            country: leadData.country,
+            created_by_user_id: user.id,
+            is_rejected: false,
+          };
+          
+          console.log('📤 Sending valid lead:', requestBody);
+          
           const response = await fetch('/api/leads', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              company_name: leadData.company_name,
-              person_name: leadData.person_name,
-              email: leadData.email,
-              phone: leadData.phone,
-              linkedin_profile_url: leadData.linkedin_profile_url,
-              country: leadData.country,
-              created_by_user_id: user.id,
-            })
+            body: JSON.stringify(requestBody)
           });
-
+          
+          console.log('📥 Valid lead response:', response.status, response.statusText);
+          
           if (response.ok) {
             const result = await response.json();
+            console.log('✅ Valid lead saved:', result);
             newLeads.push({
               id: result.data.id,
               companyName: result.data.company_name,
@@ -219,38 +233,80 @@ export default function LeadsPage() {
             });
             successCount++;
           } else {
+            const errorText = await response.text();
+            console.error('❌ Valid lead failed:', errorText);
             errorCount++;
           }
         } catch (error) {
-          console.error('Error creating lead:', error);
+          console.error('❌ Error creating valid lead:', error);
           errorCount++;
         }
       }
 
-      // Update state with valid leads
-      setLeads(prevLeads => [...newLeads, ...prevLeads]);
-
-      // Handle rejected data
+      // Save rejected leads to DB with is_rejected: true
       if (rejectedData.length > 0) {
+        console.log('🔄 Starting to save rejected leads to database:', rejectedData.length);
+        
+        for (const leadData of rejectedData) {
+          try {
+            const requestBody = {
+              company_name: leadData.company_name,
+              person_name: leadData.person_name,
+              email: leadData.email,
+              phone: leadData.phone,
+              linkedin_profile_url: leadData.linkedin_profile_url,
+              country: leadData.country,
+              created_by_user_id: user.id,
+              is_rejected: true,
+            };
+            
+            console.log('📤 Sending rejected lead request:', requestBody);
+            console.log('📤 Request body JSON:', JSON.stringify(requestBody));
+            
+            const response = await fetch('/api/leads', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(requestBody)
+            });
+            
+            console.log('📥 Rejected lead response status:', response.status);
+            console.log('📥 Rejected lead response statusText:', response.statusText);
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error('❌ Failed to save rejected lead. Status:', response.status);
+              console.error('❌ Error response:', errorText);
+            } else {
+              const result = await response.json();
+              console.log('✅ Rejected lead saved successfully:', result);
+            }
+          } catch (error) {
+            console.error('❌ Network error saving rejected lead:', error);
+          }
+        }
+        
+        console.log('🔄 Finished processing rejected leads');
         setRejectedLeads(rejectedData);
         setEditingLeads(rejectedData);
         setShowRejectedDialog(true);
+      } else {
+        console.log('ℹ️ No rejected leads to save');
       }
-
+      
+      setLeads(prevLeads => [...newLeads, ...prevLeads]);
       setImportSummary({ success: successCount, rejected: rejectedData.length });
       setShowImportSummary(true);
       setRejectedLeads(rejectedData);
-
+      
+      console.log('🎉 Import completed. Summary:', { success: successCount, rejected: rejectedData.length });
+      
       toast({
         title: "Import Summary",
-        description: `Total: ${validData.length + rejectedData.length} records
-          ✓ ${successCount} imported successfully
-          ${rejectedData.length > 0 ? `\n⚠ ${rejectedData.length} need review` : ''}
-          ${errorCount > 0 ? `\n⚠ ${errorCount} failed to import` : ''}`,
+        description: `Total: ${validData.length + rejectedData.length} records\n  ✓ ${successCount} imported successfully\n  ${rejectedData.length > 0 ? `\n⚠ ${rejectedData.length} need review` : ''}\n  ${errorCount > 0 ? `\n⚠ ${errorCount} failed to import` : ''}`,
         variant: "default"
       });
     } catch (error) {
-      console.error('Error importing leads:', error);
+      console.error('💥 Fatal error in handleImport:', error);
       toast({
         title: "Import Failed",
         description: error instanceof Error ? error.message : "Failed to import leads.",
@@ -264,10 +320,8 @@ export default function LeadsPage() {
 
   const handleSaveRejectedLeads = async () => {
     if (!editingLeads.length || !user) return;
-
     const results = { success: 0, failed: 0 };
     const newLeads: Lead[] = [];
-
     for (const lead of editingLeads) {
       try {
         const response = await fetch('/api/leads', {
@@ -281,9 +335,9 @@ export default function LeadsPage() {
             linkedin_profile_url: lead.linkedin_profile_url,
             country: lead.country,
             created_by_user_id: user.id,
+            is_rejected: true,
           })
         });
-
         if (response.ok) {
           const result = await response.json();
           newLeads.push({
@@ -311,13 +365,11 @@ export default function LeadsPage() {
         results.failed++;
       }
     }
-
     if (results.success > 0) {
       setLeads(prevLeads => [...newLeads, ...prevLeads]);
       setShowRejectedDialog(false);
       setRejectedLeads([]);
       setEditingLeads([]);
-
       toast({
         title: "Leads Saved",
         description: `${results.success} leads saved successfully.${results.failed > 0 ? ` ${results.failed} failed.` : ''}`,
