@@ -19,6 +19,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 export default function OpportunitiesPage() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -47,6 +48,8 @@ export default function OpportunitiesPage() {
     if (node) observerRef.current.observe(node);
   }, [isLoading, isFetchingMore, hasMore]);
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+  const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
+  const [showOpportunityModal, setShowOpportunityModal] = useState(false);
 
   const opportunityStatusOptions: OpportunityStatus[] = ["Scope Of Work", "Proposal", "Negotiation", "Win", "Loss"];
 
@@ -272,8 +275,8 @@ export default function OpportunitiesPage() {
                     <td className="px-6 py-4 whitespace-nowrap">{opportunity.status}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{opportunity.expected_close_date || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Button size="sm" variant="outline" asChild>
-                        <a href={`/opportunities/${opportunity.id}`}>View</a>
+                      <Button size="sm" variant="outline" onClick={() => { setSelectedOpportunity(opportunity); setShowOpportunityModal(true); }}>
+                        View
                       </Button>
                       <Button size="sm" variant="destructive" className="ml-2" onClick={() => handleOpportunityDeleted(opportunity.id)}>
                         Delete
@@ -307,6 +310,15 @@ export default function OpportunitiesPage() {
           <p className="text-muted-foreground">Try adjusting your search or filter criteria, or add a new opportunity.</p>
         </div>
       )}
+
+      {/* Opportunity Details Modal */}
+      <Dialog open={showOpportunityModal} onOpenChange={setShowOpportunityModal}>
+        <DialogContent className="max-w-2xl w-full bg-white text-black">
+          {selectedOpportunity && (
+            <OpportunityCard opportunity={selectedOpportunity} />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <AddOpportunityDialog 
         open={isAddOpportunityDialogOpen} 

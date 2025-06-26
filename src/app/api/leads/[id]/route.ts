@@ -137,7 +137,7 @@ export async function PUT(
       }
       console.error('Error updating lead:', error)
       return NextResponse.json(
-        { error: 'Failed to update lead' },
+        { error: error.message || 'Failed to update lead', details: error.details },
         { status: 500 }
       )
     }

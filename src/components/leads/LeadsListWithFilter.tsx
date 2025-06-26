@@ -52,9 +52,10 @@ interface LeadsListWithFilterProps {
   onLeadDeleted: (leadId: string) => void;
   onBulkAssignmentComplete?: () => void;
   backButton?: React.ReactNode;
+  onStatusChange?: (leadId: string, newStatus: Lead["status"]) => void;
 }
 
-export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdded, onLeadDeleted, onBulkAssignmentComplete, backButton }: LeadsListWithFilterProps) {
+export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdded, onLeadDeleted, onBulkAssignmentComplete, backButton, onStatusChange }: LeadsListWithFilterProps) {
   const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('All Statuses');
@@ -73,6 +74,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
     setLocalLeads((prev) => prev.map((lead) =>
       lead.id === leadId ? { ...lead, status: newStatus } : lead
     ));
+    if (onStatusChange) onStatusChange(leadId, newStatus);
   };
 
   const handleLeadConversion = (leadId: string, newAccountId: string) => {
@@ -203,7 +205,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
+              <Button variant="outline" className="flex items-center gap-2 bg-[#CBCAC5] hover:bg-[#2B2521] hover:text-white transition-colors duration-150">
                 {viewMode === 'list' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
                 {viewMode === 'list' ? 'List View' : 'Card View'}
                 <ChevronDown className="h-4 w-4" />
@@ -234,7 +236,7 @@ export default function LeadsListWithFilter({ leads, onLeadConverted, onLeadAdde
           <div className="w-60">
             <Label htmlFor="lead-status" className="text-sm font-medium mb-1 block">Status</Label>
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger id="lead-status">
+              <SelectTrigger id="lead-status" className="bg-[#CBCAC5]">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>

@@ -384,6 +384,49 @@ export default function LeadsPage() {
     }
   };
 
+  // Add handler to move lead from rejected to accepted when status changes
+  const handleLeadStatusChange = (leadId: string, newStatus: Lead["status"]) => {
+    if (newStatus === 'New') {
+      // Find the lead in rejectedLeads
+      const idx = rejectedLeads.findIndex(l => `rejected-${l._rowIndex ?? idx}` === leadId || l.email === '' || l.email === undefined);
+      let movedLead = null;
+      let newRejectedLeads = rejectedLeads;
+      if (idx !== -1) {
+        movedLead = rejectedLeads[idx];
+        newRejectedLeads = rejectedLeads.filter((_, i) => i !== idx);
+        setRejectedLeads(newRejectedLeads);
+      }
+      // If we have the lead, add to accepted leads
+      if (movedLead) {
+        setLeads(prevLeads => [
+          {
+            id: leadId,
+            companyName: movedLead.company_name,
+            personName: movedLead.person_name,
+            email: movedLead.email,
+            phone: movedLead.phone,
+            linkedinProfileUrl: movedLead.linkedin_profile_url,
+            country: movedLead.country,
+            status: 'New',
+            opportunityIds: [],
+            updateIds: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            assigned_user_id: '',
+            created_by_user_id: '',
+          },
+          ...prevLeads
+        ]);
+      } else {
+        // If not found in rejected, just update in accepted
+        setLeads(prevLeads => prevLeads.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
+      }
+    } else {
+      // Just update status in accepted leads
+      setLeads(prevLeads => prevLeads.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto space-y-6 mt-6">
@@ -411,15 +454,13 @@ export default function LeadsPage() {
           )}
           <Button
             onClick={() => setIsAddLeadDialogOpen(true)}
-            variant="beige"
-            className="flex items-center min-w-[180px] h-12 text-lg font-medium"
+            className="flex items-center justify-center min-w-[128px] rounded-[4px] px-[27px] py-[16px] gap-2 bg-[#2B2521] text-white text-base font-normal shadow-none border-none"
           >
             <PlusCircle className="mr-2 h-5 w-5" /> Add New Lead
           </Button>
           <Button
-            variant="outline"
             onClick={() => setShowImport(true)}
-            className="flex items-center min-w-[160px] h-12 text-lg font-medium"
+            className="flex items-center justify-center w-[171px] h-[56px] min-w-[128px] rounded-[4px] px-[27px] py-[16px] gap-2 border border-[#2B2521] text-[#2B2521] bg-white text-base font-normal shadow-none transition-colors duration-150 hover:bg-[#C5B496]"
           >
             <Upload className="mr-2 h-5 w-5" /> Import CSV
           </Button>
@@ -485,6 +526,7 @@ export default function LeadsPage() {
             onLeadAdded={handleLeadAdded}
             onLeadDeleted={handleLeadDeleted}
             onBulkAssignmentComplete={handleBulkAssignmentComplete}
+            onStatusChange={handleLeadStatusChange}
           />
         ) : (
           <LeadsListWithFilter
@@ -508,6 +550,7 @@ export default function LeadsPage() {
             onLeadAdded={() => {}}
             onLeadDeleted={() => {}}
             onBulkAssignmentComplete={() => {}}
+            onStatusChange={handleLeadStatusChange}
             backButton={
               <div className="mb-4">
                 <TooltipProvider>
